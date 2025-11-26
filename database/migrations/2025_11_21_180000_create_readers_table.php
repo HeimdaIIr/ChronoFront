@@ -11,17 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema->create('readers', function (Blueprint $table) {
+        Schema::create('readers', function (Blueprint $table) {
             $table->id();
             $table->string('serial')->unique()->comment('Serial number of the RFID reader (e.g., 107)');
             $table->string('name')->nullable()->comment('Reader friendly name');
-            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            $table->foreignId('event_id')->nullable()->constrained('events')->onDelete('cascade');
             $table->foreignId('race_id')->nullable()->constrained('races')->onDelete('cascade');
-            $table->string('location')->comment('Location/point name (e.g., ARRIVEE, DEPART, KM5)');
+            $table->string('location')->nullable()->comment('Location/point name (e.g., ARRIVEE, DEPART, KM5)');
             $table->integer('anti_rebounce_seconds')->default(5)->comment('Minimum seconds between two reads for same bib');
-            $table->datetime('date_min')->comment('Start datetime for reader activation');
-            $table->datetime('date_max')->comment('End datetime for reader activation');
-            $table->boolean('is_active')->default(true);
+            $table->datetime('date_min')->nullable()->comment('Start datetime for reader activation');
+            $table->datetime('date_max')->nullable()->comment('End datetime for reader activation');
+            $table->boolean('is_active')->default(false);
             $table->integer('clone_reader_id')->nullable()->comment('If set, use this reader ID for logging');
             $table->boolean('test_terrain')->default(false);
             $table->datetime('date_test')->nullable();

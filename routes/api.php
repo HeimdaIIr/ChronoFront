@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EntrantController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ResultController;
 use App\Http\Controllers\Api\RaspberryController;
+use App\Http\Controllers\Api\ReaderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,7 +54,12 @@ Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);
 Route::put('results/{result}', [ResultController::class, 'update']);
 Route::delete('results/{result}', [ResultController::class, 'destroy']);
 
-// RFID Raspberry Reader Routes
+// RFID Readers Management Routes
+Route::get('readers/race/{raceId}', [ReaderController::class, 'byRace']);
+Route::get('readers/{id}/ping', [ReaderController::class, 'ping']);
+Route::get('readers/race/{raceId}/ping', [ReaderController::class, 'pingRace']);
+
+// RFID Raspberry Reader Routes (détections)
 Route::put('raspberry', [RaspberryController::class, 'store']);
 Route::post('raspberry', [RaspberryController::class, 'store']);
 

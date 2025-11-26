@@ -33,6 +33,24 @@
                         <i class="bi bi-clock-history"></i> Dernier: <strong x-text="lastDetection"></strong>
                     </span>
                 </div>
+                <!-- RFID Readers Status -->
+                <div x-show="readers.length > 0" class="d-flex align-items-center gap-2 border-start border-white-50 ps-3 ms-3">
+                    <span class="small text-white-50">Lecteurs:</span>
+                    <template x-for="reader in readers" :key="reader.id">
+                        <div
+                            class="reader-status-badge"
+                            :class="{
+                                'reader-online': reader.online,
+                                'reader-offline': !reader.online,
+                                'reader-checking': reader.checking
+                            }"
+                            :title="`${reader.name} (${reader.ip}) - ${reader.online ? 'Connecté' : 'Déconnecté'}`"
+                        >
+                            <i class="bi" :class="reader.online ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                            <span class="small" x-text="reader.location || reader.serial"></span>
+                        </div>
+                    </template>
+                </div>
             </div>
             <div>
                 <button class="btn btn-sm btn-light" @click="recalculatePositions" :disabled="!selectedRace || recalculating">
@@ -361,6 +379,8 @@ function timingManager() {
         lastRecordedBib: null,
         syncInterval: null,
         audioEnabled: true,
+        readers: [], // RFID readers for selected race
+        readersHeartbeatInterval: null,
 
         init() {
             this.loadEvents();
@@ -368,6 +388,7 @@ function timingManager() {
             this.loadPendingTimes();
             this.startNetworkMonitoring();
             this.startSyncLoop();
+            this.startReadersHeartbeat();
         },
 
         // Load pending times from LocalStorage
@@ -463,6 +484,79 @@ function timingManager() {
             }, 2000);
         },
 
+        // Load RFID readers for selected race
+        async loadReaders() {
+            if (!this.selectedRace) {
+                this.readers = [];
+                return;
+            }
+
+            try {
+                const response = await axios.get(`/readers/race/${this.selectedRace}`);
+                this.readers = response.data.map(reader => ({
+                    ...reader,
+                    online: false,
+                    checking: false
+                }));
+                console.log(`📡 ${this.readers.length} lecteurs chargés pour l'épreuve`);
+
+                // Ping immediately after loading
+                await this.pingReaders();
+            } catch (error) {
+                console.error('Erreur lors du chargement des lecteurs', error);
+                this.readers = [];
+            }
+        },
+
+        // Ping all readers to check their status
+        async pingReaders() {
+            if (this.readers.length === 0 || !this.selectedRace) return;
+
+            console.log('🔄 Ping des lecteurs...');
+
+            try {
+                const response = await axios.get(`/readers/race/${this.selectedRace}/ping`);
+                const statuses = response.data;
+
+                // Update reader statuses
+                this.readers = this.readers.map(reader => {
+                    const status = statuses.find(s => s.reader_id === reader.id);
+                    if (status) {
+                        return {
+                            ...reader,
+                            online: status.online,
+                            checking: false,
+                            response_time: status.response_time
+                        };
+                    }
+                    return reader;
+                });
+
+                const onlineCount = this.readers.filter(r => r.online).length;
+                console.log(`✅ ${onlineCount}/${this.readers.length} lecteurs en ligne`);
+            } catch (error) {
+                console.error('Erreur lors du ping des lecteurs', error);
+            }
+        },
+
+        // Start heartbeat for readers
+        startReadersHeartbeat() {
+            this.stopReadersHeartbeat();
+            this.readersHeartbeatInterval = setInterval(() => {
+                if (this.selectedRace && this.readers.length > 0) {
+                    this.pingReaders();
+                }
+            }, 10000); // Ping every 10 seconds
+        },
+
+        // Stop heartbeat
+        stopReadersHeartbeat() {
+            if (this.readersHeartbeatInterval) {
+                clearInterval(this.readersHeartbeatInterval);
+                this.readersHeartbeatInterval = null;
+            }
+        },
+
         async loadEvents() {
             try {
                 const response = await axios.get('/events');
@@ -509,11 +603,13 @@ function timingManager() {
             if (this.selectedRace) {
                 await this.loadWaves();
                 await this.loadResults();
+                await this.loadReaders(); // Load RFID readers for this race
                 this.startAutoRefresh();
             } else {
                 this.stopAutoRefresh();
                 this.results = [];
                 this.waves = [];
+                this.readers = [];
             }
         },
 
@@ -713,7 +809,7 @@ function timingManager() {
 
 /* Network Status Bar */
 .network-status-bar {
-    position: fixed;
+    position: relative;
     top: 0;
     left: 0;
     right: 0;
@@ -738,8 +834,42 @@ function timingManager() {
     color: white;
 }
 
-.content-with-status-bar {
-    padding-top: 60px;
+/* .content-with-status-bar removed - no padding needed with relative positioning */
+
+/* RFID Reader Status Badges */
+.reader-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.reader-status-badge.reader-online {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.reader-status-badge.reader-offline {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.reader-status-badge.reader-checking {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* Success Flash Overlay */
