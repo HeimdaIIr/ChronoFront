@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema->table('waves', function (Blueprint $table) {
+        Schema::table('waves', function (Blueprint $table) {
             $table->integer('wave_number')->after('race_id')->nullable();
 
             // Index unique : un même numéro de vague ne peut exister qu'une seule fois par épreuve
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema->table('waves', function (Blueprint $table) {
+        Schema::table('waves', function (Blueprint $table) {
             $table->dropUnique('waves_race_number_unique');
             $table->dropColumn('wave_number');
         });

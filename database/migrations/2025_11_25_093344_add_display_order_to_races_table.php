@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema->table('races', function (Blueprint $table) {
+        Schema::table('races', function (Blueprint $table) {
             $table->integer('display_order')->nullable()->after('event_id');
             $table->index(['event_id', 'display_order']);
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema->table('races', function (Blueprint $table) {
+        Schema::table('races', function (Blueprint $table) {
             $table->dropIndex(['event_id', 'display_order']);
             $table->dropColumn('display_order');
         });
