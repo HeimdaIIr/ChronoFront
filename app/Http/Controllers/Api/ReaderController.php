@@ -11,11 +11,22 @@ class ReaderController extends Controller
 {
     /**
      * Get all active readers for a specific race
+     * Includes readers attached to the race AND readers attached to the parent event
      */
     public function byRace(int $raceId): JsonResponse
     {
-        $readers = Reader::where('race_id', $raceId)
-            ->where('is_active', true)
+        // Get race to access event_id
+        $race = \App\Models\Race::findOrFail($raceId);
+
+        // Get readers specific to this race OR attached to the parent event
+        $readers = Reader::where('is_active', true)
+            ->where(function($query) use ($raceId, $race) {
+                $query->where('race_id', $raceId)  // Readers for this race
+                      ->orWhere(function($q) use ($race) {
+                          $q->where('event_id', $race->event_id)  // Readers for the event
+                            ->whereNull('race_id');                // But not assigned to a specific race
+                      });
+            })
             ->orderBy('location')
             ->get()
             ->map(function ($reader) {
@@ -74,12 +85,23 @@ class ReaderController extends Controller
 
     /**
      * Ping all active readers for a race
+     * Includes readers attached to the race AND readers attached to the parent event
      * Returns array of reader statuses
      */
     public function pingRace(int $raceId): JsonResponse
     {
-        $readers = Reader::where('race_id', $raceId)
-            ->where('is_active', true)
+        // Get race to access event_id
+        $race = \App\Models\Race::findOrFail($raceId);
+
+        // Get readers specific to this race OR attached to the parent event
+        $readers = Reader::where('is_active', true)
+            ->where(function($query) use ($raceId, $race) {
+                $query->where('race_id', $raceId)  // Readers for this race
+                      ->orWhere(function($q) use ($race) {
+                          $q->where('event_id', $race->event_id)  // Readers for the event
+                            ->whereNull('race_id');                // But not assigned to a specific race
+                      });
+            })
             ->get();
 
         $statuses = [];
