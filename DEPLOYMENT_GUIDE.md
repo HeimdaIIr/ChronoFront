@@ -63,19 +63,39 @@
 
 ### Stack Technique
 
-#### Pi MASTER (Arrivée)
+#### 🔴 IMPORTANT : Configuration Dynamique des Rôles
+
+**Tous les Raspberry ont exactement la même installation !**
+
+- ✅ Les 20 Raspberry sont **100% interchangeables**
+- ✅ Le rôle (MASTER/ESCLAVE) est configuré **au début de chaque événement**
+- ✅ Lecteur 107 peut être MASTER aujourd'hui, ESCLAVE demain
+- ✅ Interface de configuration `/setup` au premier lancement
+
+**Principe** :
+```
+Installation identique sur tous les Pi
+         ↓
+Au démarrage événement : Choix du rôle via interface web
+         ↓
+    MASTER (Arrivée)          ou          ESCLAVE (Départ/Inter)
+    - App complète                       - Détection RFID uniquement
+    - Base de données                    - Envoie vers MASTER
+    - Interface chrono
+```
+
+#### Stack Technique (Identique sur tous les Pi)
+
 - **OS** : Raspbian OS Lite (64-bit)
 - **Web Server** : Nginx
-- **Backend** : PHP 8.2 + Laravel 11
-- **Base de données** : MySQL 8.0 (locale + connexion distante)
+- **Backend** : PHP 8.2 + Laravel 11 (complet)
+- **Base de données** : MySQL 8.0 (installé partout, actif uniquement si MASTER)
 - **Frontend** : Alpine.js + Bootstrap 5
 - **Monitoring** : Supervisor (pour Laravel Queue)
 
-#### Pi ESCLAVE (Départ/Intermédiaire)
-- **OS** : Raspbian OS Lite (64-bit)
-- **Web Server** : Nginx (minimal)
-- **Backend** : Script Python ou PHP simple
-- **Fonction** : Recevoir détections RFID → Envoyer au Pi MASTER
+**Configuration runtime** :
+- Fichier `storage/app/config/reader.json` définit le rôle actuel
+- Interface `/setup` pour changer de rôle à tout moment
 
 #### Serveur Central (Locaux ATS-Sport)
 - **OS** : Ubuntu Server 22.04 LTS
@@ -119,6 +139,12 @@
 **Objectif** : Préparer l'app pour déploiement Raspberry
 
 **À faire** :
+- [ ] **Interface `/setup`** : Configuration rôle MASTER/ESCLAVE
+  - Détection auto du numéro de lecteur (serial)
+  - Sélection rôle (boutons MASTER/ESCLAVE)
+  - Si ESCLAVE : saisie IP du MASTER
+  - Sauvegarde dans `storage/app/config/reader.json`
+  - Redémarrage services selon le rôle
 - [ ] Script d'installation automatique Raspberry Pi
 - [ ] Configuration optimisée pour Raspberry (performance)
 - [ ] Mode déconnecté avancé (buffer local SQLite)
