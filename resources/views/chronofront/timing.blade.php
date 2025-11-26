@@ -4,22 +4,55 @@
 
 @section('content')
 <div class="container-fluid" x-data="timingManager()">
-    <div class="row mb-4">
-        <div class="col">
-            <h1 class="h2"><i class="bi bi-stopwatch text-warning"></i> Chronométrage Temps Réel</h1>
-            <p class="text-muted">Enregistrez les temps de passage des participants</p>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-success" @click="recalculatePositions" :disabled="!selectedRace || recalculating">
-                <i class="bi bi-calculator"></i>
-                <span x-show="!recalculating">Recalculer positions</span>
-                <span x-show="recalculating">
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                    Calcul...
-                </span>
-            </button>
+    <!-- Network Status Bar (Fixed Top) -->
+    <div class="network-status-bar" :class="{
+        'status-online': networkStatus === 'online',
+        'status-offline': networkStatus === 'offline',
+        'status-syncing': networkStatus === 'syncing'
+    }">
+        <div class="container-fluid d-flex align-items-center justify-content-between py-2">
+            <div class="d-flex align-items-center gap-3">
+                <div class="status-indicator">
+                    <template x-if="networkStatus === 'online'">
+                        <div><i class="bi bi-wifi"></i> <strong>En ligne</strong></div>
+                    </template>
+                    <template x-if="networkStatus === 'offline'">
+                        <div><i class="bi bi-wifi-off"></i> <strong>Hors ligne</strong> - Les temps sont sauvegardés localement</div>
+                    </template>
+                    <template x-if="networkStatus === 'syncing'">
+                        <div>
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <strong>Synchronisation en cours...</strong>
+                            <span x-show="pendingCount > 0" class="badge bg-light text-dark ms-2" x-text="pendingCount + ' en attente'"></span>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="selectedRace" class="text-white-50 small">
+                    <i class="bi bi-people-fill"></i> <span x-text="results.length"></span> détections
+                    <span x-show="lastDetection" class="ms-3">
+                        <i class="bi bi-clock-history"></i> Dernier: <strong x-text="lastDetection"></strong>
+                    </span>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-light" @click="recalculatePositions" :disabled="!selectedRace || recalculating">
+                    <i class="bi bi-calculator"></i>
+                    <span x-show="!recalculating">Recalculer</span>
+                    <span x-show="recalculating">
+                        <span class="spinner-border spinner-border-sm"></span>
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
+
+    <div class="content-with-status-bar">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="h2"><i class="bi bi-stopwatch text-warning"></i> Chronométrage Temps Réel</h1>
+                <p class="text-muted">Enregistrez les temps de passage des participants</p>
+            </div>
+        </div>
 
     <!-- Alert Messages -->
     <div x-show="successMessage" x-transition class="alert alert-success alert-dismissible fade show" role="alert">
@@ -284,6 +317,22 @@
             </div>
         </div>
     </div>
+    </div>
+</div>
+
+<!-- Success Flash Overlay -->
+<div x-show="showSuccessFlash" x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90"
+     class="success-flash-overlay">
+    <div class="success-flash-content">
+        <i class="bi bi-check-circle-fill"></i>
+        <div class="mt-3">
+            <h4>Temps enregistré !</h4>
+            <p class="mb-0" x-text="'Dossard ' + lastRecordedBib"></p>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -304,10 +353,114 @@ function timingManager() {
         successMessage: null,
         errorMessage: null,
         autoRefreshInterval: null,
+        networkStatus: 'online', // 'online', 'offline', 'syncing'
+        pendingTimes: [],
+        pendingCount: 0,
+        lastDetection: null,
+        showSuccessFlash: false,
+        lastRecordedBib: null,
+        syncInterval: null,
+        audioEnabled: true,
 
         init() {
             this.loadEvents();
             this.loadRaces();
+            this.loadPendingTimes();
+            this.startNetworkMonitoring();
+            this.startSyncLoop();
+        },
+
+        // Load pending times from LocalStorage
+        loadPendingTimes() {
+            const stored = localStorage.getItem('chronofront_pending_times');
+            if (stored) {
+                this.pendingTimes = JSON.parse(stored);
+                this.pendingCount = this.pendingTimes.length;
+                if (this.pendingCount > 0) {
+                    console.log(`📦 ${this.pendingCount} temps en attente de synchronisation`);
+                }
+            }
+        },
+
+        // Save pending times to LocalStorage
+        savePendingTimes() {
+            localStorage.setItem('chronofront_pending_times', JSON.stringify(this.pendingTimes));
+            this.pendingCount = this.pendingTimes.length;
+        },
+
+        // Monitor network status
+        startNetworkMonitoring() {
+            // Check online/offline events
+            window.addEventListener('online', () => {
+                console.log('🟢 Connexion rétablie');
+                this.networkStatus = 'online';
+                this.syncPendingTimes();
+            });
+
+            window.addEventListener('offline', () => {
+                console.log('🔴 Connexion perdue');
+                this.networkStatus = 'offline';
+            });
+
+            // Initial check
+            this.networkStatus = navigator.onLine ? 'online' : 'offline';
+        },
+
+        // Sync loop - try to sync pending times every 10 seconds
+        startSyncLoop() {
+            this.syncInterval = setInterval(() => {
+                if (this.pendingCount > 0 && navigator.onLine) {
+                    this.syncPendingTimes();
+                }
+            }, 10000);
+        },
+
+        // Sync all pending times
+        async syncPendingTimes() {
+            if (this.pendingCount === 0) return;
+
+            this.networkStatus = 'syncing';
+            const failedTimes = [];
+
+            for (const timeData of this.pendingTimes) {
+                try {
+                    await axios.post('/results/time', timeData);
+                    console.log(`✅ Temps synchronisé: Dossard ${timeData.bib_number}`);
+                } catch (error) {
+                    console.error(`❌ Échec sync: Dossard ${timeData.bib_number}`, error);
+                    failedTimes.push(timeData);
+                }
+            }
+
+            this.pendingTimes = failedTimes;
+            this.savePendingTimes();
+
+            if (this.pendingCount === 0) {
+                this.networkStatus = 'online';
+                this.successMessage = '✅ Tous les temps ont été synchronisés';
+                await this.loadResults();
+                setTimeout(() => { this.successMessage = null; }, 3000);
+            } else {
+                this.networkStatus = 'offline';
+            }
+        },
+
+        // Play success sound
+        playSuccessSound() {
+            if (!this.audioEnabled) return;
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi78OScTgwOUKbj8LdjHAU7k9jyzXosBS1+zPLaizsKG2e57OihUBELTKXh8bllHgU2jdXzz3osBSh+zPLcizsKHGi76+ucTQwPUKXi8bZjHQU5k9jyznwsBSh9zPLaizwJH2i67OqfThAMUKTi8LVjHQU4k9byzX0tBSh7y/PbjDwKH2i67OmgThAMT6Ti8LRjHgU3k9fyznwtBSd7y/PbjDwKH2e67OmgUBALT6Pj8LRkHgU4lNfyznwtBSd7y/PajDwKH2e67OmgUBELT6Pi8LNkHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4lNfyznwtBSd7y/PajDwKHme67OmgTxELT6Ph8LNlHgU4');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        },
+
+        // Show success flash
+        showSuccessAnimation(bibNumber) {
+            this.lastRecordedBib = bibNumber;
+            this.showSuccessFlash = true;
+            this.playSuccessSound();
+
+            setTimeout(() => {
+                this.showSuccessFlash = false;
+            }, 2000);
         },
 
         async loadEvents() {
@@ -382,8 +535,18 @@ function timingManager() {
                 this.results = response.data.sort((a, b) => {
                     return new Date(b.raw_time) - new Date(a.raw_time);
                 });
+
+                // Update last detection
+                if (this.results.length > 0) {
+                    const last = this.results[0];
+                    this.lastDetection = `Dossard ${last.entrant?.bib_number || 'N/A'}`;
+                }
             } catch (error) {
                 console.error('Erreur lors du chargement des résultats', error);
+                // Don't show error if it's just a network issue
+                if (error.code !== 'ERR_NETWORK') {
+                    this.errorMessage = 'Erreur lors du chargement des résultats';
+                }
             } finally {
                 this.loading = false;
             }
@@ -395,24 +558,48 @@ function timingManager() {
             this.saving = true;
             this.errorMessage = null;
 
-            try {
-                const response = await axios.post('/results/time', {
-                    race_id: this.selectedRace,
-                    bib_number: this.bibNumber,
-                    is_manual: true
-                });
+            const timeData = {
+                race_id: this.selectedRace,
+                bib_number: this.bibNumber,
+                is_manual: true,
+                timestamp: new Date().toISOString()
+            };
 
-                this.successMessage = `Temps enregistré pour le dossard ${this.bibNumber}`;
+            const bibNumberToShow = this.bibNumber;
+
+            try {
+                // Try to send immediately
+                await axios.post('/results/time', timeData);
+
+                // Success - online
+                this.showSuccessAnimation(bibNumberToShow);
+                this.successMessage = `✅ Temps enregistré pour le dossard ${bibNumberToShow}`;
                 this.bibNumber = '';
                 await this.loadResults();
 
-                // Auto-clear success message after 3 seconds
                 setTimeout(() => {
                     this.successMessage = null;
                 }, 3000);
 
             } catch (error) {
-                this.errorMessage = error.response?.data?.message || 'Erreur lors de l\'enregistrement du temps';
+                // Failed - check if it's a network error
+                if (error.code === 'ERR_NETWORK' || !navigator.onLine) {
+                    // Store locally
+                    this.pendingTimes.push(timeData);
+                    this.savePendingTimes();
+                    this.networkStatus = 'offline';
+
+                    this.showSuccessAnimation(bibNumberToShow);
+                    this.successMessage = `📦 Temps sauvegardé localement (Dossard ${bibNumberToShow}) - Sera synchronisé quand la connexion reviendra`;
+                    this.bibNumber = '';
+
+                    setTimeout(() => {
+                        this.successMessage = null;
+                    }, 5000);
+                } else {
+                    // Other error (validation, etc.)
+                    this.errorMessage = error.response?.data?.message || 'Erreur lors de l\'enregistrement du temps';
+                }
             } finally {
                 this.saving = false;
             }
@@ -517,10 +704,123 @@ function timingManager() {
 </script>
 
 <style>
+/* Status badges */
 .badge-status-v { background-color: #10B981 !important; color: white; }
 .badge-status-dns { background-color: #F59E0B !important; color: white; }
 .badge-status-dnf { background-color: #EF4444 !important; color: white; }
 .badge-status-dsq { background-color: #DC2626 !important; color: white; }
 .badge-status-ns { background-color: #6B7280 !important; color: white; }
+
+/* Network Status Bar */
+.network-status-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.network-status-bar.status-online {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+}
+
+.network-status-bar.status-offline {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: white;
+}
+
+.network-status-bar.status-syncing {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: white;
+}
+
+.content-with-status-bar {
+    padding-top: 60px;
+}
+
+/* Success Flash Overlay */
+.success-flash-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: rgba(16, 185, 129, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.success-flash-content {
+    text-align: center;
+    color: white;
+    animation: successPulse 0.5s ease-out;
+}
+
+.success-flash-content i {
+    font-size: 5rem;
+    animation: successCheckmark 0.6s ease-out;
+}
+
+.success-flash-content h4 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.success-flash-content p {
+    font-size: 1.5rem;
+    opacity: 0.9;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes successCheckmark {
+    0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+    50% { transform: scale(1.2) rotate(0deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Table row animation */
+@keyframes slideInFade {
+    0% {
+        opacity: 0;
+        transform: translateX(-20px);
+        background-color: rgba(16, 185, 129, 0.3);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+        background-color: transparent;
+    }
+}
+
+tbody tr {
+    animation: slideInFade 0.5s ease-out;
+}
+
+tbody tr:first-child {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Status indicator pulse */
+.network-status-bar.status-syncing .spinner-border {
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>
 @endsection
