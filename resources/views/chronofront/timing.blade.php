@@ -4,26 +4,30 @@
 
 @section('content')
 <div class="container-fluid" x-data="timingManager()">
-    <!-- Network Status Bar (Fixed Top) -->
+    <!-- Status Bar -->
     <div class="network-status-bar" :class="{
-        'status-online': networkStatus === 'online',
-        'status-offline': networkStatus === 'offline',
+        'status-ready': networkStatus === 'ready',
+        'status-pending': networkStatus === 'pending',
         'status-syncing': networkStatus === 'syncing'
     }">
         <div class="container-fluid d-flex align-items-center justify-content-between py-2">
             <div class="d-flex align-items-center gap-3">
                 <div class="status-indicator">
-                    <template x-if="networkStatus === 'online'">
-                        <div><i class="bi bi-wifi"></i> <strong>En ligne</strong></div>
+                    <template x-if="networkStatus === 'ready'">
+                        <div><i class="bi bi-check-circle-fill"></i> <strong>Opérationnel</strong></div>
                     </template>
-                    <template x-if="networkStatus === 'offline'">
-                        <div><i class="bi bi-wifi-off"></i> <strong>Hors ligne</strong> - Les temps sont sauvegardés localement</div>
+                    <template x-if="networkStatus === 'pending'">
+                        <div>
+                            <i class="bi bi-clock-history"></i>
+                            <strong x-text="pendingCount + ' temps en attente'"></strong>
+                            <span class="small ms-2">- Seront synchronisés automatiquement</span>
+                        </div>
                     </template>
                     <template x-if="networkStatus === 'syncing'">
                         <div>
                             <span class="spinner-border spinner-border-sm me-2"></span>
                             <strong>Synchronisation en cours...</strong>
-                            <span x-show="pendingCount > 0" class="badge bg-light text-dark ms-2" x-text="pendingCount + ' en attente'"></span>
+                            <span x-show="pendingCount > 0" class="badge bg-light text-dark ms-2" x-text="pendingCount + ' restants'"></span>
                         </div>
                     </template>
                 </div>
@@ -371,7 +375,7 @@ function timingManager() {
         successMessage: null,
         errorMessage: null,
         autoRefreshInterval: null,
-        networkStatus: 'online', // 'online', 'offline', 'syncing'
+        networkStatus: 'ready', // 'ready', 'pending', 'syncing'
         pendingTimes: [],
         pendingCount: 0,
         lastDetection: null,
@@ -386,7 +390,7 @@ function timingManager() {
             this.loadEvents();
             this.loadRaces();
             this.loadPendingTimes();
-            this.startNetworkMonitoring();
+            this.updateNetworkStatus();
             this.startSyncLoop();
             this.startReadersHeartbeat();
         },
@@ -409,28 +413,18 @@ function timingManager() {
             this.pendingCount = this.pendingTimes.length;
         },
 
-        // Monitor network status
-        startNetworkMonitoring() {
-            // Check online/offline events
-            window.addEventListener('online', () => {
-                console.log('🟢 Connexion rétablie');
-                this.networkStatus = 'online';
-                this.syncPendingTimes();
-            });
-
-            window.addEventListener('offline', () => {
-                console.log('🔴 Connexion perdue');
-                this.networkStatus = 'offline';
-            });
-
-            // Initial check
-            this.networkStatus = navigator.onLine ? 'online' : 'offline';
+        // Update network status based on pending times count
+        updateNetworkStatus() {
+            if (this.networkStatus === 'syncing') {
+                return; // Don't change during sync
+            }
+            this.networkStatus = this.pendingCount > 0 ? 'pending' : 'ready';
         },
 
         // Sync loop - try to sync pending times every 10 seconds
         startSyncLoop() {
             this.syncInterval = setInterval(() => {
-                if (this.pendingCount > 0 && navigator.onLine) {
+                if (this.pendingCount > 0) {
                     this.syncPendingTimes();
                 }
             }, 10000);
@@ -455,14 +449,12 @@ function timingManager() {
 
             this.pendingTimes = failedTimes;
             this.savePendingTimes();
+            this.updateNetworkStatus();
 
             if (this.pendingCount === 0) {
-                this.networkStatus = 'online';
                 this.successMessage = '✅ Tous les temps ont été synchronisés';
                 await this.loadResults();
                 setTimeout(() => { this.successMessage = null; }, 3000);
-            } else {
-                this.networkStatus = 'offline';
             }
         },
 
@@ -679,14 +671,14 @@ function timingManager() {
 
             } catch (error) {
                 // Failed - check if it's a network error
-                if (error.code === 'ERR_NETWORK' || !navigator.onLine) {
+                if (error.code === 'ERR_NETWORK') {
                     // Store locally
                     this.pendingTimes.push(timeData);
                     this.savePendingTimes();
-                    this.networkStatus = 'offline';
+                    this.updateNetworkStatus();
 
                     this.showSuccessAnimation(bibNumberToShow);
-                    this.successMessage = `📦 Temps sauvegardé localement (Dossard ${bibNumberToShow}) - Sera synchronisé quand la connexion reviendra`;
+                    this.successMessage = `📦 Temps sauvegardé localement (Dossard ${bibNumberToShow}) - Sera synchronisé automatiquement`;
                     this.bibNumber = '';
 
                     setTimeout(() => {
@@ -819,13 +811,13 @@ function timingManager() {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.network-status-bar.status-online {
+.network-status-bar.status-ready {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     color: white;
 }
 
-.network-status-bar.status-offline {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+.network-status-bar.status-pending {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
     color: white;
 }
 
