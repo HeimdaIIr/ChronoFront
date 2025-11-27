@@ -139,8 +139,8 @@ class EntrantController extends Controller
             'event_id' => 'required|integer',
         ]);
 
-        // Verify event exists in chronofront database
-        $event = \App\Models\ChronoFront\Event::find($validated['event_id']);
+        // Verify event exists
+        $event = \App\Models\Event::find($validated['event_id']);
         if (!$event) {
             return response()->json([
                 'message' => 'Événement non trouvé',
@@ -159,7 +159,7 @@ class EntrantController extends Controller
         $racesCache = []; // Cache pour éviter de recréer les races
         $wavesCache = []; // Cache pour éviter de recréer les vagues
 
-        DB::connection('chronofront')->beginTransaction();
+        DB::beginTransaction();
 
         try {
             foreach ($csvData as $index => $row) {
@@ -317,7 +317,7 @@ class EntrantController extends Controller
                 $imported++;
             }
 
-            DB::connection('chronofront')->commit();
+            DB::commit();
 
             return response()->json([
                 'message' => "Import réussi",
@@ -329,7 +329,7 @@ class EntrantController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            DB::connection('chronofront')->rollBack();
+            DB::rollBack();
 
             return response()->json([
                 'message' => 'Import échoué',
