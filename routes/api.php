@@ -46,6 +46,7 @@ Route::post('entrants/import', [EntrantController::class, 'import']);
 Route::apiResource('entrants', EntrantController::class);
 
 // Results/Timing Routes
+Route::get('results', [ResultController::class, 'index']);
 Route::get('results/race/{raceId}', [ResultController::class, 'byRace']);
 Route::post('results/time', [ResultController::class, 'addTime']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);

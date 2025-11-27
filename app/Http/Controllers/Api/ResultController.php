@@ -13,6 +13,19 @@ use Illuminate\Support\Facades\DB;
 class ResultController extends Controller
 {
     /**
+     * Display all results across all races
+     */
+    public function index(): JsonResponse
+    {
+        $results = Result::with(['entrant.category', 'wave', 'race'])
+            ->orderBy('raw_time', 'desc')
+            ->limit(100) // Limit to last 100 results for performance
+            ->get();
+
+        return response()->json($results);
+    }
+
+    /**
      * Display results for a specific race
      */
     public function byRace(int $raceId): JsonResponse
@@ -31,7 +44,7 @@ class ResultController extends Controller
     public function addTime(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'race_id' => 'required|exists:races,id',
+            'race_id' => 'sometimes|exists:races,id',
             'entrant_id' => 'sometimes|exists:entrants,id',
             'bib_number' => 'sometimes|string',
             'rfid_tag' => 'sometimes|string',
@@ -44,13 +57,18 @@ class ResultController extends Controller
             $entrant = null;
 
             if (isset($validated['bib_number'])) {
-                $entrant = Entrant::where('bib_number', $validated['bib_number'])
-                    ->where('race_id', $validated['race_id'])
-                    ->first();
+                // If race_id provided, filter by it, otherwise search across all races
+                $query = Entrant::where('bib_number', $validated['bib_number']);
+                if (isset($validated['race_id'])) {
+                    $query->where('race_id', $validated['race_id']);
+                }
+                $entrant = $query->first();
             } elseif (isset($validated['rfid_tag'])) {
-                $entrant = Entrant::where('rfid_tag', $validated['rfid_tag'])
-                    ->where('race_id', $validated['race_id'])
-                    ->first();
+                $query = Entrant::where('rfid_tag', $validated['rfid_tag']);
+                if (isset($validated['race_id'])) {
+                    $query->where('race_id', $validated['race_id']);
+                }
+                $entrant = $query->first();
             }
 
             if (!$entrant) {
@@ -61,9 +79,17 @@ class ResultController extends Controller
 
             $validated['entrant_id'] = $entrant->id;
             $validated['rfid_tag'] = $entrant->rfid_tag;
+            // Get race_id from entrant if not provided
+            if (!isset($validated['race_id'])) {
+                $validated['race_id'] = $entrant->race_id;
+            }
         } else {
             $entrant = Entrant::findOrFail($validated['entrant_id']);
             $validated['rfid_tag'] = $entrant->rfid_tag;
+            // Get race_id from entrant if not provided
+            if (!isset($validated['race_id'])) {
+                $validated['race_id'] = $entrant->race_id;
+            }
         }
 
         // Set raw_time to now if not provided
