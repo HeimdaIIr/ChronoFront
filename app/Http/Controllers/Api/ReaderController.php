@@ -16,7 +16,13 @@ class ReaderController extends Controller
     {
         $readers = Reader::with(['event', 'race'])
             ->orderBy('location')
-            ->get();
+            ->get()
+            ->map(function ($reader) {
+                // Check if reader is online (heartbeat within last 60 seconds)
+                $reader->is_online = $reader->date_test &&
+                    now()->diffInSeconds($reader->date_test) < 60;
+                return $reader;
+            });
 
         return response()->json($readers);
     }
@@ -91,7 +97,13 @@ class ReaderController extends Controller
         $readers = Reader::where('event_id', $eventId)
             ->with('race')
             ->orderBy('location')
-            ->get();
+            ->get()
+            ->map(function ($reader) {
+                // Check if reader is online (heartbeat within last 60 seconds)
+                $reader->is_online = $reader->date_test &&
+                    now()->diffInSeconds($reader->date_test) < 60;
+                return $reader;
+            });
 
         return response()->json($readers);
     }

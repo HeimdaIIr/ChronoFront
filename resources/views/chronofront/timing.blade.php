@@ -649,13 +649,13 @@ body {
                 <span class="event-status" x-show="!hasOngoingRaces() && races.length > 0" style="background: #f59e0b;">En attente</span>
             </div>
             <div class="topbar-right">
-                <div class="sync-status" x-show="readers.length > 0 && readers.every(r => r.is_active)">
+                <div class="sync-status" x-show="readers.length > 0 && readers.every(r => r.is_online)">
                     <i class="bi bi-check-circle-fill"></i>
                     <span>Synchro OK</span>
                 </div>
-                <div class="sync-status" x-show="readers.length === 0 || readers.some(r => !r.is_active)" style="color: #f59e0b;">
+                <div class="sync-status" x-show="readers.length === 0 || readers.some(r => !r.is_online)" style="color: #f59e0b;">
                     <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>Problème synchro</span>
+                    <span>Lecteurs hors ligne</span>
                 </div>
                 <a href="{{ route('dashboard') }}" class="icon-btn"><i class="bi bi-x-lg"></i></a>
             </div>
@@ -670,9 +670,9 @@ body {
                     <div class="main-clock" x-text="currentTime"></div>
                     <div class="readers-status" x-show="readers.length > 0">
                         <template x-for="reader in readers" :key="reader.id">
-                            <div class="reader-item" :class="{ 'warning': !reader.is_active || !reader.test_terrain }">
+                            <div class="reader-item" :class="{ 'warning': !reader.is_online }">
                                 <span x-text="reader.location || reader.name"></span>:
-                                <strong x-text="(reader.is_active && reader.test_terrain) ? 'OK' : 'Attent.'"></strong>
+                                <strong x-text="reader.is_online ? 'OK' : 'Hors ligne'"></strong>
                             </div>
                         </template>
                     </div>
@@ -913,9 +913,9 @@ function chronoApp() {
                 this.readers = response.data;
 
                 // Check if any reader has issues
-                const inactiveReaders = this.readers.filter(r => !r.is_active || !r.test_terrain);
-                if (inactiveReaders.length > 0) {
-                    this.alertMessage = `Attention : ${inactiveReaders.length} lecteur(s) inactif(s) ou non testé(s)`;
+                const offlineReaders = this.readers.filter(r => !r.is_online);
+                if (offlineReaders.length > 0) {
+                    this.alertMessage = `Attention : ${offlineReaders.length} lecteur(s) hors ligne`;
                 } else if (this.readers.length > 0) {
                     this.alertMessage = null; // Clear alert if all readers are OK
                 }
