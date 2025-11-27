@@ -18,9 +18,21 @@ class ReaderController extends Controller
             ->orderBy('location')
             ->get()
             ->map(function ($reader) {
-                // Check if reader is online (heartbeat within last 60 seconds)
-                $reader->is_online = $reader->date_test &&
-                    now()->diffInSeconds($reader->date_test) < 60;
+                // Check reader connection status
+                if (!$reader->date_test) {
+                    // Never received data from this reader
+                    $reader->is_online = false;
+                    $reader->connection_status = 'never_connected';
+                } elseif (now()->diffInSeconds($reader->date_test) < 60) {
+                    // Received data within last 60 seconds
+                    $reader->is_online = true;
+                    $reader->connection_status = 'online';
+                } else {
+                    // Last data older than 60 seconds
+                    $reader->is_online = false;
+                    $reader->connection_status = 'offline';
+                    $reader->last_seen = $reader->date_test->diffForHumans();
+                }
                 return $reader;
             });
 
@@ -99,9 +111,21 @@ class ReaderController extends Controller
             ->orderBy('location')
             ->get()
             ->map(function ($reader) {
-                // Check if reader is online (heartbeat within last 60 seconds)
-                $reader->is_online = $reader->date_test &&
-                    now()->diffInSeconds($reader->date_test) < 60;
+                // Check reader connection status
+                if (!$reader->date_test) {
+                    // Never received data from this reader
+                    $reader->is_online = false;
+                    $reader->connection_status = 'never_connected';
+                } elseif (now()->diffInSeconds($reader->date_test) < 60) {
+                    // Received data within last 60 seconds
+                    $reader->is_online = true;
+                    $reader->connection_status = 'online';
+                } else {
+                    // Last data older than 60 seconds
+                    $reader->is_online = false;
+                    $reader->connection_status = 'offline';
+                    $reader->last_seen = $reader->date_test->diffForHumans();
+                }
                 return $reader;
             });
 
