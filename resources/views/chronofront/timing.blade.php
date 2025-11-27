@@ -3,280 +3,314 @@
 @section('title', 'Chronométrage')
 
 @section('content')
-<div class="timing-container" x-data="timingManager()">
-    <!-- Header -->
-    <div class="timing-header">
-        <div class="header-content">
-            <div class="header-title">
-                <div class="pulse-dot"></div>
-                <h1>Chronométrage Live</h1>
-            </div>
-            <p class="header-subtitle">Système de chronométrage temps réel haute précision</p>
+<div class="chrono-app" x-data="timingManager()">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-icons">
+            <a href="/events" class="sidebar-icon" title="Événements">
+                <i class="bi bi-calendar-event"></i>
+            </a>
+            <a href="/entrants" class="sidebar-icon" title="Participants">
+                <i class="bi bi-people"></i>
+            </a>
+            <a href="/races" class="sidebar-icon" title="Épreuves">
+                <i class="bi bi-trophy"></i>
+            </a>
+            <a href="/results" class="sidebar-icon active" title="Chronométrage">
+                <i class="bi bi-stopwatch"></i>
+            </a>
+            <a href="#" class="sidebar-icon" title="Classements">
+                <i class="bi bi-bar-chart"></i>
+            </a>
+            <a href="#" class="sidebar-icon" title="Lecteurs">
+                <i class="bi bi-hdd-network"></i>
+            </a>
         </div>
-        <div class="header-actions">
-            <button class="btn-recalculate" @click="recalculatePositions" :disabled="!selectedRace || recalculating">
-                <i class="bi bi-calculator"></i>
-                <span x-show="!recalculating">Recalculer</span>
-                <span x-show="recalculating">
-                    <span class="spinner"></span>
-                    Calcul...
-                </span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="race-info">
+                <template x-for="race in filteredRaces" :key="race.id">
+                    <div x-show="race.id == selectedRace">
+                        <h1 class="race-title" x-text="race.name"></h1>
+                        <span class="race-status" x-text="race.start_time ? 'Course en cours' : 'En attente'"></span>
+                    </div>
+                </template>
+                <div x-show="!selectedRace">
+                    <h1 class="race-title">Aucune épreuve sélectionnée</h1>
+                    <span class="race-status">Sélectionnez une épreuve</span>
+                </div>
+            </div>
+            <div class="top-bar-actions">
+                <div class="sync-status">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Synchro OK</span>
+                </div>
+                <button class="icon-btn" @click="showSettings = !showSettings">
+                    <i class="bi bi-gear"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Readers Status -->
+        <div class="readers-status" x-show="selectedRace">
+            <div class="reader-badge status-ok">
+                <span>Départ:</span>
+                <strong>OK</strong>
+            </div>
+            <div class="reader-badge status-ok">
+                <span>Inter 1:</span>
+                <strong>OK</strong>
+            </div>
+            <div class="reader-badge status-warning">
+                <span>Inter 2:</span>
+                <strong>Attent.</strong>
+            </div>
+            <div class="reader-badge status-ok">
+                <span>Inter 3:</span>
+                <strong>OK</strong>
+            </div>
+            <div class="reader-badge status-ok">
+                <span>Inter 4:</span>
+                <strong>OK</strong>
+            </div>
+            <div class="reader-badge status-ok">
+                <span>Arrivée:</span>
+                <strong>OK</strong>
+            </div>
+        </div>
+
+        <!-- Clock Section -->
+        <div class="clock-section" x-show="selectedRace">
+            <div class="race-clock" x-text="currentTime"></div>
+        </div>
+
+        <!-- Race Selection (when no race selected) -->
+        <div class="race-selection-panel" x-show="!selectedRace">
+            <div class="selection-card">
+                <h3>Sélection Épreuve</h3>
+                <div class="form-group">
+                    <label>Événement</label>
+                    <select class="form-control" x-model="selectedEvent" @change="onEventChange">
+                        <option value="">Sélectionnez un événement</option>
+                        <template x-for="event in events" :key="event.id">
+                            <option :value="event.id" x-text="event.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Épreuve</label>
+                    <select class="form-control" x-model="selectedRace" @change="onRaceChange">
+                        <option value="">Sélectionnez une épreuve</option>
+                        <template x-for="race in filteredRaces" :key="race.id">
+                            <option :value="race.id">
+                                <span x-show="race.display_order" x-text="'#' + race.display_order + ' - '"></span>
+                                <span x-text="race.name"></span>
+                            </option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Filters -->
+        <div class="filters-bar" x-show="selectedRace">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input
+                    type="text"
+                    placeholder="Rechercher dossard / nom"
+                    x-model="searchQuery"
+                    @input="filterResults"
+                >
+            </div>
+            <select class="filter-select" x-model="categoryFilter" @change="filterResults">
+                <option value="">Catégorie</option>
+                <option value="V1F">V1F</option>
+                <option value="V1E">V1E</option>
+            </select>
+            <select class="filter-select" x-model="sasFilter" @change="filterResults">
+                <option value="">SAS</option>
+                <option value="1">SAS 1</option>
+                <option value="2">SAS 2</option>
+            </select>
+            <button class="filter-btn">
+                <i class="bi bi-funnel"></i>
+                Filtrer
             </button>
         </div>
-    </div>
 
-    <!-- Alert Messages -->
-    <div x-show="successMessage" x-transition class="alert alert-success-modern">
-        <i class="bi bi-check-circle-fill"></i>
-        <span x-text="successMessage"></span>
-        <button @click="successMessage = null" class="alert-close">×</button>
-    </div>
-
-    <div x-show="errorMessage" x-transition class="alert alert-error-modern">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <span x-text="errorMessage"></span>
-        <button @click="errorMessage = null" class="alert-close">×</button>
-    </div>
-
-    <div class="timing-grid">
-        <!-- Left Panel -->
-        <div class="left-panel">
-            <!-- Race Selection Card -->
-            <div class="glass-card">
-                <div class="card-header-modern gradient-primary">
-                    <i class="bi bi-trophy"></i>
-                    <h3>Sélection Épreuve</h3>
-                </div>
-                <div class="card-body-modern">
-                    <div class="form-group-modern">
-                        <label>Événement</label>
-                        <select class="select-modern" x-model="selectedEvent" @change="onEventChange">
-                            <option value="">Sélectionnez un événement</option>
-                            <template x-for="event in events" :key="event.id">
-                                <option :value="event.id" x-text="event.name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div class="form-group-modern">
-                        <label>Épreuve</label>
-                        <select class="select-modern" x-model="selectedRace" @change="onRaceChange">
-                            <option value="">Sélectionnez une épreuve</option>
-                            <template x-for="race in filteredRaces" :key="race.id">
-                                <option :value="race.id">
-                                    <span x-show="race.display_order" x-text="'#' + race.display_order + ' - '"></span>
-                                    <span x-text="race.name"></span>
-                                </option>
-                            </template>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TOP Départ Card -->
-            <div x-show="selectedRace" x-transition class="glass-card start-card">
-                <div class="card-header-modern gradient-success">
-                    <i class="bi bi-flag-fill"></i>
-                    <h3>Départ Épreuve</h3>
-                </div>
-                <div class="card-body-modern text-center">
-                    <template x-for="race in filteredRaces" :key="race.id">
-                        <div x-show="race.id == selectedRace">
-                            <div class="race-info-badge">
-                                <span x-show="race.display_order" class="order-number" x-text="'#' + race.display_order"></span>
-                                <h4 x-text="race.name"></h4>
-                            </div>
-                            <div x-show="race.start_time" class="start-time-info">
-                                <i class="bi bi-clock-history"></i>
-                                Départ: <strong x-text="formatTime(race.start_time)"></strong>
-                            </div>
-                            <button
-                                class="btn-start-race"
-                                :class="race.start_time ? 'started' : ''"
-                                @click="topDepart(race)"
-                                :disabled="race.start_time || startingRace"
-                            >
-                                <span class="btn-icon">🚀</span>
-                                <span class="btn-text" x-show="!race.start_time && !startingRace">TOP DÉPART</span>
-                                <span class="btn-text" x-show="race.start_time">Départ donné</span>
-                                <span class="btn-text" x-show="startingRace">
-                                    <span class="spinner-sm"></span>
-                                    Enregistrement...
-                                </span>
-                            </button>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Active Waves -->
-            <div x-show="selectedRace && waves.length > 0" x-transition class="glass-card">
-                <div class="card-header-modern gradient-info">
-                    <i class="bi bi-flag-fill"></i>
-                    <h3>Vagues Actives</h3>
-                </div>
-                <div class="waves-list">
-                    <template x-for="wave in waves" :key="wave.id">
-                        <div class="wave-item">
-                            <div class="wave-info">
-                                <strong x-text="wave.name"></strong>
-                                <span x-show="wave.is_started && !wave.end_time" class="wave-badge active">
-                                    <i class="bi bi-play-fill"></i> En cours
-                                </span>
-                                <span x-show="!wave.is_started" class="wave-badge pending">
-                                    <i class="bi bi-clock"></i> En attente
-                                </span>
-                                <div class="wave-time" x-show="wave.start_time">
-                                    <i class="bi bi-clock"></i> <span x-text="formatTime(wave.start_time)"></span>
-                                </div>
-                            </div>
-                            <span class="wave-count" x-text="(wave.entrants?.length || 0)"></span>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Quick Entry Card -->
-            <div x-show="selectedRace" x-transition class="glass-card quick-entry-card">
-                <div class="card-header-modern gradient-warning">
-                    <i class="bi bi-lightning-fill"></i>
-                    <h3>Saisie Rapide</h3>
-                </div>
-                <div class="card-body-modern">
-                    <form @submit.prevent="addTime">
-                        <div class="quick-entry-input">
-                            <label>N° Dossard</label>
-                            <input
-                                type="text"
-                                class="input-modern input-large"
-                                x-model="bibNumber"
-                                placeholder="Ex: 2113"
-                                autofocus
-                                :disabled="!selectedRace || saving"
-                            >
-                        </div>
-                        <button
-                            type="submit"
-                            class="btn-submit-time"
-                            :disabled="!bibNumber || !selectedRace || saving"
+        <!-- Results Table -->
+        <div class="results-table-wrapper" x-show="selectedRace && !loading">
+            <table class="results-table-dark">
+                <thead>
+                    <tr>
+                        <th>Dossard</th>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>SAS</th>
+                        <th>Départ</th>
+                        <th>Inter 1</th>
+                        <th>Inter 2</th>
+                        <th>Arrivée</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="result in displayedResults" :key="result.id">
+                        <tr
+                            class="result-row-dark"
+                            :class="{ 'selected': selectedResult?.id === result.id }"
+                            @click="selectResult(result)"
                         >
-                            <i class="bi bi-stopwatch"></i>
-                            <span x-show="!saving">Enregistrer Temps</span>
-                            <span x-show="saving">
-                                <span class="spinner-sm"></span>
-                                Enregistrement...
-                            </span>
-                        </button>
-                        <p class="input-hint">Saisissez le dossard et appuyez sur Entrée</p>
-                    </form>
-                </div>
+                            <td><strong x-text="result.entrant?.bib_number"></strong></td>
+                            <td x-text="result.entrant?.firstname + ' ' + result.entrant?.lastname"></td>
+                            <td><span class="category-badge" x-text="result.entrant?.category?.name"></span></td>
+                            <td x-text="result.wave?.wave_number || '-'"></td>
+                            <td x-text="formatTimeShort(result.raw_time)"></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td x-text="formatTimeShort(result.raw_time)"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <!-- Empty state -->
+            <div x-show="results.length === 0" class="empty-state-dark">
+                <i class="bi bi-inbox"></i>
+                <p>Aucune détection pour cette épreuve</p>
             </div>
         </div>
 
-        <!-- Right Panel - Results -->
-        <div class="right-panel">
-            <div class="glass-card results-card">
-                <div class="card-header-modern gradient-dark">
-                    <div class="header-left">
-                        <i class="bi bi-list-check"></i>
-                        <h3>Détections Temps Réel</h3>
-                        <span x-show="results.length > 0" class="count-badge" x-text="results.length"></span>
+        <!-- Loading state -->
+        <div x-show="loading" class="loading-state-dark">
+            <div class="spinner-dark"></div>
+            <p>Chargement des résultats...</p>
+        </div>
+
+        <!-- Alert Bar -->
+        <div class="alert-bar" x-show="errorMessage || successMessage">
+            <div x-show="errorMessage" class="alert-message alert-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span x-text="errorMessage"></span>
+            </div>
+            <div x-show="successMessage" class="alert-message alert-success">
+                <i class="bi bi-check-circle-fill"></i>
+                <span x-text="successMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Participant Detail -->
+    <div class="detail-panel" x-show="selectedResult">
+        <div class="detail-header">
+            <div class="detail-bib">
+                <span class="label">Dossard</span>
+                <span class="value" x-text="'#' + (selectedResult?.entrant?.bib_number || '')"></span>
+            </div>
+            <button class="close-btn" @click="selectedResult = null">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="detail-body">
+            <h2 class="runner-name" x-text="(selectedResult?.entrant?.firstname || '') + ' ' + (selectedResult?.entrant?.lastname || '')"></h2>
+
+            <!-- Timeline -->
+            <div class="timeline">
+                <div class="timeline-item status-ok">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Départ</span>
+                        <span class="time" x-text="formatTimeShort(selectedResult?.raw_time)"></span>
                     </div>
-                    <button class="btn-refresh" @click="loadResults" :disabled="!selectedRace">
-                        <i class="bi bi-arrow-clockwise"></i> Actualiser
+                </div>
+
+                <div class="timeline-item status-ok">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Inter 1</span>
+                        <span class="time">09:02:13</span>
+                    </div>
+                </div>
+
+                <div class="timeline-item status-ok">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Inter 2</span>
+                        <span class="time">09:46:12</span>
+                    </div>
+                </div>
+
+                <div class="timeline-item status-warning">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Non détecté</span>
+                        <span class="action">ajouter temps manuel</span>
+                    </div>
+                </div>
+
+                <div class="timeline-item status-ok">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Inter 4</span>
+                        <span class="time">10:27:11</span>
+                    </div>
+                </div>
+
+                <div class="timeline-item status-ok">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="checkpoint">Arrivée</span>
+                        <span class="time">11:18:17</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Entry -->
+            <div class="quick-entry-panel">
+                <h4>Saisie Rapide</h4>
+                <form @submit.prevent="addTime">
+                    <div class="form-group">
+                        <label>Numéro de dossard</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            x-model="bibNumber"
+                            placeholder="Ex: 254"
+                            :disabled="!selectedRace || saving"
+                        >
+                    </div>
+                    <button type="submit" class="btn-primary" :disabled="!bibNumber || saving">
+                        <i class="bi bi-stopwatch"></i>
+                        <span x-show="!saving">Enregistrer temps</span>
+                        <span x-show="saving">Enregistrement...</span>
                     </button>
-                </div>
+                </form>
+            </div>
 
-                <div class="results-body">
-                    <!-- Empty State -->
-                    <div x-show="!selectedRace" class="empty-state">
-                        <i class="bi bi-info-circle"></i>
-                        <p>Sélectionnez une épreuve pour commencer</p>
-                    </div>
-
-                    <!-- Loading State -->
-                    <div x-show="selectedRace && loading" class="loading-state">
-                        <div class="spinner-large"></div>
-                        <p>Chargement des résultats...</p>
-                    </div>
-
-                    <!-- No Results -->
-                    <div x-show="selectedRace && !loading && results.length === 0" class="empty-state">
-                        <i class="bi bi-inbox"></i>
-                        <p>Aucune détection enregistrée</p>
-                    </div>
-
-                    <!-- Results Table -->
-                    <div x-show="selectedRace && !loading && results.length > 0" class="results-table-container">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th>Heure</th>
-                                    <th>Dossard</th>
-                                    <th>Participant</th>
-                                    <th>Vague</th>
-                                    <th>Tour</th>
-                                    <th>Temps</th>
-                                    <th>Vitesse</th>
-                                    <th>Statut</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="result in results" :key="result.id">
-                                    <tr class="result-row">
-                                        <td>
-                                            <span class="time-cell" x-text="formatTime(result.raw_time)"></span>
-                                            <span x-show="result.is_manual" class="manual-badge" title="Saisie manuelle">
-                                                <i class="bi bi-pencil-fill"></i>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="bib-number" x-text="result.entrant?.bib_number"></span>
-                                        </td>
-                                        <td>
-                                            <span class="participant-name" x-text="result.entrant?.firstname + ' ' + result.entrant?.lastname"></span>
-                                        </td>
-                                        <td>
-                                            <span class="wave-tag" x-text="result.wave?.name"></span>
-                                        </td>
-                                        <td>
-                                            <span class="lap-tag" x-text="'Tour ' + result.lap_number"></span>
-                                        </td>
-                                        <td>
-                                            <span class="duration-cell" x-text="formatDuration(result.calculated_time)"></span>
-                                        </td>
-                                        <td>
-                                            <span class="speed-cell" x-text="result.speed ? result.speed + ' km/h' : 'N/A'"></span>
-                                        </td>
-                                        <td>
-                                            <select
-                                                class="status-select"
-                                                :class="'status-' + result.status.toLowerCase()"
-                                                :value="result.status"
-                                                @change="updateStatus(result, $event.target.value)"
-                                            >
-                                                <option value="V">V - Validé</option>
-                                                <option value="DNS">DNS - Non parti</option>
-                                                <option value="DNF">DNF - Abandon</option>
-                                                <option value="DSQ">DSQ - Disqualifié</option>
-                                                <option value="NS">NS - Non classé</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <button
-                                                class="btn-delete"
-                                                @click="deleteResult(result)"
-                                                title="Supprimer"
-                                            >
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- Actions -->
+            <div class="detail-actions">
+                <button class="btn-secondary" @click="recalculatePositions" :disabled="recalculating">
+                    <i class="bi bi-calculator"></i>
+                    <span x-show="!recalculating">Recalculer</span>
+                    <span x-show="recalculating">Calcul...</span>
+                </button>
+                <template x-for="race in filteredRaces" :key="race.id">
+                    <button
+                        x-show="race.id == selectedRace && !race.start_time"
+                        class="btn-success"
+                        @click="topDepart(race)"
+                        :disabled="startingRace"
+                    >
+                        <i class="bi bi-flag-fill"></i>
+                        <span x-show="!startingRace">TOP DÉPART</span>
+                        <span x-show="startingRace">Démarrage...</span>
+                    </button>
+                </template>
             </div>
         </div>
     </div>
@@ -290,9 +324,14 @@ function timingManager() {
         filteredRaces: [],
         waves: [],
         results: [],
+        displayedResults: [],
         selectedEvent: '',
         selectedRace: '',
+        selectedResult: null,
         bibNumber: '',
+        searchQuery: '',
+        categoryFilter: '',
+        sasFilter: '',
         loading: false,
         saving: false,
         startingRace: false,
@@ -300,10 +339,28 @@ function timingManager() {
         successMessage: null,
         errorMessage: null,
         autoRefreshInterval: null,
+        currentTime: '00:00:00',
+        clockInterval: null,
 
         init() {
             this.loadEvents();
             this.loadRaces();
+            this.startClock();
+        },
+
+        startClock() {
+            this.updateClock();
+            this.clockInterval = setInterval(() => {
+                this.updateClock();
+            }, 1000);
+        },
+
+        updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            this.currentTime = `${hours}:${minutes}:${seconds}`;
         },
 
         async loadEvents() {
@@ -311,7 +368,7 @@ function timingManager() {
                 const response = await axios.get('/events');
                 this.events = response.data;
             } catch (error) {
-                console.error('Erreur lors du chargement des événements', error);
+                console.error('Erreur chargement événements', error);
             }
         },
 
@@ -320,7 +377,7 @@ function timingManager() {
                 const response = await axios.get('/races');
                 this.races = response.data;
             } catch (error) {
-                console.error('Erreur lors du chargement des épreuves', error);
+                console.error('Erreur chargement épreuves', error);
             }
         },
 
@@ -334,17 +391,14 @@ function timingManager() {
             this.filteredRaces.sort((a, b) => {
                 if (a.display_order && b.display_order) {
                     return a.display_order - b.display_order;
-                } else if (a.display_order) {
-                    return -1;
-                } else if (b.display_order) {
-                    return 1;
                 }
                 return 0;
             });
 
             this.selectedRace = '';
             this.results = [];
-            this.waves = [];
+            this.displayedResults = [];
+            this.selectedResult = null;
         },
 
         async onRaceChange() {
@@ -355,7 +409,8 @@ function timingManager() {
             } else {
                 this.stopAutoRefresh();
                 this.results = [];
-                this.waves = [];
+                this.displayedResults = [];
+                this.selectedResult = null;
             }
         },
 
@@ -364,7 +419,7 @@ function timingManager() {
                 const response = await axios.get(`/waves/race/${this.selectedRace}`);
                 this.waves = response.data;
             } catch (error) {
-                console.error('Erreur lors du chargement des vagues', error);
+                console.error('Erreur chargement vagues', error);
             }
         },
 
@@ -377,11 +432,32 @@ function timingManager() {
                 this.results = response.data.sort((a, b) => {
                     return new Date(b.raw_time) - new Date(a.raw_time);
                 });
+                this.filterResults();
             } catch (error) {
-                console.error('Erreur lors du chargement des résultats', error);
+                console.error('Erreur chargement résultats', error);
             } finally {
                 this.loading = false;
             }
+        },
+
+        filterResults() {
+            this.displayedResults = this.results.filter(result => {
+                const matchesSearch = !this.searchQuery ||
+                    result.entrant?.bib_number?.toString().includes(this.searchQuery) ||
+                    (result.entrant?.firstname + ' ' + result.entrant?.lastname).toLowerCase().includes(this.searchQuery.toLowerCase());
+
+                const matchesCategory = !this.categoryFilter ||
+                    result.entrant?.category?.name === this.categoryFilter;
+
+                const matchesSas = !this.sasFilter ||
+                    result.wave?.wave_number?.toString() === this.sasFilter;
+
+                return matchesSearch && matchesCategory && matchesSas;
+            });
+        },
+
+        selectResult(result) {
+            this.selectedResult = result;
         },
 
         async addTime() {
@@ -391,7 +467,7 @@ function timingManager() {
             this.errorMessage = null;
 
             try {
-                const response = await axios.post('/results/time', {
+                await axios.post('/results/time', {
                     race_id: this.selectedRace,
                     bib_number: this.bibNumber,
                     is_manual: true
@@ -406,36 +482,9 @@ function timingManager() {
                 }, 3000);
 
             } catch (error) {
-                this.errorMessage = error.response?.data?.message || 'Erreur lors de l\'enregistrement du temps';
+                this.errorMessage = error.response?.data?.message || 'Erreur enregistrement';
             } finally {
                 this.saving = false;
-            }
-        },
-
-        async updateStatus(result, newStatus) {
-            try {
-                await axios.put(`/results/${result.id}`, {
-                    status: newStatus
-                });
-                result.status = newStatus;
-                this.successMessage = 'Statut mis à jour';
-                setTimeout(() => {
-                    this.successMessage = null;
-                }, 2000);
-            } catch (error) {
-                this.errorMessage = 'Erreur lors de la mise à jour du statut';
-            }
-        },
-
-        async deleteResult(result) {
-            if (!confirm(`Supprimer la détection du dossard ${result.entrant?.bib_number} ?`)) return;
-
-            try {
-                await axios.delete(`/results/${result.id}`);
-                this.successMessage = 'Détection supprimée';
-                await this.loadResults();
-            } catch (error) {
-                this.errorMessage = 'Erreur lors de la suppression';
             }
         },
 
@@ -448,31 +497,24 @@ function timingManager() {
                 this.successMessage = response.data.message;
                 await this.loadResults();
             } catch (error) {
-                this.errorMessage = 'Erreur lors du recalcul des positions';
+                this.errorMessage = 'Erreur recalcul';
             } finally {
                 this.recalculating = false;
             }
         },
 
         async topDepart(race) {
-            if (!confirm(`Donner le TOP DÉPART pour l'épreuve "${race.name}" ?\n\nL'heure actuelle sera enregistrée comme heure de départ.`)) return;
+            if (!confirm(`Donner le TOP DÉPART pour "${race.name}" ?`)) return;
 
             this.startingRace = true;
-            this.errorMessage = null;
-
             try {
                 await axios.post(`/races/${race.id}/start`);
                 race.start_time = new Date().toISOString();
-                this.successMessage = `🚀 TOP DÉPART donné pour "${race.name}" !`;
-
+                this.successMessage = `TOP DÉPART donné pour "${race.name}"`;
                 await this.loadRaces();
                 await this.onEventChange();
-
-                setTimeout(() => {
-                    this.successMessage = null;
-                }, 5000);
             } catch (error) {
-                this.errorMessage = error.response?.data?.message || 'Erreur lors du TOP DÉPART';
+                this.errorMessage = 'Erreur TOP DÉPART';
             } finally {
                 this.startingRace = false;
             }
@@ -488,722 +530,610 @@ function timingManager() {
         stopAutoRefresh() {
             if (this.autoRefreshInterval) {
                 clearInterval(this.autoRefreshInterval);
-                this.autoRefreshInterval = null;
             }
         },
 
         formatTime(datetime) {
             if (!datetime) return 'N/A';
-            const date = new Date(datetime);
-            return date.toLocaleTimeString('fr-FR');
+            return new Date(datetime).toLocaleTimeString('fr-FR');
         },
 
-        formatDuration(seconds) {
-            if (!seconds) return 'N/A';
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        formatTimeShort(datetime) {
+            if (!datetime) return '-';
+            const date = new Date(datetime);
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
     }
 }
 </script>
 
 <style>
-/* Modern Timing Interface Styles */
-.timing-container {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 2rem;
+/* Base Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Header */
-.timing-header {
+/* Dark Theme */
+.chrono-app {
     display: flex;
-    justify-content: space-between;
+    min-height: 100vh;
+    background: #1a1d2e;
+    color: #e4e4e7;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 70px;
+    background: #0f1117;
+    border-right: 1px solid #2a2d3e;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-icons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 0;
+}
+
+.sidebar-icon {
+    width: 70px;
+    height: 60px;
+    display: flex;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 1.5rem 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    justify-content: center;
+    color: #71717a;
+    font-size: 1.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
 }
 
-.header-content {
+.sidebar-icon:hover {
+    color: #e4e4e7;
+    background: #1a1d2e;
+}
+
+.sidebar-icon.active {
+    color: #22c55e;
+    background: #1a1d2e;
+    border-left-color: #22c55e;
+}
+
+/* Main Content */
+.main-content {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.header-title {
+/* Top Bar */
+.top-bar {
+    height: 60px;
+    background: #0f1117;
+    border-bottom: 1px solid #2a2d3e;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.race-info {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 0.5rem;
 }
 
-.header-title h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin: 0;
-}
-
-.pulse-dot {
-    width: 12px;
-    height: 12px;
-    background: #10b981;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-}
-
-.header-subtitle {
-    color: #64748b;
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-.btn-recalculate {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-recalculate:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-}
-
-.btn-recalculate:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Alerts */
-.alert-success-modern,
-.alert-error-modern {
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 500;
-    animation: slideInDown 0.3s ease;
-}
-
-.alert-success-modern {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-}
-
-.alert-error-modern {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-}
-
-.alert-close {
-    margin-left: auto;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.2s;
-}
-
-.alert-close:hover {
-    opacity: 1;
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Grid Layout */
-.timing-grid {
-    display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 1.5rem;
-}
-
-.left-panel,
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-/* Glass Card */
-.glass-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-}
-
-.card-header-modern {
-    padding: 1.25rem 1.5rem;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 700;
-}
-
-.card-header-modern h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.gradient-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.gradient-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.gradient-info {
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-}
-
-.gradient-dark {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-}
-
-.card-body-modern {
-    padding: 1.5rem;
-}
-
-/* Form Elements */
-.form-group-modern {
-    margin-bottom: 1.25rem;
-}
-
-.form-group-modern label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #334155;
-    font-size: 0.9rem;
-}
-
-.select-modern,
-.input-modern {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    background: white;
-}
-
-.select-modern:focus,
-.input-modern:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-.input-large {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-align: center;
-    padding: 1rem;
-}
-
-/* Race Info Badge */
-.race-info-badge {
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-}
-
-.order-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: white;
-    border-radius: 10px;
-    font-weight: 700;
-}
-
-.race-info-badge h4 {
-    margin: 0;
-    color: #1e293b;
+.race-title {
     font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.start-time-info {
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    color: #1e40af;
     font-weight: 600;
+    color: #e4e4e7;
+    margin-right: 1rem;
 }
 
-/* Start Race Button */
-.btn-start-race {
-    width: 100%;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.race-status {
+    padding: 0.25rem 0.75rem;
+    background: #22c55e;
     color: white;
-    border: none;
-    border-radius: 16px;
-    font-size: 1.5rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.top-bar-actions {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.sync-status {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
-    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+    color: #22c55e;
+    font-weight: 500;
 }
 
-.btn-start-race:hover:not(:disabled) {
-    transform: scale(1.05);
-    box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
-}
-
-.btn-start-race:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-start-race.started {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-}
-
-.btn-icon {
-    font-size: 2.5rem;
-}
-
-/* Waves List */
-.waves-list {
-    padding: 0.5rem;
-}
-
-.wave-item {
+.icon-btn {
+    width: 36px;
+    height: 36px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    margin-bottom: 0.5rem;
-    background: #f8fafc;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #71717a;
+    font-size: 1.25rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background: #2a2d3e;
+    color: #e4e4e7;
+}
+
+/* Readers Status */
+.readers-status {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #2a2d3e;
+}
+
+.reader-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.reader-badge span {
+    color: #a1a1aa;
+}
+
+.reader-badge strong {
+    color: #22c55e;
+}
+
+.reader-badge.status-warning strong {
+    color: #f59e0b;
+}
+
+.reader-badge.status-error strong {
+    color: #ef4444;
+}
+
+/* Clock Section */
+.clock-section {
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid #2a2d3e;
+}
+
+.race-clock {
+    font-size: 6rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #e4e4e7;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Race Selection Panel */
+.race-selection-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.selection-card {
+    width: 100%;
+    max-width: 500px;
+    background: #0f1117;
+    border: 1px solid #2a2d3e;
     border-radius: 12px;
-    transition: all 0.2s ease;
+    padding: 2rem;
 }
 
-.wave-item:hover {
-    background: #f1f5f9;
-    transform: translateX(4px);
+.selection-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #e4e4e7;
 }
 
-.wave-info strong {
-    display: block;
-    color: #1e293b;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
+/* Filters Bar */
+.filters-bar {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #2a2d3e;
 }
 
-.wave-time {
-    color: #64748b;
-    font-size: 0.85rem;
+.search-box {
+    flex: 1;
+    position: relative;
 }
 
-.wave-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #71717a;
+}
+
+.search-box input {
+    width: 100%;
+    height: 40px;
+    background: #0f1117;
+    border: 1px solid #2a2d3e;
     border-radius: 8px;
+    padding: 0 1rem 0 2.5rem;
+    color: #e4e4e7;
+    font-size: 0.875rem;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.filter-select,
+.form-control {
+    height: 40px;
+    background: #0f1117;
+    border: 1px solid #2a2d3e;
+    border-radius: 8px;
+    padding: 0 1rem;
+    color: #e4e4e7;
+    font-size: 0.875rem;
+}
+
+.filter-select:focus,
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.filter-btn {
+    height: 40px;
+    padding: 0 1.5rem;
+    background: #3b82f6;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Results Table */
+.results-table-wrapper {
+    flex: 1;
+    overflow: auto;
+    padding: 1rem 2rem;
+}
+
+.results-table-dark {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results-table-dark thead th {
+    position: sticky;
+    top: 0;
+    background: #0f1117;
+    padding: 0.75rem 1rem;
+    text-align: left;
     font-size: 0.75rem;
     font-weight: 600;
-    margin-top: 0.25rem;
+    color: #a1a1aa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #2a2d3e;
 }
 
-.wave-badge.active {
-    background: #10b981;
-    color: white;
-}
-
-.wave-badge.pending {
-    background: #f59e0b;
-    color: white;
-}
-
-.wave-count {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
-    font-weight: 700;
-}
-
-/* Quick Entry */
-.quick-entry-input {
-    margin-bottom: 1rem;
-}
-
-.btn-submit-time {
-    width: 100%;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
+.result-row-dark {
+    border-bottom: 1px solid #2a2d3e;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    transition: background 0.1s;
 }
 
-.btn-submit-time:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+.result-row-dark:hover {
+    background: #252836;
 }
 
-.btn-submit-time:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.result-row-dark.selected {
+    background: #1e3a5f;
 }
 
-.input-hint {
-    text-align: center;
-    color: #64748b;
-    font-size: 0.85rem;
-    margin: 0;
+.result-row-dark td {
+    padding: 1rem;
+    font-size: 0.875rem;
 }
 
-/* Results Card */
-.results-card {
-    height: fit-content;
-    min-height: 600px;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.count-badge {
-    padding: 0.25rem 0.75rem;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-}
-
-.btn-refresh {
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 600;
-}
-
-.btn-refresh:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.btn-refresh:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.results-body {
-    padding: 1.5rem;
-    min-height: 500px;
+.category-badge {
+    padding: 0.25rem 0.5rem;
+    background: #2a2d3e;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 /* Empty & Loading States */
-.empty-state,
-.loading-state {
+.empty-state-dark,
+.loading-state-dark {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
-    color: #94a3b8;
+    color: #71717a;
+    padding: 4rem;
 }
 
-.empty-state i,
-.loading-state i {
+.empty-state-dark i,
+.loading-state-dark i {
     font-size: 4rem;
     margin-bottom: 1rem;
 }
 
-.empty-state p,
-.loading-state p {
-    font-size: 1.1rem;
-    margin: 0;
-}
-
-/* Spinners */
-.spinner,
-.spinner-sm,
-.spinner-large {
-    display: inline-block;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-.spinner {
-    width: 16px;
-    height: 16px;
-}
-
-.spinner-sm {
-    width: 14px;
-    height: 14px;
-}
-
-.spinner-large {
+.spinner-dark {
     width: 48px;
     height: 48px;
-    border-width: 4px;
+    border: 3px solid #2a2d3e;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* Results Table */
-.results-table-container {
-    overflow-x: auto;
+/* Alert Bar */
+.alert-bar {
+    position: fixed;
+    bottom: 0;
+    left: 70px;
+    right: 400px;
+    padding: 1rem 2rem;
+    background: #7c2d12;
+    border-top: 1px solid #9a3412;
+    z-index: 100;
 }
 
-.results-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 0.5rem;
-}
-
-.results-table thead th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    color: #64748b;
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.result-row {
-    background: #f8fafc;
-    transition: all 0.2s ease;
-}
-
-.result-row:hover {
-    background: #f1f5f9;
-    transform: scale(1.01);
-}
-
-.result-row td {
-    padding: 1rem;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.result-row td:first-child {
-    border-left: 1px solid #e2e8f0;
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
-}
-
-.result-row td:last-child {
-    border-right: 1px solid #e2e8f0;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-}
-
-.time-cell {
-    font-size: 0.9rem;
-    color: #64748b;
+.alert-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 500;
 }
 
-.manual-badge {
-    display: inline-flex;
+.alert-warning {
+    color: #fed7aa;
+}
+
+.alert-success {
+    color: #86efac;
+}
+
+/* Right Panel */
+.detail-panel {
+    width: 400px;
+    background: #0f1117;
+    border-left: 1px solid #2a2d3e;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.detail-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #2a2d3e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detail-bib {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-bib .label {
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-bib .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e4e4e7;
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: #06b6d4;
-    color: white;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    margin-left: 0.5rem;
-}
-
-.bib-number {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #1e293b;
-}
-
-.participant-name {
-    color: #475569;
-    font-weight: 500;
-}
-
-.wave-tag,
-.lap-tag {
-    padding: 0.25rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.wave-tag {
-    background: #e2e8f0;
-    color: #475569;
-}
-
-.lap-tag {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.duration-cell {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1e293b;
-    font-family: 'Courier New', monospace;
-}
-
-.speed-cell {
-    color: #64748b;
-    font-weight: 600;
-}
-
-/* Status Select */
-.status-select {
-    padding: 0.4rem 0.75rem;
-    border: 2px solid;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.status-v {
-    background: #10b981;
-    border-color: #059669;
-    color: white;
-}
-
-.status-dns {
-    background: #f59e0b;
-    border-color: #d97706;
-    color: white;
-}
-
-.status-dnf {
-    background: #ef4444;
-    border-color: #dc2626;
-    color: white;
-}
-
-.status-dsq {
-    background: #dc2626;
-    border-color: #b91c1c;
-    color: white;
-}
-
-.status-ns {
-    background: #6b7280;
-    border-color: #4b5563;
-    color: white;
-}
-
-.btn-delete {
-    padding: 0.5rem 0.75rem;
     background: transparent;
-    color: #ef4444;
-    border: 2px solid #fecaca;
-    border-radius: 8px;
+    border: none;
+    color: #71717a;
     cursor: pointer;
-    transition: all 0.2s ease;
+    border-radius: 6px;
 }
 
-.btn-delete:hover {
-    background: #ef4444;
+.close-btn:hover {
+    background: #2a2d3e;
+    color: #e4e4e7;
+}
+
+.detail-body {
+    padding: 1.5rem;
+}
+
+.runner-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: #e4e4e7;
+}
+
+/* Timeline */
+.timeline {
+    margin-bottom: 2rem;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0;
+}
+
+.timeline-item:not(:last-child) {
+    border-left: 2px solid #2a2d3e;
+    margin-left: 7px;
+}
+
+.timeline-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+    position: relative;
+    left: -9px;
+}
+
+.timeline-item.status-warning .timeline-dot {
+    background: #f59e0b;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.timeline-content .checkpoint {
+    font-size: 0.875rem;
+    color: #a1a1aa;
+}
+
+.timeline-content .time {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #e4e4e7;
+    font-variant-numeric: tabular-nums;
+}
+
+.timeline-content .action {
+    font-size: 0.875rem;
+    color: #f59e0b;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Quick Entry Panel */
+.quick-entry-panel {
+    background: #1a1d2e;
+    border: 1px solid #2a2d3e;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.quick-entry-panel h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #e4e4e7;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary,
+.btn-success {
+    width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #3b82f6;
     color: white;
-    border-color: #ef4444;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    .timing-grid {
-        grid-template-columns: 1fr;
-    }
+.btn-primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.btn-secondary {
+    background: #2a2d3e;
+    color: #e4e4e7;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #3a3d4e;
+}
+
+.btn-success {
+    background: #22c55e;
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #16a34a;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 </style>
 @endsection
