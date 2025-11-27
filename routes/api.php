@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EntrantController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ResultController;
 use App\Http\Controllers\Api\RaspberryController;
+use App\Http\Controllers\Api\ReaderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +54,10 @@ Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'reca
 Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);
 Route::put('results/{result}', [ResultController::class, 'update']);
 Route::delete('results/{result}', [ResultController::class, 'destroy']);
+
+// Readers Routes
+Route::get('readers/event/{eventId}', [ReaderController::class, 'byEvent']);
+Route::apiResource('readers', ReaderController::class);
 
 // RFID Raspberry Reader Routes
 Route::put('raspberry', [RaspberryController::class, 'store']);

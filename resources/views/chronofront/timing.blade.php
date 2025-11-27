@@ -43,6 +43,7 @@ body {
     font-size: 1.5rem;
     cursor: pointer;
     transition: all 0.2s;
+    text-decoration: none;
 }
 
 .sidebar-icon:hover {
@@ -52,6 +53,7 @@ body {
 
 .sidebar-icon.active {
     color: #22c55e;
+    background: #1a1d2e;
 }
 
 /* Main */
@@ -628,13 +630,13 @@ body {
 <div class="chrono-container" x-data="chronoApp()">
     <!-- Sidebar -->
     <div class="chrono-sidebar">
-        <div class="sidebar-icon"><i class="bi bi-people"></i></div>
-        <div class="sidebar-icon"><i class="bi bi-person-running"></i></div>
-        <div class="sidebar-icon"><i class="bi bi-credit-card"></i></div>
-        <div class="sidebar-icon"><i class="bi bi-list-ul"></i></div>
-        <div class="sidebar-icon active"><i class="bi bi-stopwatch"></i></div>
-        <div class="sidebar-icon"><i class="bi bi-bar-chart"></i></div>
-        <div class="sidebar-icon"><i class="bi bi-file-earmark-text"></i></div>
+        <a href="{{ route('dashboard') }}" class="sidebar-icon" title="Dashboard"><i class="bi bi-house"></i></a>
+        <a href="{{ route('events') }}" class="sidebar-icon" title="Événements"><i class="bi bi-calendar-event"></i></a>
+        <a href="{{ route('races') }}" class="sidebar-icon" title="Épreuves"><i class="bi bi-trophy"></i></a>
+        <a href="{{ route('entrants') }}" class="sidebar-icon" title="Participants"><i class="bi bi-people"></i></a>
+        <a href="{{ route('waves') }}" class="sidebar-icon" title="Vagues"><i class="bi bi-list-ul"></i></a>
+        <a href="{{ route('timing') }}" class="sidebar-icon active" title="Chronométrage"><i class="bi bi-stopwatch"></i></a>
+        <a href="{{ route('results') }}" class="sidebar-icon" title="Résultats"><i class="bi bi-bar-chart"></i></a>
     </div>
 
     <!-- Main -->
@@ -642,15 +644,20 @@ body {
         <!-- Top Bar -->
         <div class="chrono-topbar">
             <div style="display: flex; align-items: center;">
-                <span class="event-title" x-text="eventName"></span>
-                <span class="event-status">Course en cours</span>
+                <span class="event-title" x-text="eventName || 'ChronoFront'"></span>
+                <span class="event-status" x-show="hasOngoingRaces()" style="background: #22c55e;">Course en cours</span>
+                <span class="event-status" x-show="!hasOngoingRaces() && races.length > 0" style="background: #f59e0b;">En attente</span>
             </div>
             <div class="topbar-right">
-                <div class="sync-status">
+                <div class="sync-status" x-show="readers.length > 0 && readers.every(r => r.is_active)">
                     <i class="bi bi-check-circle-fill"></i>
                     <span>Synchro OK</span>
                 </div>
-                <button class="icon-btn"><i class="bi bi-gear"></i></button>
+                <div class="sync-status" x-show="readers.length === 0 || readers.some(r => !r.is_active)" style="color: #f59e0b;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Problème synchro</span>
+                </div>
+                <a href="{{ route('dashboard') }}" class="icon-btn"><i class="bi bi-x-lg"></i></a>
             </div>
         </div>
 
@@ -661,31 +668,16 @@ body {
                 <!-- Clock + Readers Status -->
                 <div class="clock-status-section">
                     <div class="main-clock" x-text="currentTime"></div>
-                    <div class="readers-status">
-                        <div class="reader-item">
-                            <span>Départ:</span>
-                            <strong>OK</strong>
-                        </div>
-                        <div class="reader-item">
-                            <span>Inter 1:</span>
-                            <strong>OK</strong>
-                        </div>
-                        <div class="reader-item warning">
-                            <span>Inter 2:</span>
-                            <strong>Attent.</strong>
-                        </div>
-                        <div class="reader-item">
-                            <span>Inter 3:</span>
-                            <strong>OK</strong>
-                        </div>
-                        <div class="reader-item">
-                            <span>Inter 4:</span>
-                            <strong>OK</strong>
-                        </div>
-                        <div class="reader-item">
-                            <span>Arrivée:</span>
-                            <strong>OK</strong>
-                        </div>
+                    <div class="readers-status" x-show="readers.length > 0">
+                        <template x-for="reader in readers" :key="reader.id">
+                            <div class="reader-item" :class="{ 'warning': !reader.is_active || !reader.test_terrain }">
+                                <span x-text="reader.location || reader.name"></span>:
+                                <strong x-text="(reader.is_active && reader.test_terrain) ? 'OK' : 'Attent.'"></strong>
+                            </div>
+                        </template>
+                    </div>
+                    <div x-show="readers.length === 0" class="text-center py-3 text-muted" style="font-size: 0.9rem;">
+                        Aucun lecteur configuré
                     </div>
                 </div>
 
@@ -822,11 +814,14 @@ body {
         </div>
     </div>
 
-    <!-- Alert Bar -->
-    <div class="alert-bar" x-show="showAlert">
+    <!-- Alert Bar - Only show if there are real issues -->
+    <div class="alert-bar" x-show="alertMessage">
         <div class="alert-content">
             <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
-            <span>Alerte : faible lecture inter 3 – vérifier antennes</span>
+            <span x-text="alertMessage"></span>
+            <button @click="alertMessage = null" style="background: none; border: none; color: #fef3c7; margin-left: auto; cursor: pointer;">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
     </div>
 
@@ -859,9 +854,10 @@ body {
 <script>
 function chronoApp() {
     return {
-        eventName: 'Marathon Trail ATS Sport',
+        eventName: '',
         currentTime: '00:00:00',
         races: [],
+        readers: [],
         results: [],
         displayedResults: [],
         selectedResult: null,
@@ -871,7 +867,7 @@ function chronoApp() {
         loading: false,
         saving: false,
         startingRace: false,
-        showAlert: true,
+        alertMessage: null,
         toastMessage: null,
         toastType: 'success',
         showTopDepartModal: false,
@@ -881,7 +877,9 @@ function chronoApp() {
 
         init() {
             this.startClock();
+            this.loadEvent();
             this.loadRaces();
+            this.loadReaders();
             this.loadAllResults();
             this.startAutoRefresh();
         },
@@ -896,12 +894,40 @@ function chronoApp() {
             this.currentTime = now.toLocaleTimeString('fr-FR');
         },
 
+        async loadEvent() {
+            try {
+                // Load first active event
+                const response = await axios.get('/events');
+                const activeEvent = response.data.find(e => e.is_active) || response.data[0];
+                if (activeEvent) {
+                    this.eventName = activeEvent.name;
+                }
+            } catch (error) {
+                console.error('Erreur chargement événement', error);
+            }
+        },
+
         async loadRaces() {
             try {
                 const response = await axios.get('/races');
                 this.races = response.data;
             } catch (error) {
-                console.error('Erreur', error);
+                console.error('Erreur chargement courses', error);
+            }
+        },
+
+        async loadReaders() {
+            try {
+                const response = await axios.get('/readers');
+                this.readers = response.data;
+
+                // Check if any reader has issues
+                const inactiveReaders = this.readers.filter(r => !r.is_active || !r.test_terrain);
+                if (inactiveReaders.length > 0) {
+                    this.alertMessage = `Attention : ${inactiveReaders.length} lecteur(s) inactif(s) ou non testé(s)`;
+                }
+            } catch (error) {
+                console.error('Erreur chargement lecteurs', error);
             }
         },
 
@@ -925,6 +951,10 @@ function chronoApp() {
                     (result.entrant?.firstname + ' ' + result.entrant?.lastname).toLowerCase().includes(this.searchQuery.toLowerCase());
                 return matchesSearch;
             });
+        },
+
+        hasOngoingRaces() {
+            return this.races.some(r => r.start_time && !r.end_time);
         },
 
         selectResult(result) {
