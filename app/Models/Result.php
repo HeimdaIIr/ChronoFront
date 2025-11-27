@@ -104,15 +104,25 @@ class Result extends Model
     }
 
     /**
-     * Calculate time from wave start
+     * Calculate time from wave start or race start (TOP DÉPART)
      */
     public function calculateTime(): void
     {
-        if (!$this->wave || !$this->wave->start_time) {
-            return;
+        // Try wave start time first, then fallback to race start time (TOP DÉPART)
+        $startTime = null;
+
+        if ($this->wave && $this->wave->start_time) {
+            $startTime = $this->wave->start_time;
+        } elseif ($this->race && $this->race->start_time) {
+            // Use race TOP DÉPART if no wave start time
+            $startTime = $this->race->start_time;
         }
 
-        $start = \Carbon\Carbon::parse($this->wave->start_time);
+        if (!$startTime) {
+            return; // No start time available
+        }
+
+        $start = \Carbon\Carbon::parse($startTime);
         $end = \Carbon\Carbon::parse($this->raw_time);
 
         $this->calculated_time = $end->diffInSeconds($start);

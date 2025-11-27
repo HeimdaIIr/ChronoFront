@@ -708,10 +708,9 @@ body {
                                 <th>Nom</th>
                                 <th>Catégorie</th>
                                 <th>SAS</th>
-                                <th>Départ</th>
-                                <th>Inter 1</th>
-                                <th>Inter 2</th>
-                                <th>Arrivée</th>
+                                <th>Lecteur</th>
+                                <th>Temps</th>
+                                <th>Détection</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -721,9 +720,8 @@ body {
                                     <td x-text="(result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '')"></td>
                                     <td><span class="cat-tag" x-text="result.entrant?.category?.name || '-'"></span></td>
                                     <td x-text="result.wave?.wave_number || '-'"></td>
-                                    <td x-text="formatTime(result.raw_time)"></td>
-                                    <td>-</td>
-                                    <td>-</td>
+                                    <td x-text="result.reader_location || '-'"></td>
+                                    <td><strong x-text="result.formatted_time || '-'"></strong></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
                                 </tr>
                             </template>
@@ -751,49 +749,31 @@ body {
                 </div>
 
                 <div class="detail-body">
-                    <!-- Timeline -->
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Départ</div>
-                                <div class="checkpoint-time" x-text="formatTime(selectedResult?.raw_time)"></div>
-                            </div>
+                    <!-- Info détails -->
+                    <div class="mb-4">
+                        <div class="row mb-2">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Épreuve:</div>
+                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.race?.name || '-'"></div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Inter 1</div>
-                                <div class="checkpoint-time">09:02:13</div>
-                            </div>
+                        <div class="row mb-2">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Vague:</div>
+                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.wave?.name || 'SAS ' + (selectedResult?.wave?.wave_number || '-')"></div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Inter 2</div>
-                                <div class="checkpoint-time">09:46:12</div>
-                            </div>
+                        <div class="row mb-2">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Lecteur:</div>
+                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.reader_location || '-'"></div>
                         </div>
-                        <div class="timeline-item warning">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Non détecté</div>
-                                <div class="checkpoint-action">ajouter temps manuel</div>
-                            </div>
+                        <div class="row mb-3">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Détection:</div>
+                            <div class="col-6" style="text-align: right;" x-text="formatTime(selectedResult?.raw_time)"></div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Inter 4</div>
-                                <div class="checkpoint-time">10:27:11</div>
-                            </div>
+                        <div class="row mb-2" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
+                            <div class="col-6" style="color: #22c55e; font-size: 0.85rem; font-weight: 600;">TEMPS TOTAL:</div>
+                            <div class="col-6" style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
                         </div>
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="timeline-content">
-                                <div class="checkpoint-label">Arrivée</div>
-                                <div class="checkpoint-time" x-text="formatTime(selectedResult?.raw_time)"></div>
-                            </div>
+                        <div class="row" x-show="selectedResult?.speed">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Vitesse moyenne:</div>
+                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.speed ? selectedResult.speed + ' km/h' : '-'"></div>
                         </div>
                     </div>
 
@@ -855,6 +835,7 @@ body {
 function chronoApp() {
     return {
         eventName: '',
+        currentEventId: null,
         currentTime: '00:00:00',
         races: [],
         readers: [],
@@ -874,6 +855,7 @@ function chronoApp() {
         manualBib: '',
         clockInterval: null,
         autoRefreshInterval: null,
+        readerPingInterval: null,
 
         init() {
             this.startClock();
@@ -882,6 +864,7 @@ function chronoApp() {
             this.loadReaders();
             this.loadAllResults();
             this.startAutoRefresh();
+            this.startReaderPing();
         },
 
         startClock() {
@@ -901,6 +884,9 @@ function chronoApp() {
                 const activeEvent = response.data.find(e => e.is_active) || response.data[0];
                 if (activeEvent) {
                     this.eventName = activeEvent.name;
+                    this.currentEventId = activeEvent.id;
+                    // Reload readers when event is loaded
+                    this.loadReaders();
                 }
             } catch (error) {
                 console.error('Erreur chargement événement', error);
@@ -917,18 +903,30 @@ function chronoApp() {
         },
 
         async loadReaders() {
+            if (!this.currentEventId) {
+                return; // Wait for event to load
+            }
+
             try {
-                const response = await axios.get('/readers');
+                // Load only readers for current event
+                const response = await axios.get(`/readers/event/${this.currentEventId}`);
                 this.readers = response.data;
 
                 // Check if any reader has issues
                 const inactiveReaders = this.readers.filter(r => !r.is_active || !r.test_terrain);
                 if (inactiveReaders.length > 0) {
                     this.alertMessage = `Attention : ${inactiveReaders.length} lecteur(s) inactif(s) ou non testé(s)`;
+                } else if (this.readers.length > 0) {
+                    this.alertMessage = null; // Clear alert if all readers are OK
                 }
             } catch (error) {
                 console.error('Erreur chargement lecteurs', error);
             }
+        },
+
+        startReaderPing() {
+            // Ping readers every 10 seconds to check connection
+            this.readerPingInterval = setInterval(() => this.loadReaders(), 10000);
         },
 
         async loadAllResults() {
