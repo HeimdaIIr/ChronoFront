@@ -23,12 +23,12 @@ class ReaderController extends Controller
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif (now()->diffInSeconds($reader->date_test) < 60) {
-                    // Received data within last 60 seconds
+                } elseif (now()->diffInSeconds($reader->date_test) < 20) {
+                    // Received data within last 20 seconds (2 pings missed max)
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
                 } else {
-                    // Last data older than 60 seconds
+                    // Last data older than 20 seconds
                     $reader->is_online = false;
                     $reader->connection_status = 'offline';
                     $reader->last_seen = $reader->date_test->diffForHumans();
@@ -132,12 +132,12 @@ class ReaderController extends Controller
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif (now()->diffInSeconds($reader->date_test) < 60) {
-                    // Received data within last 60 seconds
+                } elseif (now()->diffInSeconds($reader->date_test) < 20) {
+                    // Received data within last 20 seconds (2 pings missed max)
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
                 } else {
-                    // Last data older than 60 seconds
+                    // Last data older than 20 seconds
                     $reader->is_online = false;
                     $reader->connection_status = 'offline';
                     $reader->last_seen = $reader->date_test->diffForHumans();
