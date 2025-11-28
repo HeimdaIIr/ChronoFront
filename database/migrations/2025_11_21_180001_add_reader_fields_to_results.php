@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema->table('results', function (Blueprint $table) {
+        Schema::table('results', function (Blueprint $table) {
             $table->foreignId('reader_id')->nullable()->after('wave_id')->constrained('readers')->onDelete('set null');
             $table->string('serial')->nullable()->after('rfid_tag')->comment('Full serial from RFID reader (e.g., [2000003])');
             $table->string('reader_location')->nullable()->after('serial')->comment('Location where read occurred');
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema->table('results', function (Blueprint $table) {
+        Schema::table('results', function (Blueprint $table) {
             $table->dropForeign(['reader_id']);
             $table->dropColumn(['reader_id', 'serial', 'reader_location']);
         });

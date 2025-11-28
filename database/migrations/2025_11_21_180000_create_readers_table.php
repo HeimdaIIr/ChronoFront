@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema->create('readers', function (Blueprint $table) {
+        Schema::create('readers', function (Blueprint $table) {
             $table->id();
             $table->string('serial')->unique()->comment('Serial number of the RFID reader (e.g., 107)');
             $table->string('name')->nullable()->comment('Reader friendly name');
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema->dropIfExists('readers');
+        Schema::dropIfExists('readers');
     }
 };
