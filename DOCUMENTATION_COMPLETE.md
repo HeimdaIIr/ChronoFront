@@ -72,16 +72,28 @@
 - `event_id` - FK vers events (cascade delete)
 - `race_id` - FK vers races (cascade delete, nullable)
 - `location` - Emplacement (ex: 'ARRIVEE', 'DEPART', 'KM5')
+- `distance_from_start` - Distance en km depuis le départ (decimal 8,2, default: 0)
+- `checkpoint_order` - Ordre du checkpoint calculé automatiquement (integer, nullable)
 - `anti_rebounce_seconds` - Secondes anti-rebond (default: 5)
-- `date_min` - Date de début activation (datetime)
-- `date_max` - Date de fin activation (datetime)
+- `date_min` - Date de début activation (datetime, **NULLABLE** - si NULL = toujours actif)
+- `date_max` - Date de fin activation (datetime, **NULLABLE** - si NULL = toujours actif)
 - `is_active` - Lecteur actif (boolean, default: true)
 - `clone_reader_id` - ID lecteur cloné pour logging (nullable)
 - `test_terrain` - A envoyé des données au moins une fois (boolean, default: false)
 - `date_test` - **Dernière communication Raspberry** (datetime, nullable)
 - `created_at`, `updated_at` - Timestamps
 
+**CALCUL IP AUTOMATIQUE:** IP = `192.168.10.{150 + last2digits(serial)}`
+- Serial 107 → IP 192.168.10.157
+- Serial 112 → IP 192.168.10.162
+
 **DÉTECTION CONNEXION:** Un lecteur est "en ligne" si `date_test` existe et < 60 secondes
+
+**SYSTÈME DE PING:**
+- Route: `POST /api/readers/{reader}/ping`
+- L'application teste la connexion HTTP vers le Raspberry Pi
+- Si réponse reçue: met à jour `date_test` et `test_terrain`
+- Utilisable depuis l'interface lecteurs (bouton 🔊)
 
 ### Table `results` (Résultats/Détections de passages)
 - `id` - Primary key
