@@ -122,7 +122,7 @@
                                     <span class="badge" :class="entrant.gender === 'M' ? 'bg-primary' : 'bg-danger'" x-text="entrant.gender"></span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info" x-text="entrant.category?.code || 'N/A'"></span>
+                                    <span class="badge bg-info" x-text="entrant.category?.name || 'N/A'"></span>
                                 </td>
                                 <td>
                                     <span x-show="entrant.race?.display_order" class="badge bg-dark me-1" x-text="'#' + entrant.race?.display_order"></span>
