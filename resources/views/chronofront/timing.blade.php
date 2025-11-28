@@ -882,6 +882,8 @@ function chronoApp() {
     return {
         eventName: '',
         currentEventId: null,
+        currentEvent: null,
+        alertThreshold: 5,
         currentTime: '00:00:00',
         raceChrono: '00:00:00',
         selectedRaceId: null,
@@ -909,12 +911,13 @@ function chronoApp() {
 
         init() {
             this.startClock();
-            this.loadEvent();
+            this.loadEvent().then(() => this.loadAlertThreshold());
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
             this.loadReaders();
             this.loadAllResults();
             this.startAutoRefresh();
             this.startReaderPing();
+            this.startAlertCheck();
         },
 
         startClock() {
@@ -966,9 +969,10 @@ function chronoApp() {
         async loadEvent() {
             try {
                 // Load first active event
-                const response = await axios.get('/events');
+                const response = await axios.get('/api/events');
                 const activeEvent = response.data.find(e => e.is_active) || response.data[0];
                 if (activeEvent) {
+                    this.currentEvent = activeEvent;
                     this.eventName = activeEvent.name;
                     this.currentEventId = activeEvent.id;
                     // Reload readers when event is loaded
@@ -976,6 +980,14 @@ function chronoApp() {
                 }
             } catch (error) {
                 console.error('Erreur chargement événement', error);
+            }
+        },
+
+        loadAlertThreshold() {
+            if (this.currentEvent && this.currentEvent.alert_threshold_minutes) {
+                this.alertThreshold = this.currentEvent.alert_threshold_minutes;
+            } else {
+                this.alertThreshold = 5; // default
             }
         },
 
@@ -1227,6 +1239,102 @@ function chronoApp() {
                     this.loadAllResults();
                 }
             }, 30000);
+        },
+
+        startAlertCheck() {
+            // Check for late runners every minute
+            setInterval(() => this.checkForLateRunners(), 60000);
+            // Run once immediately after 10 seconds
+            setTimeout(() => this.checkForLateRunners(), 10000);
+        },
+
+        checkForLateRunners() {
+            if (!this.hasOngoingRaces() || this.readers.length === 0) {
+                return;
+            }
+
+            // Get all entrants from results who have at least one detection
+            const entrantIds = [...new Set(this.results.map(r => r.entrant_id).filter(Boolean))];
+
+            let lateRunners = [];
+
+            for (let entrantId of entrantIds) {
+                const runnerResults = this.results.filter(r => r.entrant_id === entrantId);
+                if (runnerResults.length === 0) continue;
+
+                // Get the entrant info from the first result
+                const entrant = runnerResults[0].entrant;
+                if (!entrant) continue;
+
+                // Sort results by reader distance
+                const sortedResults = runnerResults
+                    .filter(r => r.reader_id)
+                    .map(r => {
+                        const reader = this.readers.find(rd => rd.id === r.reader_id);
+                        return {
+                            ...r,
+                            distance: reader ? reader.distance_from_start : 0
+                        };
+                    })
+                    .sort((a, b) => a.distance - b.distance);
+
+                if (sortedResults.length < 2) continue;
+
+                // Calculate average speed from last two checkpoints
+                const last = sortedResults[sortedResults.length - 1];
+                const secondLast = sortedResults[sortedResults.length - 2];
+
+                const distance = last.distance - secondLast.distance;
+                const timeMs = new Date(last.raw_time) - new Date(secondLast.raw_time);
+                const timeHours = timeMs / (1000 * 60 * 60);
+                const avgSpeed = distance / timeHours; // km/h
+
+                if (avgSpeed <= 0) continue;
+
+                // Find next checkpoint after last detection
+                const nextCheckpoint = this.readers
+                    .filter(r => r.distance_from_start > last.distance)
+                    .sort((a, b) => a.distance_from_start - b.distance_from_start)[0];
+
+                if (!nextCheckpoint) continue;
+
+                // Calculate expected arrival time at next checkpoint
+                const distanceToNext = nextCheckpoint.distance_from_start - last.distance;
+                const timeNeededHours = distanceToNext / avgSpeed;
+                const timeNeededMs = timeNeededHours * 60 * 60 * 1000;
+                const expectedArrival = new Date(new Date(last.raw_time).getTime() + timeNeededMs);
+
+                // Check if runner is late
+                const now = new Date();
+                const delayMinutes = (now - expectedArrival) / (1000 * 60);
+
+                if (delayMinutes > this.alertThreshold) {
+                    const severity = delayMinutes > 15 ? 'critical' : 'warning';
+                    lateRunners.push({
+                        entrant,
+                        checkpoint: nextCheckpoint.location,
+                        delayMinutes: Math.floor(delayMinutes),
+                        severity
+                    });
+                }
+            }
+
+            // Update alert message
+            if (lateRunners.length > 0) {
+                const critical = lateRunners.filter(r => r.severity === 'critical');
+                const warning = lateRunners.filter(r => r.severity === 'warning');
+
+                let message = '';
+                if (critical.length > 0) {
+                    const runner = critical[0];
+                    message = `🚨 CRITIQUE: Dossard #${runner.entrant.bib_number} (${runner.entrant.firstname} ${runner.entrant.lastname}) devrait être à ${runner.checkpoint} (retard ${runner.delayMinutes} min)`;
+                } else if (warning.length > 0) {
+                    const runner = warning[0];
+                    message = `⚠️ Attention: Dossard #${runner.entrant.bib_number} (${runner.entrant.firstname} ${runner.entrant.lastname}) devrait être à ${runner.checkpoint} (retard ${runner.delayMinutes} min)`;
+                }
+
+                this.alertMessage = message;
+            }
         },
 
         showToast(message, type = 'success') {
