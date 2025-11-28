@@ -658,3 +658,548 @@ speed (km/h) = distance / (calculated_time / 3600)
 - `0f3040c` - Lecteurs par événement + calcul temps réel
 - `55fd7fc` - Interface chronométrage données réelles uniquement
 - `9f24606` - Correction import CSV
+
+---
+
+## 🆕 AMÉLIORATIONS PRÉVUES - VERSION 2.0
+
+### 📊 MODIFICATIONS BASE DE DONNÉES
+
+#### Table `events` - Nouveaux champs
+```sql
+ALTER TABLE events ADD COLUMN alert_threshold_minutes INT DEFAULT 5 
+  COMMENT 'Seuil en minutes pour alertes coureurs en retard';
+```
+
+**Champ ajouté :**
+- `alert_threshold_minutes` - Seuil d'alerte si coureur en retard (integer, default: 5)
+  - Utilisé pour détecter si un coureur devrait être détecté mais ne l'est pas
+  - Exemple: Si estimé à 00:30:00 et temps actuel 00:36:00, seuil 5min → ALERTE
+
+#### Table `readers` - Nouveaux champs
+```sql
+ALTER TABLE readers ADD COLUMN distance_from_start DECIMAL(8,2) DEFAULT 0 
+  COMMENT 'Distance en km depuis le point de départ';
+ALTER TABLE readers ADD COLUMN checkpoint_order INT 
+  COMMENT 'Ordre du checkpoint (1=Départ, 2=Inter1, 3=Arrivée...)';
+```
+
+**Champs ajoutés :**
+- `distance_from_start` - Distance en km depuis le départ (decimal 8,2, default: 0)
+  - Exemple: Départ = 0, KM5 = 5.0, KM10 = 10.0, Arrivée = 21.0
+  - Utilisé pour calculer vitesse moyenne et temps estimés
+- `checkpoint_order` - Ordre du checkpoint (integer, nullable)
+  - Calculé automatiquement selon distance_from_start
+  - 1 = Départ, 2 = Premier intermédiaire, N = Arrivée
+
+**Calcul IP automatique :**
+```php
+// Formule: 192.168.10.1(50+XX) où XX = 2 derniers chiffres du serial
+// Exemples:
+serial: '107' → ip_address: '192.168.10.157'
+serial: '112' → ip_address: '192.168.10.162'
+serial: '05'  → ip_address: '192.168.10.155'
+serial: '99'  → ip_address: '192.168.10.199'
+```
+
+**Méthode dans Reader model :**
+```php
+public function getIpAddressAttribute(): string
+{
+    $lastTwo = str_pad($this->serial, 2, '0', STR_PAD_LEFT);
+    $lastTwo = substr($lastTwo, -2);
+    return '192.168.10.1' . (50 + intval($lastTwo));
+}
+```
+
+---
+
+### 🖥️ NOUVELLE PAGE - CONFIGURATION LECTEURS
+
+**Route :** `GET /events/{id}/readers` ou `GET /readers/config`
+
+**Interface de configuration :**
+```
+┌─────────────────────────────────────────────────────┐
+│ Configuration Lecteurs - Marathon Trail 2025       │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ Seuil d'alerte coureurs: [5] minutes               │
+│                                                     │
+│ ┌─────────────────────────────────────────────┐   │
+│ │ Lecteurs configurés pour cet événement      │   │
+│ ├─────────────────────────────────────────────┤   │
+│ │ Ordre │ Serial │ Location  │ Distance │ IP  │   │
+│ ├─────────────────────────────────────────────┤   │
+│ │   1   │  105   │ DEPART    │  0.00 km │ ...157│ │
+│ │   2   │  107   │ KM5       │  5.00 km │ ...157│ │
+│ │   3   │  112   │ KM10      │ 10.00 km │ ...162│ │
+│ │   4   │  115   │ ARRIVEE   │ 21.00 km │ ...165│ │
+│ └─────────────────────────────────────────────┘   │
+│                                                     │
+│ [+ Ajouter lecteur]  [Enregistrer]                 │
+└─────────────────────────────────────────────────────┘
+```
+
+**Fonctionnalités :**
+- Saisir numéro serial lecteur (ex: 107)
+- IP calculée automatiquement et affichée
+- Saisir location (DEPART, KM5, KM10, ARRIVEE...)
+- Saisir distance depuis départ en km
+- Ordre calculé automatiquement selon distance
+- Validation : distance croissante
+- Bouton test ping lecteur (vérifie si joignable)
+
+**API endpoints nécessaires :**
+- `GET /api/events/{id}/readers` - Liste lecteurs configurés pour événement
+- `POST /api/events/{id}/readers` - Ajouter lecteur à événement
+- `PUT /api/readers/{id}` - Modifier config lecteur
+- `DELETE /api/readers/{id}` - Retirer lecteur
+- `POST /api/readers/{id}/ping` - Tester connexion lecteur
+
+---
+
+### ⏱️ INTERFACE CHRONOMÉTRAGE - AMÉLIORATIONS
+
+#### 1. HEADER - Petite horloge actuelle
+```
+┌────────────────────────────────────────────────┐
+│ ChronoFront          🕐 14:32:15    [⚙️] [✕]  │ ← Header
+└────────────────────────────────────────────────┘
+```
+
+**Modifications :**
+- Déplacer horloge actuelle (petite, 1rem) en haut à droite du header
+- Format: HH:MM:SS
+- Update chaque seconde
+- Remplace le gros chrono actuel
+
+#### 2. ZONE CHRONO - Grand chrono de course
+```
+┌────────────────────────────────────────────────┐
+│          CHRONO DE COURSE                      │
+│                                                │
+│         [Parcours: 21km ▼]                     │ ← Dropdown
+│                                                │
+│            01:23:45                            │ ← Grand chrono
+│         (depuis TOP départ)                    │
+└────────────────────────────────────────────────┘
+```
+
+**Logique :**
+- Remplace la grande horloge actuelle
+- Affiche temps écoulé depuis TOP DÉPART du parcours sélectionné
+- Format: HH:MM:SS en grand (8rem comme actuellement)
+- Update chaque seconde en temps réel
+- Dropdown au-dessus pour sélectionner parcours
+- Par défaut: dernier parcours démarré
+- Si aucun parcours démarré: affiche "00:00:00" et dropdown disabled
+
+**Calcul chrono :**
+```javascript
+if (selectedRace.start_time) {
+  const now = new Date();
+  const start = new Date(selectedRace.start_time);
+  const elapsed = Math.floor((now - start) / 1000); // en secondes
+  displayChrono = formatSeconds(elapsed); // HH:MM:SS
+}
+```
+
+**Dropdown parcours :**
+```html
+<select x-model="selectedRaceId" @change="updateChrono()">
+  <option value="">-- Sélectionner parcours --</option>
+  <option :value="race.id" x-for="race in startedRaces">
+    {{ race.name }} (démarré à {{ formatTime(race.start_time) }})
+  </option>
+</select>
+```
+
+#### 3. RECHERCHE - Normalisation accents
+
+**Fonction normalisation :**
+```javascript
+function normalizeString(str) {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire accents
+    .replace(/[^a-z0-9]/g, ''); // Garde que lettres/chiffres
+}
+
+// Exemples:
+normalizeString('Anaïs Müller')  → 'anaismuller'
+normalizeString('José García')   → 'josegarcia'
+normalizeString('Björk Østberg') → 'bjorkostberg'
+```
+
+**Application recherche :**
+```javascript
+filterResults() {
+  const searchNormalized = normalizeString(this.searchQuery);
+  
+  this.displayedResults = this.results.filter(result => {
+    const fullName = `${result.entrant?.firstname} ${result.entrant?.lastname}`;
+    const nameNormalized = normalizeString(fullName);
+    const bibNormalized = normalizeString(result.entrant?.bib_number || '');
+    
+    return nameNormalized.includes(searchNormalized) ||
+           bibNormalized.includes(searchNormalized);
+  });
+}
+```
+
+**Test :**
+- Recherche "anais" trouve "Anaïs Dupont"
+- Recherche "jose" trouve "José García"
+- Recherche "123" trouve dossard "123"
+
+#### 4. AUTO-REFRESH - Suppression animation 5s
+
+**Problème actuel :**
+- `setInterval(() => loadAllResults(), 5000)` toutes les 5s
+- Animation visuelle désagréable
+- Refresh inutile si aucune nouvelle donnée
+
+**Solutions possibles :**
+
+**Option A - Polling intelligent :**
+```javascript
+let lastResultId = 0;
+
+async function checkNewResults() {
+  const response = await axios.get(`/results/since/${lastResultId}`);
+  if (response.data.length > 0) {
+    // Nouvelles données → refresh silencieux
+    this.results = [...this.results, ...response.data];
+    lastResultId = response.data[response.data.length - 1].id;
+    this.filterResults(); // Pas de loading spinner
+  }
+}
+
+setInterval(checkNewResults, 3000); // Check toutes les 3s
+```
+
+**Option B - Event-driven (après action) :**
+```javascript
+// Refresh uniquement après:
+// 1. TOP DÉPART donné
+// 2. Temps manuel ajouté
+// 3. Raspberry envoie détection
+
+async topDepart(race) {
+  await axios.post(`/races/${race.id}/start`);
+  await this.loadAllResults(); // Refresh ciblé
+}
+
+async addManualTime() {
+  await axios.post('/results/time', {...});
+  await this.loadAllResults(); // Refresh ciblé
+}
+```
+
+**Option C - WebSocket (futur) :**
+```javascript
+// Écoute événements temps réel
+Echo.channel('timing')
+  .listen('NewResultAdded', (e) => {
+    this.results.unshift(e.result);
+    this.filterResults();
+  });
+```
+
+**Recommandation :** Option A pour l'immédiat (polling intelligent sans spinner)
+
+#### 5. PANNEAU DÉTAIL - Timeline dynamique
+
+**Affichage selon configuration lecteurs :**
+
+**Cas 1 - Un seul lecteur (ARRIVEE) :**
+```
+┌─────────────────────────────────┐
+│ #123 - Jean DUPONT              │
+├─────────────────────────────────┤
+│ Épreuve: 21km                   │
+│                                 │
+│ ● DÉPART                        │
+│   08:00:00 (TOP départ course)  │
+│                                 │
+│ ● ARRIVÉE                       │
+│   09:23:45 (détecté)            │
+│   Temps: 01:23:45               │
+│   Vitesse: 15.2 km/h            │
+└─────────────────────────────────┘
+```
+
+**Cas 2 - Lecteurs intermédiaires (4 checkpoints) :**
+```
+┌─────────────────────────────────┐
+│ #123 - Jean DUPONT              │
+├─────────────────────────────────┤
+│ Épreuve: 21km                   │
+│ Vitesse moyenne: 15.2 km/h      │
+│                                 │
+│ ● DÉPART (0km)                  │
+│   08:00:00 (TOP départ)         │
+│                                 │
+│ ● KM5 (5km)                     │
+│   08:20:15 (détecté)            │
+│   Temps: 00:20:15               │
+│                                 │
+│ ⚠ KM10 (10km)                   │
+│   ~08:40:30 (estimé)            │ ← Temps estimé (grisé)
+│   NON DÉTECTÉ                   │
+│                                 │
+│ ● KM15 (15km)                   │
+│   09:00:45 (détecté)            │
+│   Temps: 01:00:45               │
+│                                 │
+│ ● ARRIVÉE (21km)                │
+│   09:23:45 (détecté)            │
+│   Temps: 01:23:45               │
+│   Vitesse finale: 15.2 km/h     │
+└─────────────────────────────────┘
+```
+
+**Logique calcul temps estimé :**
+
+```javascript
+function calculateEstimatedTime(runner, missingCheckpoint) {
+  // Trouve les 2 dernières détections
+  const detections = runner.results
+    .filter(r => r.reader_id) // Uniquement détections réelles
+    .sort((a, b) => a.reader.checkpoint_order - b.reader.checkpoint_order);
+  
+  if (detections.length < 2) return null;
+  
+  const lastDetection = detections[detections.length - 1];
+  const previousDetection = detections[detections.length - 2];
+  
+  // Calcul vitesse moyenne entre 2 dernières détections
+  const distanceBetween = lastDetection.reader.distance_from_start - 
+                          previousDetection.reader.distance_from_start;
+  const timeBetween = (new Date(lastDetection.raw_time) - 
+                       new Date(previousDetection.raw_time)) / 1000; // secondes
+  const speedKmH = (distanceBetween / (timeBetween / 3600));
+  
+  // Estimation pour checkpoint manquant
+  const distanceToMissing = missingCheckpoint.distance_from_start - 
+                            previousDetection.reader.distance_from_start;
+  const estimatedSeconds = (distanceToMissing / speedKmH) * 3600;
+  const estimatedTime = new Date(previousDetection.raw_time);
+  estimatedTime.setSeconds(estimatedTime.getSeconds() + estimatedSeconds);
+  
+  return {
+    time: estimatedTime,
+    isEstimated: true,
+    speedUsed: speedKmH,
+    confidence: 'medium' // low/medium/high selon écart détections
+  };
+}
+```
+
+**Exemple calcul :**
+```
+KM5 détecté: 08:20:15
+KM10 NON détecté
+KM15 détecté: 09:00:45
+
+Distance KM5→KM15: 10km
+Temps KM5→KM15: 40min 30s (2430s)
+Vitesse moyenne: 10km / (2430/3600)h = 14.81 km/h
+
+Distance KM5→KM10: 5km
+Temps estimé: 5km / 14.81km/h = 0.337h = 20min 15s
+Heure estimée KM10: 08:20:15 + 20min15s = 08:40:30
+
+→ Affiche "~08:40:30 (estimé)" en grisé/orange
+```
+
+**CSS temps estimé :**
+```css
+.checkpoint-estimated {
+  color: #f59e0b; /* Orange */
+  font-style: italic;
+}
+
+.checkpoint-estimated::before {
+  content: '~';
+  font-weight: bold;
+}
+
+.checkpoint-missing {
+  background: #2a2d3e;
+  border-left: 3px solid #f59e0b;
+}
+```
+
+#### 6. ALERT BAR - Système d'alerte coureurs en retard
+
+**Déclenchement alerte :**
+```javascript
+function checkLateRunners() {
+  const alerts = [];
+  
+  results.forEach(result => {
+    const runner = result.entrant;
+    const nextCheckpoint = getNextExpectedCheckpoint(runner);
+    
+    if (!nextCheckpoint) return; // Déjà arrivé
+    
+    const estimated = calculateEstimatedTime(runner, nextCheckpoint);
+    if (!estimated) return; // Pas assez de données
+    
+    const now = new Date();
+    const delay = (now - estimated.time) / 60000; // minutes
+    
+    // Seuil dépassé ?
+    if (delay > event.alert_threshold_minutes) {
+      alerts.push({
+        runner: runner,
+        checkpoint: nextCheckpoint,
+        estimatedTime: estimated.time,
+        delayMinutes: Math.round(delay),
+        severity: delay > 15 ? 'critical' : 'warning'
+      });
+    }
+  });
+  
+  return alerts;
+}
+```
+
+**Affichage Alert Bar :**
+```
+┌────────────────────────────────────────────────────────────┐
+│ ⚠️ ALERTES (3 coureurs en retard)                      [✕] │
+├────────────────────────────────────────────────────────────┤
+│ • #123 Jean DUPONT - Attendu KM10 à 08:40, +12min         │
+│ • #045 Marie MARTIN - Attendu ARRIVÉE à 09:15, +8min      │
+│ 🚨 #078 Paul BERNARD - Attendu KM5 à 08:25, +23min URGENT │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Niveaux d'alerte :**
+- **Warning (⚠️)** : Retard 5-15 minutes → Orange
+- **Critical (🚨)** : Retard > 15 minutes → Rouge
+
+**Fonctionnalités :**
+- Click coureur → Ouvre panneau détail
+- Bouton [✕] → Masque alert bar
+- Auto-refresh toutes les 30 secondes
+- Son d'alerte optionnel (désactivable)
+
+**API endpoint :**
+```
+GET /api/events/{id}/alerts
+→ Retourne liste coureurs en retard avec détails
+```
+
+---
+
+### 🔄 WORKFLOW COMPLET VERSION 2.0
+
+#### Scénario: Course 21km avec 4 lecteurs
+
+**PHASE 1: CONFIGURATION**
+1. Créer événement "Marathon Trail 2025"
+2. Aller dans `/events/{id}/readers`
+3. Configurer lecteurs:
+   ```
+   Serial 105 → DEPART   → 0km   → IP 192.168.10.155
+   Serial 107 → KM5      → 5km   → IP 192.168.10.157
+   Serial 112 → KM10     → 10km  → IP 192.168.10.162
+   Serial 115 → ARRIVEE  → 21km  → IP 192.168.10.165
+   ```
+4. Définir seuil alerte: 5 minutes
+5. Importer participants CSV
+
+**PHASE 2: CHRONOMÉTRAGE**
+6. Aller sur `/timing`
+   - Header: Petite horloge "14:32:15"
+   - Zone chrono: "00:00:00" (aucun parcours démarré)
+   - Lecteurs: 4 lecteurs "Hors ligne" (pas allumés)
+
+7. Allumer les 4 Raspberry Pi
+   - Chacun envoie heartbeat
+   - Statuts: "DEPART: OK", "KM5: OK", "KM10: OK", "ARRIVEE: OK" (vert)
+
+8. Donner TOP DÉPART à 08:00:00
+   - Click "TOP DÉPART" → Select "21km"
+   - Backend: race.start_time = 08:00:00
+   - Interface: Chrono démarre "00:00:01... 00:00:02..."
+
+**PHASE 3: DÉTECTIONS**
+9. Coureur #123 Jean DUPONT:
+   - 08:00:00 → DÉPART (implicite, TOP départ)
+   - 08:20:15 → KM5 détecté → Vitesse 14.8 km/h
+   - 08:40:XX → KM10 PAS détecté ⚠️
+   - 09:00:45 → KM15 détecté → Temps estimé KM10 calculé
+   - 09:23:45 → ARRIVEE détecté → Temps final 01:23:45
+
+10. Panneau détail affiche:
+    ```
+    ● DÉPART: 08:00:00
+    ● KM5: 08:20:15 (00:20:15)
+    ⚠ KM10: ~08:40:30 (estimé) - NON DÉTECTÉ
+    ● KM15: 09:00:45 (01:00:45)
+    ● ARRIVEE: 09:23:45 (01:23:45) - 15.2 km/h
+    ```
+
+**PHASE 4: ALERTES**
+11. Coureur #045 Marie MARTIN:
+    - Détectée KM5 à 08:25:00
+    - Vitesse moyenne: 12 km/h
+    - Estimation ARRIVEE: 09:15:00
+    - Temps actuel: 09:23:00
+    - Retard: 8 minutes
+    - → Alert bar: "⚠️ #045 Marie MARTIN - Attendu ARRIVÉE à 09:15, +8min"
+
+12. Coureur #078 Paul BERNARD:
+    - Détecté DÉPART à 08:00:00
+    - PAS détecté KM5 (attendu 08:25)
+    - Temps actuel: 08:48:00
+    - Retard: 23 minutes
+    - → Alert bar: "🚨 #078 Paul BERNARD - Attendu KM5 à 08:25, +23min URGENT"
+    - → Organisation engage secours
+
+---
+
+### 📝 RÉSUMÉ MODIFICATIONS
+
+**Base de données:**
+- ✅ `events.alert_threshold_minutes`
+- ✅ `readers.distance_from_start`
+- ✅ `readers.checkpoint_order`
+- ✅ `readers.ip_address` (calculé)
+
+**Nouvelles pages:**
+- ✅ `/events/{id}/readers` - Configuration lecteurs
+
+**Interface timing:**
+- ✅ Petite horloge actuelle (header)
+- ✅ Grand chrono course avec dropdown parcours
+- ✅ Recherche normalisée (sans accents)
+- ✅ Auto-refresh intelligent (sans animation)
+- ✅ Panneau détail avec timeline dynamique
+- ✅ Temps estimés si checkpoint manquant
+- ✅ Alert bar coureurs en retard
+
+**Nouveaux endpoints API:**
+- ✅ `GET/POST /api/events/{id}/readers` - Config lecteurs
+- ✅ `GET /api/events/{id}/alerts` - Coureurs en retard
+- ✅ `POST /api/readers/{id}/ping` - Test connexion
+
+**Nouvelle logique:**
+- ✅ Calcul IP automatique (192.168.10.1XX)
+- ✅ Calcul vitesse moyenne entre checkpoints
+- ✅ Estimation temps checkpoints manquants
+- ✅ Détection coureurs en retard
+- ✅ Normalisation recherche accents
+
+---
+
+**Version:** 2.0 (Prévue)
+**Date planification:** 2025-11-28
+**Statut:** 📋 Spécifications complètes - Prêt pour implémentation
+
