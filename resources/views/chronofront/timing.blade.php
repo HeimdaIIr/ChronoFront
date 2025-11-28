@@ -770,31 +770,56 @@ body {
                 </div>
 
                 <div class="detail-body">
-                    <!-- Info détails -->
-                    <div class="mb-4">
+                    <!-- Info de base -->
+                    <div class="mb-3">
                         <div class="row mb-2">
                             <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Épreuve:</div>
-                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.race?.name || '-'"></div>
+                            <div class="col-6" style="text-align: right; font-size: 0.9rem;" x-text="selectedResult?.race?.name || '-'"></div>
                         </div>
                         <div class="row mb-2">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Vague:</div>
-                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.wave?.name || 'SAS ' + (selectedResult?.wave?.wave_number || '-')"></div>
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Catégorie:</div>
+                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.entrant?.category?.name || '-'"></div>
                         </div>
+                    </div>
+
+                    <!-- Checkpoint Timeline -->
+                    <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: #e4e4e7;">
+                            <i class="bi bi-geo-alt-fill"></i> Checkpoints
+                        </h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <template x-for="(checkpoint, index) in runnerCheckpoints" :key="index">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #1a1d2e; border-radius: 8px; border-left: 3px solid"
+                                     :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
+                                    <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
+                                         :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; font-size: 0.9rem;" x-text="checkpoint.location"></div>
+                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance + ' km'"></div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 600; font-size: 0.95rem;"
+                                             :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
+                                             x-text="checkpoint.time_display"></div>
+                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.is_estimated">Estimé</div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="runnerCheckpoints.length === 0" style="text-align: center; padding: 1rem; color: #71717a; font-size: 0.85rem;">
+                                Aucun checkpoint configuré
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
                         <div class="row mb-2">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Lecteur:</div>
-                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.reader_location || '-'"></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Détection:</div>
-                            <div class="col-6" style="text-align: right;" x-text="formatTime(selectedResult?.raw_time)"></div>
-                        </div>
-                        <div class="row mb-2" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
                             <div class="col-6" style="color: #22c55e; font-size: 0.85rem; font-weight: 600;">TEMPS TOTAL:</div>
                             <div class="col-6" style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
                         </div>
-                        <div class="row" x-show="selectedResult?.speed">
+                        <div class="row" x-show="runnerAverageSpeed">
                             <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Vitesse moyenne:</div>
-                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.speed ? selectedResult.speed + ' km/h' : '-'"></div>
+                            <div class="col-6" style="text-align: right;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
                         </div>
                     </div>
 
@@ -865,6 +890,8 @@ function chronoApp() {
         results: [],
         displayedResults: [],
         selectedResult: null,
+        runnerCheckpoints: [],
+        runnerAverageSpeed: null,
         searchQuery: '',
         categoryFilter: '',
         sasFilter: '',
@@ -1030,6 +1057,132 @@ function chronoApp() {
 
         selectResult(result) {
             this.selectedResult = result;
+            this.calculateRunnerCheckpoints();
+        },
+
+        calculateRunnerCheckpoints() {
+            if (!this.selectedResult || !this.selectedResult.entrant_id) {
+                this.runnerCheckpoints = [];
+                this.runnerAverageSpeed = null;
+                return;
+            }
+
+            // Get all results for this runner
+            const runnerResults = this.results.filter(r => r.entrant_id === this.selectedResult.entrant_id);
+
+            // Get configured readers sorted by distance
+            const sortedReaders = [...this.readers]
+                .filter(r => r.distance_from_start !== undefined)
+                .sort((a, b) => parseFloat(a.distance_from_start || 0) - parseFloat(b.distance_from_start || 0));
+
+            if (sortedReaders.length === 0) {
+                this.runnerCheckpoints = [];
+                return;
+            }
+
+            // Build checkpoint list
+            this.runnerCheckpoints = [];
+            let lastRealCheckpoint = null;
+
+            // Add race start as first checkpoint
+            const race = this.getSelectedRace();
+            if (race && race.start_time) {
+                this.runnerCheckpoints.push({
+                    location: 'DÉPART',
+                    distance: 0,
+                    time_display: this.formatTime(race.start_time),
+                    raw_time: new Date(race.start_time),
+                    is_estimated: false
+                });
+                lastRealCheckpoint = {
+                    distance: 0,
+                    raw_time: new Date(race.start_time)
+                };
+            }
+
+            // Process each reader checkpoint
+            for (let reader of sortedReaders) {
+                // Find if runner was detected at this checkpoint
+                const detection = runnerResults.find(r => r.reader_id === reader.id || r.reader_location === reader.location);
+
+                if (detection && detection.raw_time) {
+                    // Real detection
+                    this.runnerCheckpoints.push({
+                        location: reader.location,
+                        distance: reader.distance_from_start,
+                        time_display: this.formatTime(detection.raw_time),
+                        raw_time: new Date(detection.raw_time),
+                        is_estimated: false
+                    });
+                    lastRealCheckpoint = {
+                        distance: parseFloat(reader.distance_from_start),
+                        raw_time: new Date(detection.raw_time)
+                    };
+                } else if (lastRealCheckpoint) {
+                    // Estimate time based on average speed
+                    const estimatedTime = this.estimateCheckpointTime(lastRealCheckpoint, reader.distance_from_start);
+                    if (estimatedTime) {
+                        this.runnerCheckpoints.push({
+                            location: reader.location,
+                            distance: reader.distance_from_start,
+                            time_display: this.formatTime(estimatedTime.toISOString()),
+                            raw_time: estimatedTime,
+                            is_estimated: true
+                        });
+                    }
+                }
+            }
+
+            // Calculate average speed
+            this.calculateAverageSpeed();
+        },
+
+        estimateCheckpointTime(lastCheckpoint, targetDistance) {
+            // Find the next real checkpoint after lastCheckpoint to calculate average speed
+            const nextRealIndex = this.runnerCheckpoints.findIndex(cp =>
+                !cp.is_estimated && cp.distance > lastCheckpoint.distance
+            );
+
+            let averageSpeed = null;
+
+            if (nextRealIndex > 0) {
+                // Calculate speed between last two real checkpoints
+                const nextReal = this.runnerCheckpoints[nextRealIndex];
+                const distance = nextReal.distance - lastCheckpoint.distance; // km
+                const timeMs = nextReal.raw_time - lastCheckpoint.raw_time;
+                const timeHours = timeMs / (1000 * 60 * 60);
+                averageSpeed = distance / timeHours; // km/h
+            } else {
+                // Use a default speed estimate if we don't have next checkpoint yet
+                // Calculate from all available checkpoints
+                averageSpeed = this.runnerAverageSpeed || 10; // default 10 km/h
+            }
+
+            if (!averageSpeed || averageSpeed <= 0) return null;
+
+            // Calculate estimated time
+            const distanceDiff = targetDistance - lastCheckpoint.distance;
+            const timeNeededHours = distanceDiff / averageSpeed;
+            const timeNeededMs = timeNeededHours * 60 * 60 * 1000;
+
+            return new Date(lastCheckpoint.raw_time.getTime() + timeNeededMs);
+        },
+
+        calculateAverageSpeed() {
+            // Calculate overall average speed from all real checkpoints
+            const realCheckpoints = this.runnerCheckpoints.filter(cp => !cp.is_estimated);
+            if (realCheckpoints.length < 2) {
+                this.runnerAverageSpeed = null;
+                return;
+            }
+
+            const first = realCheckpoints[0];
+            const last = realCheckpoints[realCheckpoints.length - 1];
+            const distance = last.distance - first.distance; // km
+            const timeMs = last.raw_time - first.raw_time;
+            const timeHours = timeMs / (1000 * 60 * 60);
+
+            this.runnerAverageSpeed = distance / timeHours; // km/h
         },
 
         async addManualTime() {
