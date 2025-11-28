@@ -175,11 +175,11 @@ class RaspberryController extends Controller
 
     /**
      * Convert timestamp to Carbon datetime
+     * Timestamp Unix is always UTC, Laravel will handle timezone conversion automatically
      */
     private function timestampToDatetime(float $timestamp): Carbon
     {
-        // Create from timestamp with app timezone
-        return Carbon::createFromTimestamp(intval($timestamp), config('app.timezone'));
+        return Carbon::createFromTimestamp(intval($timestamp));
     }
 
     /**

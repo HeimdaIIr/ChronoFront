@@ -122,12 +122,16 @@ class Result extends Model
             return; // No start time available
         }
 
-        // Parse both dates in the same timezone to avoid negative values
-        $start = \Carbon\Carbon::parse($startTime, config('app.timezone'));
-        $end = \Carbon\Carbon::parse($this->raw_time, config('app.timezone'));
+        // Laravel handles timezone conversion automatically (UTC in DB, app timezone for display)
+        $start = \Carbon\Carbon::parse($startTime);
+        $end = \Carbon\Carbon::parse($this->raw_time);
 
-        // Use abs() to handle any timezone conversion issues
-        $this->calculated_time = abs($end->diffInSeconds($start, false));
+        // Calculate difference in seconds (should always be positive if detection is after start)
+        $diff = $end->diffInSeconds($start, false);
+
+        // If negative, it means detection time is before start time (clock issue)
+        // Use absolute value to avoid breaking the app
+        $this->calculated_time = abs($diff);
     }
 
     /**
