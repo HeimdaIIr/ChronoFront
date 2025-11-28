@@ -122,10 +122,12 @@ class Result extends Model
             return; // No start time available
         }
 
-        $start = \Carbon\Carbon::parse($startTime);
-        $end = \Carbon\Carbon::parse($this->raw_time);
+        // Parse both dates in the same timezone to avoid negative values
+        $start = \Carbon\Carbon::parse($startTime, config('app.timezone'));
+        $end = \Carbon\Carbon::parse($this->raw_time, config('app.timezone'));
 
-        $this->calculated_time = $end->diffInSeconds($start);
+        // Use abs() to handle any timezone conversion issues
+        $this->calculated_time = abs($end->diffInSeconds($start, false));
     }
 
     /**
