@@ -62,9 +62,9 @@ class EntrantController extends Controller
             'team' => 'nullable|string|max:200',
         ]);
 
-        // Générer le RFID si bib_number fourni
+        // Générer le RFID si bib_number fourni (2000 + dossard sur 4 chiffres)
         if (isset($validated['bib_number']) && !isset($validated['rfid_tag'])) {
-            $validated['rfid_tag'] = '2000' . $validated['bib_number'];
+            $validated['rfid_tag'] = '2000' . str_pad($validated['bib_number'], 4, '0', STR_PAD_LEFT);
         }
 
         $entrant = Entrant::create($validated);
@@ -270,10 +270,10 @@ class EntrantController extends Controller
                     }
                 }
 
-                // Generate RFID tag from bib number (2000 + dossard)
+                // Generate RFID tag from bib number (2000 + dossard sur 4 chiffres)
                 $rfidTag = null;
                 if ($bibNumber) {
-                    $rfidTag = '2000' . $bibNumber;
+                    $rfidTag = '2000' . str_pad($bibNumber, 4, '0', STR_PAD_LEFT);
                 }
 
                 // Clean gender
