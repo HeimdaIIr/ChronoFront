@@ -24,14 +24,15 @@ class ReaderController extends Controller
                 // DEBUG: Add debug info to response
                 $reader->debug_now = $now->toDateTimeString();
                 $reader->debug_date_test = $reader->date_test ? $reader->date_test->toDateTimeString() : null;
-                $reader->debug_diff_seconds = $reader->date_test ? $now->diffInSeconds($reader->date_test) : null;
+                $reader->debug_diff_seconds = $reader->date_test ? abs($now->diffInSeconds($reader->date_test)) : null;
 
                 if (!$reader->date_test) {
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif ($now->diffInSeconds($reader->date_test) < 20) {
+                } elseif (abs($now->diffInSeconds($reader->date_test)) < 20) {
                     // Received data within last 20 seconds (2 pings missed max)
+                    // Use abs() to handle timezone conversion issues
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
                 } else {
@@ -140,14 +141,15 @@ class ReaderController extends Controller
                 // DEBUG: Add debug info to response
                 $reader->debug_now = $now->toDateTimeString();
                 $reader->debug_date_test = $reader->date_test ? $reader->date_test->toDateTimeString() : null;
-                $reader->debug_diff_seconds = $reader->date_test ? $now->diffInSeconds($reader->date_test) : null;
+                $reader->debug_diff_seconds = $reader->date_test ? abs($now->diffInSeconds($reader->date_test)) : null;
 
                 if (!$reader->date_test) {
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif ($now->diffInSeconds($reader->date_test) < 20) {
+                } elseif (abs($now->diffInSeconds($reader->date_test)) < 20) {
                     // Received data within last 20 seconds (2 pings missed max)
+                    // Use abs() to handle timezone conversion issues
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
                 } else {
