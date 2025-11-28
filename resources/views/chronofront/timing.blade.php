@@ -657,6 +657,7 @@ body {
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <span>Lecteurs hors ligne</span>
                 </div>
+                <div style="font-size: 1.1rem; font-variant-numeric: tabular-nums; color: #a1a1aa; margin-left: 1rem;" x-text="currentTime"></div>
                 <a href="{{ route('dashboard') }}" class="icon-btn"><i class="bi bi-x-lg"></i></a>
             </div>
         </div>
@@ -667,7 +668,27 @@ body {
             <div class="chrono-left">
                 <!-- Clock + Readers Status -->
                 <div class="clock-status-section">
-                    <div class="main-clock" x-text="currentTime"></div>
+                    <!-- Race Selector -->
+                    <div style="text-align: center; padding-top: 1.5rem; padding-bottom: 0.5rem;">
+                        <select x-model="selectedRaceId" @change="switchRaceChrono()"
+                                style="background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.95rem; cursor: pointer;">
+                            <option value="">Sélectionner un parcours</option>
+                            <template x-for="race in races" :key="race.id">
+                                <option :value="race.id" x-text="race.name + (race.start_time ? ' (Démarré)' : '')"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Race Chrono Display -->
+                    <div class="main-clock" x-text="raceChrono" x-show="selectedRaceId && getSelectedRace()?.start_time"></div>
+                    <div class="main-clock" style="font-size: 3rem; color: #71717a;" x-show="!selectedRaceId || !getSelectedRace()?.start_time">
+                        -- : -- : --
+                    </div>
+                    <div style="text-align: center; padding-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;" x-show="selectedRaceId && getSelectedRace()?.start_time">
+                        <span>Départ: </span>
+                        <span x-text="formatTime(getSelectedRace()?.start_time)"></span>
+                    </div>
+
                     <div class="readers-status" x-show="readers.length > 0">
                         <template x-for="reader in readers" :key="reader.id">
                             <div class="reader-item" :class="{ 'warning': !reader.is_online }">
@@ -837,6 +858,8 @@ function chronoApp() {
         eventName: '',
         currentEventId: null,
         currentTime: '00:00:00',
+        raceChrono: '00:00:00',
+        selectedRaceId: null,
         races: [],
         readers: [],
         results: [],
@@ -860,7 +883,7 @@ function chronoApp() {
         init() {
             this.startClock();
             this.loadEvent();
-            this.loadRaces();
+            this.loadRaces().then(() => this.autoSelectLastStartedRace());
             this.loadReaders();
             this.loadAllResults();
             this.startAutoRefresh();
@@ -875,6 +898,42 @@ function chronoApp() {
         updateClock() {
             const now = new Date();
             this.currentTime = now.toLocaleTimeString('fr-FR');
+            this.updateRaceChrono();
+        },
+
+        updateRaceChrono() {
+            const race = this.getSelectedRace();
+            if (!race || !race.start_time) {
+                this.raceChrono = '00:00:00';
+                return;
+            }
+
+            const startTime = new Date(race.start_time);
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000); // seconds
+
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+
+            this.raceChrono = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+
+        getSelectedRace() {
+            return this.races.find(r => r.id == this.selectedRaceId);
+        },
+
+        switchRaceChrono() {
+            this.updateRaceChrono();
+        },
+
+        autoSelectLastStartedRace() {
+            // Auto-select the most recently started race
+            const startedRaces = this.races.filter(r => r.start_time).sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+            if (startedRaces.length > 0) {
+                this.selectedRaceId = startedRaces[0].id;
+                this.updateRaceChrono();
+            }
         },
 
         async loadEvent() {
@@ -942,11 +1001,25 @@ function chronoApp() {
             }
         },
 
+        normalizeString(str) {
+            if (!str) return '';
+            // NFD normalization: decompose accented characters
+            // Then remove diacritics (combining marks)
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        },
+
         filterResults() {
             this.displayedResults = this.results.filter(result => {
-                const matchesSearch = !this.searchQuery ||
-                    result.entrant?.bib_number?.toString().includes(this.searchQuery) ||
-                    (result.entrant?.firstname + ' ' + result.entrant?.lastname).toLowerCase().includes(this.searchQuery.toLowerCase());
+                if (!this.searchQuery) return true;
+
+                const searchNormalized = this.normalizeString(this.searchQuery);
+                const bibNumber = result.entrant?.bib_number?.toString() || '';
+                const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
+                const fullNameNormalized = this.normalizeString(fullName);
+
+                const matchesSearch = bibNumber.includes(this.searchQuery) ||
+                    fullNameNormalized.includes(searchNormalized);
+
                 return matchesSearch;
             });
         },
@@ -994,7 +1067,13 @@ function chronoApp() {
         },
 
         startAutoRefresh() {
-            this.autoRefreshInterval = setInterval(() => this.loadAllResults(), 5000);
+            // Reduced frequency to 30 seconds to avoid annoying UI updates
+            // Only refresh when there are started races
+            this.autoRefreshInterval = setInterval(() => {
+                if (this.hasOngoingRaces()) {
+                    this.loadAllResults();
+                }
+            }, 30000);
         },
 
         showToast(message, type = 'success') {
