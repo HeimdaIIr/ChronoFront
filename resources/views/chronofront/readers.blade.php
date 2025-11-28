@@ -228,7 +228,7 @@ function readersManager(eventId) {
         async loadReaders() {
             this.loading = true;
             try {
-                const response = await axios.get(`/api/readers/event/${this.eventId}`);
+                const response = await axios.get(`/readers/event/${this.eventId}`);
                 this.readers = response.data;
             } catch (error) {
                 console.error('Error loading readers:', error);
@@ -240,7 +240,7 @@ function readersManager(eventId) {
 
         async loadRaces() {
             try {
-                const response = await axios.get(`/api/races/event/${this.eventId}`);
+                const response = await axios.get(`/races/event/${this.eventId}`);
                 this.races = response.data;
             } catch (error) {
                 console.error('Error loading races:', error);
@@ -303,9 +303,9 @@ function readersManager(eventId) {
             this.saving = true;
             try {
                 if (this.editMode) {
-                    await axios.put(`/api/readers/${this.currentReader.id}`, this.currentReader);
+                    await axios.put(`/readers/${this.currentReader.id}`, this.currentReader);
                 } else {
-                    await axios.post('/api/readers', this.currentReader);
+                    await axios.post('/readers', this.currentReader);
                 }
                 this.closeModal();
                 await this.loadReaders();
@@ -322,7 +322,7 @@ function readersManager(eventId) {
             if (!confirm('Êtes-vous sûr de vouloir supprimer ce lecteur ?')) return;
 
             try {
-                await axios.delete(`/api/readers/${id}`);
+                await axios.delete(`/readers/${id}`);
                 await this.loadReaders();
                 alert('Lecteur supprimé avec succès !');
             } catch (error) {
