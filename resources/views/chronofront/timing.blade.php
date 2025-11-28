@@ -969,7 +969,7 @@ function chronoApp() {
         async loadEvent() {
             try {
                 // Load first active event
-                const response = await axios.get('/api/events');
+                const response = await axios.get('/events');
                 const activeEvent = response.data.find(e => e.is_active) || response.data[0];
                 if (activeEvent) {
                     this.currentEvent = activeEvent;
