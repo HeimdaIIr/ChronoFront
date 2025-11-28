@@ -149,6 +149,59 @@ class ReaderController extends Controller
     }
 
     /**
+     * Ping a reader to check if it's online
+     */
+    public function ping(Reader $reader): JsonResponse
+    {
+        // Calculate IP from serial (192.168.10.1XX where XX = last 2 digits of serial)
+        $lastTwoDigits = substr((string)$reader->serial, -2);
+        $ipSuffix = 150 + (int)$lastTwoDigits;
+        $readerIp = "192.168.10.{$ipSuffix}";
+
+        // Try to ping the reader (HTTP request to check if it's alive)
+        try {
+            $timeout = 2; // 2 seconds timeout
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => $timeout,
+                    'ignore_errors' => true
+                ]
+            ]);
+
+            // Try to reach the reader (you can adjust the endpoint)
+            $url = "http://{$readerIp}";
+            $response = @file_get_contents($url, false, $context);
+
+            // If we got any response, consider it online
+            if ($response !== false || isset($http_response_header)) {
+                $reader->update([
+                    'test_terrain' => true,
+                    'date_test' => now(),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Reader is online',
+                    'ip' => $readerIp,
+                    'reader' => $reader
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Reader is offline or unreachable',
+                    'ip' => $readerIp
+                ], 503);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error pinging reader: ' . $e->getMessage(),
+                'ip' => $readerIp
+            ], 500);
+        }
+    }
+
+    /**
      * Calculate checkpoint order based on distance from start
      * Readers are ordered by distance (ascending)
      */

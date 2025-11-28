@@ -57,6 +57,7 @@ Route::delete('results/{result}', [ResultController::class, 'destroy']);
 
 // Readers Routes
 Route::get('readers/event/{eventId}', [ReaderController::class, 'byEvent']);
+Route::post('readers/{reader}/ping', [ReaderController::class, 'ping']);
 Route::apiResource('readers', ReaderController::class);
 
 // RFID Raspberry Reader Routes

@@ -335,19 +335,22 @@ function readersManager(eventId) {
             this.pinging = reader.id;
             try {
                 const ip = this.calculateIP(reader.serial);
-                // In reality, the ping would be done server-side or by the Raspberry itself
-                // For now, we just reload to check the date_test status
-                alert(`Test de connexion pour ${reader.location} (${ip})...\nVérifiez que le lecteur envoie des données.`);
-                setTimeout(() => {
-                    this.loadReaders();
-                }, 2000);
+                const response = await axios.post(`/readers/${reader.id}/ping`);
+
+                if (response.data.success) {
+                    alert(`✓ Lecteur ${reader.location} (${ip}) est EN LIGNE !`);
+                } else {
+                    alert(`✗ Lecteur ${reader.location} (${ip}) est HORS LIGNE\n${response.data.message}`);
+                }
+
+                // Reload readers to update status
+                await this.loadReaders();
             } catch (error) {
                 console.error('Error pinging reader:', error);
-                alert('Erreur lors du test de connexion');
+                const ip = this.calculateIP(reader.serial);
+                alert(`✗ Erreur lors du test de connexion vers ${ip}\n${error.response?.data?.message || error.message}`);
             } finally {
-                setTimeout(() => {
-                    this.pinging = null;
-                }, 2000);
+                this.pinging = null;
             }
         }
     }
