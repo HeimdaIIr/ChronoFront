@@ -56,25 +56,45 @@ class Reader extends Model
 
     /**
      * Check if reader is currently active based on date range
+     * If date_min/date_max are NULL, reader is always active (no time restriction)
      */
     public function isCurrentlyActive(): bool
     {
         $now = now();
-        return $this->is_active
-            && $now >= $this->date_min
-            && $now <= $this->date_max;
+        $withinDateRange = true;
+
+        // Check date_min if set
+        if ($this->date_min !== null && $now < $this->date_min) {
+            $withinDateRange = false;
+        }
+
+        // Check date_max if set
+        if ($this->date_max !== null && $now > $this->date_max) {
+            $withinDateRange = false;
+        }
+
+        return $this->is_active && $withinDateRange;
     }
 
     /**
      * Get active configuration for a reader by serial number
+     * If date_min/date_max are NULL, reader is always active (no time restriction)
      */
     public static function getActiveConfig(string $serial): ?self
     {
         $now = now();
         return self::where('serial', $serial)
             ->where('is_active', true)
-            ->where('date_min', '<=', $now)
-            ->where('date_max', '>=', $now)
+            ->where(function($q) use ($now) {
+                // If date_min is NULL, no start restriction
+                $q->whereNull('date_min')
+                  ->orWhere('date_min', '<=', $now);
+            })
+            ->where(function($q) use ($now) {
+                // If date_max is NULL, no end restriction
+                $q->whereNull('date_max')
+                  ->orWhere('date_max', '>=', $now);
+            })
             ->first();
     }
 
