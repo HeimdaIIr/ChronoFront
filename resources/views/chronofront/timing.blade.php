@@ -1022,9 +1022,22 @@ function chronoApp() {
             }
         },
 
+        async pingAllReaders() {
+            if (!this.currentEventId) return;
+
+            try {
+                await axios.post(`/readers/event/${this.currentEventId}/ping-all`);
+                // After ping, reload readers to get updated status
+                await this.loadReaders();
+            } catch (error) {
+                console.error('Error pinging readers:', error);
+            }
+        },
+
         startReaderPing() {
             // Ping readers every 10 seconds to check connection
-            this.readerPingInterval = setInterval(() => this.loadReaders(), 10000);
+            this.pingAllReaders(); // Initial ping
+            this.readerPingInterval = setInterval(() => this.pingAllReaders(), 10000);
         },
 
         async loadAllResults() {

@@ -149,6 +149,49 @@ class ReaderController extends Controller
     }
 
     /**
+     * Ping all readers for an event
+     */
+    public function pingAll(int $eventId): JsonResponse
+    {
+        $readers = Reader::where('event_id', $eventId)->get();
+        $results = [];
+
+        foreach ($readers as $reader) {
+            // Calculate IP from serial
+            $lastTwoDigits = substr((string)$reader->serial, -2);
+            $ipSuffix = 150 + (int)$lastTwoDigits;
+            $readerIp = "192.168.10.{$ipSuffix}";
+
+            // Try to ping
+            $timeout = 1; // 1 second timeout for bulk ping
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => $timeout,
+                    'ignore_errors' => true
+                ]
+            ]);
+
+            $url = "http://{$readerIp}";
+            $response = @file_get_contents($url, false, $context);
+
+            if ($response !== false || isset($http_response_header)) {
+                $reader->update([
+                    'test_terrain' => true,
+                    'date_test' => now(),
+                ]);
+                $results[] = ['reader_id' => $reader->id, 'status' => 'online'];
+            } else {
+                $results[] = ['reader_id' => $reader->id, 'status' => 'offline'];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'results' => $results
+        ]);
+    }
+
+    /**
      * Ping a reader to check if it's online
      */
     public function ping(Reader $reader): JsonResponse
