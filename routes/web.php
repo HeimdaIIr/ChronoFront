@@ -12,3 +12,4 @@ Route::get('/waves', [ChronoFrontController::class, 'waves'])->name('waves');
 Route::get('/timing', [ChronoFrontController::class, 'timing'])->name('timing');
 Route::get('/results', [ChronoFrontController::class, 'results'])->name('results');
 Route::get('/categories', [ChronoFrontController::class, 'categories'])->name('categories');
+Route::get('/events/{id}/readers', [ChronoFrontController::class, 'readers'])->name('events.readers');

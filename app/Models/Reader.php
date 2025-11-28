@@ -16,6 +16,8 @@ class Reader extends Model
         'event_id',
         'race_id',
         'location',
+        'distance_from_start',
+        'checkpoint_order',
         'anti_rebounce_seconds',
         'date_min',
         'date_max',
@@ -32,6 +34,8 @@ class Reader extends Model
         'is_active' => 'boolean',
         'test_terrain' => 'boolean',
         'anti_rebounce_seconds' => 'integer',
+        'distance_from_start' => 'decimal:2',
+        'checkpoint_order' => 'integer',
     ];
 
     /**

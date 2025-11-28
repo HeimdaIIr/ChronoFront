@@ -77,4 +77,12 @@ class ChronoFrontController extends Controller
     {
         return view('chronofront.categories');
     }
+
+    /**
+     * Configuration des lecteurs RFID
+     */
+    public function readers($id)
+    {
+        return view('chronofront.readers', ['eventId' => $id]);
+    }
 }

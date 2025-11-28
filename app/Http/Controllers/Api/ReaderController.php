@@ -46,15 +46,23 @@ class ReaderController extends Controller
     {
         $validated = $request->validate([
             'serial' => 'required|string|max:50',
-            'name' => 'required|string|max:200',
-            'event_id' => 'nullable|exists:events,id',
+            'name' => 'nullable|string|max:200',
+            'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'required|string|max:100',
-            'anti_rebounce_seconds' => 'integer|min:0',
-            'date_min' => 'required|date',
-            'date_max' => 'required|date|after_or_equal:date_min',
-            'is_active' => 'boolean',
+            'distance_from_start' => 'required|numeric|min:0',
+            'anti_rebounce_seconds' => 'nullable|integer|min:0',
+            'date_min' => 'nullable|date',
+            'date_max' => 'nullable|date|after_or_equal:date_min',
+            'is_active' => 'nullable|boolean',
         ]);
+
+        // Calculate checkpoint_order based on distance for this event
+        $validated['checkpoint_order'] = $this->calculateCheckpointOrder(
+            $validated['event_id'],
+            $validated['distance_from_start'],
+            null // no reader id for new reader
+        );
 
         $reader = Reader::create($validated);
 
@@ -77,15 +85,23 @@ class ReaderController extends Controller
     {
         $validated = $request->validate([
             'serial' => 'sometimes|string|max:50',
-            'name' => 'sometimes|string|max:200',
-            'event_id' => 'nullable|exists:events,id',
+            'name' => 'nullable|string|max:200',
+            'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'sometimes|string|max:100',
-            'anti_rebounce_seconds' => 'integer|min:0',
-            'date_min' => 'sometimes|date',
-            'date_max' => 'sometimes|date',
-            'is_active' => 'boolean',
+            'distance_from_start' => 'sometimes|numeric|min:0',
+            'anti_rebounce_seconds' => 'nullable|integer|min:0',
+            'date_min' => 'nullable|date',
+            'date_max' => 'nullable|date',
+            'is_active' => 'nullable|boolean',
         ]);
+
+        // Recalculate checkpoint_order if distance or event changed
+        if (isset($validated['distance_from_start']) || isset($validated['event_id'])) {
+            $eventId = $validated['event_id'] ?? $reader->event_id;
+            $distance = $validated['distance_from_start'] ?? $reader->distance_from_start;
+            $validated['checkpoint_order'] = $this->calculateCheckpointOrder($eventId, $distance, $reader->id);
+        }
 
         $reader->update($validated);
 
@@ -130,5 +146,25 @@ class ReaderController extends Controller
             });
 
         return response()->json($readers);
+    }
+
+    /**
+     * Calculate checkpoint order based on distance from start
+     * Readers are ordered by distance (ascending)
+     */
+    private function calculateCheckpointOrder(int $eventId, float $distance, ?int $excludeReaderId = null): int
+    {
+        // Count how many readers have a smaller distance in this event
+        $query = Reader::where('event_id', $eventId)
+            ->where('distance_from_start', '<', $distance);
+
+        if ($excludeReaderId) {
+            $query->where('id', '!=', $excludeReaderId);
+        }
+
+        $smallerCount = $query->count();
+
+        // Order is count + 1 (1-indexed)
+        return $smallerCount + 1;
     }
 }
