@@ -19,11 +19,18 @@ class ReaderController extends Controller
             ->get()
             ->map(function ($reader) {
                 // Check reader connection status
+                $now = now();
+
+                // DEBUG: Add debug info to response
+                $reader->debug_now = $now->toDateTimeString();
+                $reader->debug_date_test = $reader->date_test ? $reader->date_test->toDateTimeString() : null;
+                $reader->debug_diff_seconds = $reader->date_test ? $now->diffInSeconds($reader->date_test) : null;
+
                 if (!$reader->date_test) {
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif (now()->diffInSeconds($reader->date_test) < 20) {
+                } elseif ($now->diffInSeconds($reader->date_test) < 20) {
                     // Received data within last 20 seconds (2 pings missed max)
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
@@ -128,11 +135,18 @@ class ReaderController extends Controller
             ->get()
             ->map(function ($reader) {
                 // Check reader connection status
+                $now = now();
+
+                // DEBUG: Add debug info to response
+                $reader->debug_now = $now->toDateTimeString();
+                $reader->debug_date_test = $reader->date_test ? $reader->date_test->toDateTimeString() : null;
+                $reader->debug_diff_seconds = $reader->date_test ? $now->diffInSeconds($reader->date_test) : null;
+
                 if (!$reader->date_test) {
                     // Never received data from this reader
                     $reader->is_online = false;
                     $reader->connection_status = 'never_connected';
-                } elseif (now()->diffInSeconds($reader->date_test) < 20) {
+                } elseif ($now->diffInSeconds($reader->date_test) < 20) {
                     // Received data within last 20 seconds (2 pings missed max)
                     $reader->is_online = true;
                     $reader->connection_status = 'online';
