@@ -178,7 +178,8 @@ class RaspberryController extends Controller
      */
     private function timestampToDatetime(float $timestamp): Carbon
     {
-        return Carbon::createFromTimestamp(intval($timestamp));
+        // Create from timestamp with app timezone
+        return Carbon::createFromTimestamp(intval($timestamp), config('app.timezone'));
     }
 
     /**
