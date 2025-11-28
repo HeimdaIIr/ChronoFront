@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Category;
 
 class CategorySeeder extends Seeder
@@ -319,14 +320,10 @@ class CategorySeeder extends Seeder
             ],
         ];
 
-        // Désactive les contraintes de clé étrangère
-        DB::statement()('SET FOREIGN_KEY_CHECKS=0;');
-
         // Supprime toutes les catégories existantes
+        DB::statement('PRAGMA foreign_keys = OFF;');
         Category::truncate();
-
-        // Réactive les contraintes de clé étrangère
-        DB::statement()('SET FOREIGN_KEY_CHECKS=1;');
+        DB::statement('PRAGMA foreign_keys = ON;');
 
         // Crée les nouvelles catégories
         foreach ($categories as $category) {
