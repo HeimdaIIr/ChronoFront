@@ -1245,13 +1245,13 @@ function chronoApp() {
         },
 
         startAutoRefresh() {
-            // Reduced frequency to 30 seconds to avoid annoying UI updates
+            // Auto-refresh every 3 seconds for real-time updates
             // Only refresh when there are started races
             this.autoRefreshInterval = setInterval(() => {
                 if (this.hasOngoingRaces()) {
                     this.loadAllResults();
                 }
-            }, 30000);
+            }, 3000);
         },
 
         startAlertCheck() {
