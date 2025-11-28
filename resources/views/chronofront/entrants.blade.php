@@ -100,9 +100,30 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Dossard</th>
-                            <th>Nom</th>
-                            <th>Prénom</th>
+                            <th @click="sortBy('bib_number')" style="cursor: pointer;">
+                                Dossard
+                                <i class="bi" :class="{
+                                    'bi-arrow-down': sortColumn === 'bib_number' && sortDirection === 'asc',
+                                    'bi-arrow-up': sortColumn === 'bib_number' && sortDirection === 'desc',
+                                    'bi-arrow-down-up': sortColumn !== 'bib_number'
+                                }"></i>
+                            </th>
+                            <th @click="sortBy('lastname')" style="cursor: pointer;">
+                                Nom
+                                <i class="bi" :class="{
+                                    'bi-arrow-down': sortColumn === 'lastname' && sortDirection === 'asc',
+                                    'bi-arrow-up': sortColumn === 'lastname' && sortDirection === 'desc',
+                                    'bi-arrow-down-up': sortColumn !== 'lastname'
+                                }"></i>
+                            </th>
+                            <th @click="sortBy('firstname')" style="cursor: pointer;">
+                                Prénom
+                                <i class="bi" :class="{
+                                    'bi-arrow-down': sortColumn === 'firstname' && sortDirection === 'asc',
+                                    'bi-arrow-up': sortColumn === 'firstname' && sortDirection === 'desc',
+                                    'bi-arrow-down-up': sortColumn !== 'firstname'
+                                }"></i>
+                            </th>
                             <th>Sexe</th>
                             <th>Catégorie</th>
                             <th>Épreuve</th>
@@ -292,6 +313,8 @@ function entrantsManager() {
         selectedEventFilter: '',
         selectedRaceFilter: '',
         searchQuery: '',
+        sortColumn: 'bib_number',
+        sortDirection: 'asc',
         loading: false,
         showModal: false,
         editingEntrant: null,
@@ -314,9 +337,26 @@ function entrantsManager() {
         },
 
         get paginatedEntrants() {
+            // Tri des participants
+            const sorted = [...this.filteredEntrants].sort((a, b) => {
+                let aVal = a[this.sortColumn];
+                let bVal = b[this.sortColumn];
+
+                // Tri par dossard : conversion en nombre
+                if (this.sortColumn === 'bib_number') {
+                    aVal = parseInt(aVal) || 0;
+                    bVal = parseInt(bVal) || 0;
+                }
+
+                // Comparaison
+                if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
             const start = (this.currentPage - 1) * this.perPage;
             const end = start + this.perPage;
-            return this.filteredEntrants.slice(start, end);
+            return sorted.slice(start, end);
         },
 
         get totalPages() {
@@ -429,6 +469,17 @@ function entrantsManager() {
                 );
             }
             this.currentPage = 1;
+        },
+
+        sortBy(column) {
+            if (this.sortColumn === column) {
+                // Inverse la direction si même colonne
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Nouvelle colonne : tri ascendant par défaut
+                this.sortColumn = column;
+                this.sortDirection = 'asc';
+            }
         },
 
         openCreateModal() {
