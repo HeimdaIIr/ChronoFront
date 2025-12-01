@@ -1709,21 +1709,48 @@ function chronoApp() {
                 // Build datetime string: YYYY-MM-DD HH:MM:SS
                 const datetime = `${this.intermediateDate} ${this.intermediateTime}`;
 
-                const response = await axios.post('/results/time', {
-                    entrant_id: this.selectedResult.entrant_id,
-                    race_id: this.selectedResult.race_id,
-                    reader_id: reader.id,
-                    reader_location: reader.location,
-                    raw_time: datetime,
-                    is_manual: true
-                });
+                // Check if a result already exists for this runner at this checkpoint
+                const existingResult = this.results.find(r =>
+                    r.entrant_id === this.selectedResult.entrant_id &&
+                    (r.reader_id == reader.id || r.reader_location === reader.location)
+                );
 
-                // Add the new result to the results array (local update)
-                const newResult = response.data.result; // Get result from response
-                this.results.unshift(newResult);
+                let response;
+                let updatedResult;
+
+                if (existingResult) {
+                    // Update existing result
+                    response = await axios.put(`/results/${existingResult.id}`, {
+                        raw_time: datetime
+                    });
+
+                    // Update in local array
+                    const resultIndex = this.results.findIndex(r => r.id === existingResult.id);
+                    if (resultIndex !== -1) {
+                        this.results[resultIndex] = response.data;
+                    }
+                    updatedResult = response.data;
+
+                    this.showToast(`Temps modifié: ${reader.location}`, 'success');
+                } else {
+                    // Create new result
+                    response = await axios.post('/results/time', {
+                        entrant_id: this.selectedResult.entrant_id,
+                        race_id: this.selectedResult.race_id,
+                        reader_id: reader.id,
+                        reader_location: reader.location,
+                        raw_time: datetime,
+                        is_manual: true
+                    });
+
+                    // Add to local array
+                    updatedResult = response.data.result;
+                    this.results.unshift(updatedResult);
+
+                    this.showToast(`Temps ajouté: ${reader.location}`, 'success');
+                }
+
                 this.filterResults();
-
-                this.showToast(`Temps intermédiaire ajouté: ${reader.location}`, 'success');
 
                 // Reset form
                 this.intermediateReaderId = '';
@@ -1734,7 +1761,7 @@ function chronoApp() {
                 this.calculateRunnerCheckpoints();
 
             } catch (error) {
-                console.error('Erreur ajout temps:', error);
+                console.error('Erreur ajout/modification temps:', error);
                 alert('Erreur: ' + (error.response?.data?.message || error.message));
             } finally {
                 this.saving = false;
