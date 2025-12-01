@@ -792,7 +792,7 @@ body {
                     </button>
                     <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6;">
                         <i class="bi bi-file-earmark-text-fill"></i>
-                        IMPORTER RFID
+                        IMPORTER HEURES
                     </button>
                 </div>
 
@@ -1137,22 +1137,7 @@ body {
     <!-- RFID File Import Modal -->
     <div x-show="showRfidFileModal" class="modal-overlay" @click.self="showRfidFileModal = false">
         <div class="modal-content" style="max-width: 700px;">
-            <h3><i class="bi bi-file-earmark-text-fill"></i> Importer fichier RFID</h3>
-
-            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">
-                    <i class="bi bi-info-circle-fill"></i> Format du fichier
-                </h4>
-                <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;">
-                    Fichier .txt généré par le lecteur RFID
-                </p>
-                <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.85rem; font-family: monospace;">
-                    Exemple:<br>
-                    [20000002]:a20251201140220034<br>
-                    [20001695]:a20251201140222034<br>
-                    [20002113]:a20251201140222036
-                </p>
-            </div>
+            <h3><i class="bi bi-file-earmark-text-fill"></i> Importer heures</h3>
 
             <!-- Checkpoint selection -->
             <div style="margin-bottom: 1.5rem;">
