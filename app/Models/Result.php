@@ -41,6 +41,14 @@ class Result extends Model
     ];
 
     /**
+     * Attributes to append to JSON responses
+     */
+    protected $appends = [
+        'formatted_time',
+        'formatted_lap_time',
+    ];
+
+    /**
      * Get raw_time attribute - convert to Carbon in app timezone
      */
     public function getRawTimeAttribute($value)
