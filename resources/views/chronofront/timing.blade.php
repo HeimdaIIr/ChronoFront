@@ -756,10 +756,16 @@ body {
                         <input type="text" placeholder="Rechercher dossard / nom" x-model="searchQuery" @input="filterResults">
                     </div>
                     <select class="filter-select" x-model="categoryFilter" @change="filterResults">
-                        <option value="">Catégorie</option>
+                        <option value="">Toutes catégories</option>
+                        <template x-for="category in [...new Set(results.map(r => r.entrant?.category?.name).filter(c => c))]" :key="category">
+                            <option :value="category" x-text="category"></option>
+                        </template>
                     </select>
                     <select class="filter-select" x-model="sasFilter" @change="filterResults">
-                        <option value="">SAS</option>
+                        <option value="">Tous SAS</option>
+                        <template x-for="wave in [...new Set(results.map(r => r.wave?.name).filter(w => w))]" :key="wave">
+                            <option :value="wave" x-text="wave"></option>
+                        </template>
                     </select>
                     <button class="btn-filter" @click="showTopDepartModal = true">
                         <i class="bi bi-flag-fill"></i>
@@ -1210,17 +1216,30 @@ function chronoApp() {
 
         filterResults() {
             this.displayedResults = this.results.filter(result => {
-                if (!this.searchQuery) return true;
+                // Filter by search query (bib number or name)
+                if (this.searchQuery) {
+                    const searchNormalized = this.normalizeString(this.searchQuery);
+                    const bibNumber = result.entrant?.bib_number?.toString() || '';
+                    const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
+                    const fullNameNormalized = this.normalizeString(fullName);
 
-                const searchNormalized = this.normalizeString(this.searchQuery);
-                const bibNumber = result.entrant?.bib_number?.toString() || '';
-                const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
-                const fullNameNormalized = this.normalizeString(fullName);
+                    const matchesSearch = bibNumber.includes(this.searchQuery) ||
+                        fullNameNormalized.includes(searchNormalized);
 
-                const matchesSearch = bibNumber.includes(this.searchQuery) ||
-                    fullNameNormalized.includes(searchNormalized);
+                    if (!matchesSearch) return false;
+                }
 
-                return matchesSearch;
+                // Filter by category
+                if (this.categoryFilter && result.entrant?.category?.name !== this.categoryFilter) {
+                    return false;
+                }
+
+                // Filter by SAS (wave)
+                if (this.sasFilter && result.wave?.name !== this.sasFilter) {
+                    return false;
+                }
+
+                return true;
             });
         },
 
