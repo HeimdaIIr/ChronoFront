@@ -1477,20 +1477,25 @@ function chronoApp() {
             this.runnerCheckpoints = [];
             let lastRealCheckpoint = null;
 
-            // Add race start as first checkpoint
-            const race = this.getSelectedRace();
-            if (race && race.start_time) {
+            // Add race start as first checkpoint (use runner's race, not selected filter)
+            const runnerRace = this.selectedResult.race;
+            const runnerWave = this.selectedResult.wave;
+
+            // Get start time from wave first, then race (wave has priority)
+            const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
+
+            if (startTime) {
                 this.runnerCheckpoints.push({
                     id: null, // Start time is not editable
                     location: 'DÉPART',
                     distance: 0,
-                    time_display: this.formatTime(race.start_time),
-                    raw_time: new Date(race.start_time),
+                    time_display: this.formatTime(startTime),
+                    raw_time: new Date(startTime),
                     is_estimated: false
                 });
                 lastRealCheckpoint = {
                     distance: 0,
-                    raw_time: new Date(race.start_time)
+                    raw_time: new Date(startTime)
                 };
             }
 
