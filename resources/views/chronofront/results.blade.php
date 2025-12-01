@@ -11,6 +11,19 @@
         </div>
         <div class="col-auto">
             <button
+                class="btn btn-primary me-2"
+                @click="recalculatePositions"
+                :disabled="!selectedRace || results.length === 0 || recalculating"
+            >
+                <span x-show="!recalculating">
+                    <i class="bi bi-calculator"></i> Recalculer positions
+                </span>
+                <span x-show="recalculating">
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    Calcul...
+                </span>
+            </button>
+            <button
                 class="btn btn-success"
                 @click="exportResults"
                 :disabled="!selectedRace || results.length === 0"
@@ -259,6 +272,7 @@ function resultsManager() {
         displayMode: 'general',
         statusFilter: 'all',
         loading: false,
+        recalculating: false,
         stats: {
             total: 0,
             finished: 0,
@@ -377,6 +391,26 @@ function resultsManager() {
             } else {
                 this.stats.avgTime = 0;
                 this.stats.avgSpeed = 0;
+            }
+        },
+
+        async recalculatePositions() {
+            if (!this.selectedRace) return;
+
+            this.recalculating = true;
+            try {
+                const response = await axios.post(`/results/race/${this.selectedRace}/recalculate`);
+
+                // Show success message
+                alert(`Positions recalculées avec succès!\n${response.data.total_results} résultats traités.`);
+
+                // Reload results to show new positions
+                await this.loadResults();
+            } catch (error) {
+                console.error('Erreur lors du recalcul des positions', error);
+                alert('Erreur lors du recalcul des positions: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.recalculating = false;
             }
         },
 
