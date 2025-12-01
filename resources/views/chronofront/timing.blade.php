@@ -801,6 +801,8 @@ body {
                     <table class="chrono-table">
                         <thead>
                             <tr>
+                                <th>Pos</th>
+                                <th>Cat</th>
                                 <th>Dossard</th>
                                 <th>Nom</th>
                                 <th>Catégorie</th>
@@ -815,6 +817,8 @@ body {
                         <tbody>
                             <template x-for="result in displayedResults" :key="result.id">
                                 <tr :class="{ 'selected': selectedResult?.id === result.id }" @click="selectResult(result)">
+                                    <td><strong x-text="result.position || '-'"></strong></td>
+                                    <td><strong x-text="result.category_position || '-'"></strong></td>
                                     <td><strong x-text="result.entrant?.bib_number"></strong></td>
                                     <td x-text="(result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '')"></td>
                                     <td><span class="cat-tag" x-text="result.entrant?.category?.name || '-'"></span></td>
@@ -1441,6 +1445,74 @@ function chronoApp() {
                 }
 
                 return true;
+            });
+
+            // Calculate positions after filtering
+            this.calculatePositions();
+        },
+
+        calculatePositions() {
+            // Group results by race and entrant to get best result for each runner
+            const resultsByRace = {};
+
+            this.displayedResults.forEach(result => {
+                if (!result.calculated_time || !result.race_id || !result.entrant_id) {
+                    result.position = null;
+                    result.category_position = null;
+                    return;
+                }
+
+                const raceKey = result.race_id;
+                if (!resultsByRace[raceKey]) {
+                    resultsByRace[raceKey] = {};
+                }
+
+                const entrantKey = result.entrant_id;
+                // Keep only the best time (lowest calculated_time) for each entrant
+                if (!resultsByRace[raceKey][entrantKey] ||
+                    result.calculated_time < resultsByRace[raceKey][entrantKey].calculated_time) {
+                    resultsByRace[raceKey][entrantKey] = result;
+                }
+            });
+
+            // Calculate positions for each race
+            Object.keys(resultsByRace).forEach(raceKey => {
+                const raceResults = Object.values(resultsByRace[raceKey]);
+
+                // Sort by calculated time (fastest first)
+                raceResults.sort((a, b) => a.calculated_time - b.calculated_time);
+
+                // Assign overall positions
+                raceResults.forEach((result, index) => {
+                    result.position = index + 1;
+                });
+
+                // Calculate category positions
+                const categorizedResults = {};
+                raceResults.forEach(result => {
+                    const categoryId = result.entrant?.category?.id;
+                    if (!categoryId) return;
+
+                    if (!categorizedResults[categoryId]) {
+                        categorizedResults[categoryId] = [];
+                    }
+                    categorizedResults[categoryId].push(result);
+                });
+
+                // Assign category positions
+                Object.values(categorizedResults).forEach(categoryResults => {
+                    categoryResults.forEach((result, index) => {
+                        result.category_position = index + 1;
+                    });
+                });
+            });
+
+            // Reset positions for results not in best results
+            this.displayedResults.forEach(result => {
+                if (!result.position && result.calculated_time) {
+                    result.position = '-';
+                    result.category_position = '-';
+                }
             });
         },
 

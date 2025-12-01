@@ -114,6 +114,9 @@ class ResultController extends Controller
         // Calculate time and speed
         $this->calculateResult($result);
 
+        // Recalculate positions for this race
+        $this->recalculateRacePositions($result->race_id);
+
         $result->load(['entrant.category', 'wave', 'race']);
 
         return response()->json([
@@ -191,6 +194,12 @@ class ResultController extends Controller
                 $this->calculateResult($result);
 
                 $created[] = $result->load(['entrant.category', 'wave', 'race']);
+            }
+
+            // Recalculate positions for affected races
+            $affectedRaces = collect($created)->pluck('race_id')->unique();
+            foreach ($affectedRaces as $raceId) {
+                $this->recalculateRacePositions($raceId);
             }
 
             DB::commit();
@@ -316,6 +325,13 @@ class ResultController extends Controller
                         'error' => $e->getMessage()
                     ];
                 }
+            }
+
+            // Recalculate positions for affected races
+            $allResults = array_merge($created, $updated);
+            $affectedRaces = collect($allResults)->pluck('race_id')->unique();
+            foreach ($affectedRaces as $raceId) {
+                $this->recalculateRacePositions($raceId);
             }
 
             DB::commit();
@@ -464,6 +480,9 @@ class ResultController extends Controller
             $this->calculateResult($result);
         }
 
+        // Recalculate positions for this race
+        $this->recalculateRacePositions($result->race_id);
+
         return response()->json($result);
     }
 
@@ -472,7 +491,12 @@ class ResultController extends Controller
      */
     public function destroy(Result $result): JsonResponse
     {
+        $raceId = $result->race_id;
         $result->delete();
+
+        // Recalculate positions for this race
+        $this->recalculateRacePositions($raceId);
+
         return response()->json(['message' => 'Result deleted successfully']);
     }
 
@@ -508,5 +532,57 @@ class ResultController extends Controller
         }
 
         $result->save();
+    }
+
+    /**
+     * Recalculate positions for a specific race (private helper)
+     */
+    private function recalculateRacePositions(int $raceId): void
+    {
+        try {
+            $race = Race::find($raceId);
+            if (!$race) {
+                return;
+            }
+
+            // Get all results for this race, grouped by entrant
+            $results = Result::where('race_id', $raceId)
+                ->where('status', 'V')
+                ->with(['entrant.category'])
+                ->get()
+                ->groupBy('entrant_id')
+                ->map(function ($entrantResults) use ($race) {
+                    // For best_time races, keep best time
+                    // Otherwise keep last lap
+                    if ($race->best_time) {
+                        return $entrantResults->sortBy('calculated_time')->first();
+                    } else {
+                        return $entrantResults->sortByDesc('lap_number')->first();
+                    }
+                })
+                ->sortBy('calculated_time')
+                ->values();
+
+            // Calculate overall positions
+            $position = 1;
+            foreach ($results as $result) {
+                $result->update(['position' => $position++]);
+            }
+
+            // Calculate category positions
+            $resultsByCategory = $results->groupBy(function ($result) {
+                return $result->entrant->category_id;
+            });
+
+            foreach ($resultsByCategory as $categoryId => $categoryResults) {
+                $categoryPosition = 1;
+                foreach ($categoryResults as $result) {
+                    $result->update(['category_position' => $categoryPosition++]);
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the main operation
+            \Log::error("Error recalculating positions for race {$raceId}: " . $e->getMessage());
+        }
     }
 }
