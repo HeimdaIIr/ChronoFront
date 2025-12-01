@@ -731,6 +731,7 @@ body {
                                 <th>SAS</th>
                                 <th>Lecteur</th>
                                 <th>Temps</th>
+                                <th>Vit</th>
                                 <th>Détection</th>
                             </tr>
                         </thead>
@@ -740,9 +741,10 @@ body {
                                     <td><strong x-text="result.entrant?.bib_number"></strong></td>
                                     <td x-text="(result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '')"></td>
                                     <td><span class="cat-tag" x-text="result.entrant?.category?.name || '-'"></span></td>
-                                    <td x-text="result.wave?.wave_number || '-'"></td>
+                                    <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
                                     <td><strong x-text="result.formatted_time || '-'"></strong></td>
+                                    <td x-text="result.speed ? result.speed + ' km/h' : '-'"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
                                 </tr>
                             </template>
