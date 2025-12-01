@@ -29,7 +29,8 @@ class Result extends Model
     ];
 
     protected $casts = [
-        'raw_time' => 'datetime',
+        // Don't use 'datetime' cast for raw_time with SQLite
+        // We'll handle timezone manually with accessors/mutators
         'calculated_time' => 'integer', // en secondes
         'lap_number' => 'integer',
         'lap_time' => 'integer', // en secondes
@@ -38,6 +39,32 @@ class Result extends Model
         'category_position' => 'integer',
         'is_manual' => 'boolean',
     ];
+
+    /**
+     * Get raw_time attribute - convert to Carbon in app timezone
+     */
+    public function getRawTimeAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // Parse as app timezone (SQLite stores local time as text)
+        return \Carbon\Carbon::parse($value, config('app.timezone'));
+    }
+
+    /**
+     * Set raw_time attribute - store as local time string
+     */
+    public function setRawTimeAttribute($value)
+    {
+        if ($value instanceof \Carbon\Carbon) {
+            // Store as local time string (Y-m-d H:i:s)
+            $this->attributes['raw_time'] = $value->format('Y-m-d H:i:s');
+        } else {
+            $this->attributes['raw_time'] = $value;
+        }
+    }
 
     /**
      * Get the race that owns the result
