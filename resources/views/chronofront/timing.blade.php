@@ -913,34 +913,38 @@ body {
                             <i class="bi bi-plus-circle-fill"></i> Ajouter temps intermédiaire
                         </h4>
                         <form @submit.prevent="addIntermediateTime" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <select x-model="intermediateLocation"
+                            <!-- Select checkpoint from configured readers -->
+                            <select x-model="intermediateReaderId"
                                     style="padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
                                 <option value="">Sélectionner checkpoint</option>
-                                <option value="DEPART">DÉPART</option>
-                                <option value="CP1">CP1</option>
-                                <option value="CP2">CP2</option>
-                                <option value="CP3">CP3</option>
-                                <option value="CP4">CP4</option>
-                                <option value="CP5">CP5</option>
-                                <option value="ARRIVEE">ARRIVÉE</option>
+                                <template x-for="reader in readers" :key="reader.id">
+                                    <option :value="reader.id" x-text="reader.location"></option>
+                                </template>
                             </select>
 
+                            <!-- Date input -->
+                            <input type="date"
+                                   x-model="intermediateDate"
+                                   style="padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+
+                            <!-- Time inputs with seconds -->
                             <div style="display: flex; gap: 0.5rem;">
-                                <input type="datetime-local"
+                                <input type="time"
                                        x-model="intermediateTime"
+                                       step="1"
                                        style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
                                 <button type="button"
                                         @click="setIntermediateTimeNow()"
-                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;">
                                     Maintenant
                                 </button>
                             </div>
 
                             <button type="submit"
                                     class="btn-manual"
-                                    :disabled="!intermediateLocation || !intermediateTime || saving"
+                                    :disabled="!intermediateReaderId || !intermediateDate || !intermediateTime || saving"
                                     style="opacity: 1;"
-                                    :style="(!intermediateLocation || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                    :style="(!intermediateReaderId || !intermediateDate || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
                                 <i class="bi bi-stopwatch"></i>
                                 <span x-show="!saving">Ajouter le temps</span>
                                 <span x-show="saving">Enregistrement...</span>
@@ -1104,7 +1108,8 @@ function chronoApp() {
         manualTimestamps: [],
         csvFile: null,
         importingManualTimes: false,
-        intermediateLocation: '',
+        intermediateReaderId: '',
+        intermediateDate: '',
         intermediateTime: '',
         clockInterval: null,
         autoRefreshInterval: null,
@@ -1681,37 +1686,51 @@ function chronoApp() {
             const day = String(now.getDate()).padStart(2, '0');
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            // Format for datetime-local input: YYYY-MM-DDTHH:MM
-            this.intermediateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            // Format for separate date and time inputs
+            this.intermediateDate = `${year}-${month}-${day}`;
+            this.intermediateTime = `${hours}:${minutes}:${seconds}`;
         },
 
         async addIntermediateTime() {
-            if (!this.selectedResult || !this.intermediateLocation || !this.intermediateTime) {
+            if (!this.selectedResult || !this.intermediateReaderId || !this.intermediateDate || !this.intermediateTime) {
                 return;
             }
 
             this.saving = true;
 
             try {
-                // Convert datetime-local format to MySQL format
-                const datetime = this.intermediateTime.replace('T', ' ') + ':00';
+                // Find the selected reader to get its location name
+                const reader = this.readers.find(r => r.id == this.intermediateReaderId);
+                if (!reader) {
+                    throw new Error('Lecteur non trouvé');
+                }
+
+                // Build datetime string: YYYY-MM-DD HH:MM:SS
+                const datetime = `${this.intermediateDate} ${this.intermediateTime}`;
 
                 const response = await axios.post('/results/time', {
                     entrant_id: this.selectedResult.entrant_id,
                     race_id: this.selectedResult.race_id,
-                    reader_location: this.intermediateLocation,
+                    reader_id: reader.id,
+                    reader_location: reader.location,
                     raw_time: datetime,
                     is_manual: true
                 });
 
-                this.showToast(`Temps intermédiaire ajouté: ${this.intermediateLocation}`, 'success');
+                // Add the new result to the results array (local update)
+                const newResult = response.data;
+                this.results.unshift(newResult);
+                this.filterResults();
+
+                this.showToast(`Temps intermédiaire ajouté: ${reader.location}`, 'success');
 
                 // Reset form
-                this.intermediateLocation = '';
+                this.intermediateReaderId = '';
+                this.intermediateDate = '';
                 this.intermediateTime = '';
 
-                // Reload data
-                await this.loadAllResults();
+                // Update runner checkpoints
                 this.calculateRunnerCheckpoints();
 
             } catch (error) {
@@ -1731,10 +1750,12 @@ function chronoApp() {
 
             try {
                 // Find the result in our data
-                const result = this.results.find(r => r.id === resultId);
-                if (!result) {
+                const resultIndex = this.results.findIndex(r => r.id === resultId);
+                if (resultIndex === -1) {
                     throw new Error('Résultat non trouvé');
                 }
+
+                const result = this.results[resultIndex];
 
                 // Calculate new time
                 const currentTime = new Date(result.raw_time);
@@ -1752,10 +1773,13 @@ function chronoApp() {
                     raw_time: newTime
                 });
 
+                // Update local result with response data (includes recalculated fields)
+                this.results[resultIndex] = response.data;
+                this.filterResults();
+
                 this.showToast(`Temps ajusté de ${seconds > 0 ? '+' : ''}${seconds}s`, 'success');
 
-                // Reload data
-                await this.loadAllResults();
+                // Update runner checkpoints
                 this.calculateRunnerCheckpoints();
 
             } catch (error) {
@@ -1776,10 +1800,16 @@ function chronoApp() {
             try {
                 await axios.delete(`/results/${resultId}`);
 
+                // Remove from local results array
+                const resultIndex = this.results.findIndex(r => r.id === resultId);
+                if (resultIndex !== -1) {
+                    this.results.splice(resultIndex, 1);
+                    this.filterResults();
+                }
+
                 this.showToast('Passage supprimé', 'success');
 
-                // Reload data
-                await this.loadAllResults();
+                // Update runner checkpoints
                 this.calculateRunnerCheckpoints();
 
             } catch (error) {
