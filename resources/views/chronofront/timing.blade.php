@@ -771,11 +771,21 @@ body {
                         <i class="bi bi-flag-fill"></i>
                         TOP DÉPART
                     </button>
-                    <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }">
-                        <i class="bi bi-plus-circle-fill"></i>
-                        <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
-                        <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
-                    </button>
+                    <div style="position: relative; display: inline-block;">
+                        <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }">
+                            <i class="bi bi-plus-circle-fill"></i>
+                            <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
+                            <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
+                        </button>
+                        <!-- Quick clear button when times are stored -->
+                        <button x-show="manualTimestamps.length > 0"
+                                @click.stop="quickClearManualTimestamps()"
+                                class="btn-clear-manual"
+                                title="Effacer tous les temps"
+                                style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #ef4444; color: white; border: 2px solid #18181b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; padding: 0;">
+                            ×
+                        </button>
+                    </div>
                     <button class="btn-import-csv" @click="showManualTimesModal = true" x-show="manualTimestamps.length > 0">
                         <i class="bi bi-file-earmark-arrow-up-fill"></i>
                         ATTRIBUER
@@ -1622,6 +1632,14 @@ function chronoApp() {
             this.manualTimestamps = [];
             this.saveManualTimestampsToStorage();
             this.showManualTimesModal = false;
+        },
+
+        quickClearManualTimestamps() {
+            // Quick clear without confirmation for rapid correction
+            const count = this.manualTimestamps.length;
+            this.manualTimestamps = [];
+            this.saveManualTimestampsToStorage();
+            this.showToast(`${count} temps effacés`, 'success');
         },
 
         removeManualTimestamp(index) {
