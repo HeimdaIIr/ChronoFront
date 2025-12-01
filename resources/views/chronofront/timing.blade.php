@@ -248,6 +248,53 @@ body {
     gap: 0.5rem;
 }
 
+.btn-manual-time {
+    height: 45px;
+    padding: 0 1.5rem;
+    background: #f59e0b;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-manual-time.has-times {
+    background: #dc2626;
+    animation: pulse 2s infinite;
+}
+
+.btn-manual-time:hover {
+    transform: scale(1.05);
+}
+
+.btn-import-csv {
+    height: 45px;
+    padding: 0 1.5rem;
+    background: #10b981;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
 /* Table */
 .table-wrapper {
     flex: 1;
@@ -717,6 +764,15 @@ body {
                     <button class="btn-filter" @click="showTopDepartModal = true">
                         <i class="bi bi-flag-fill"></i>
                         TOP DÉPART
+                    </button>
+                    <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
+                        <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
+                    </button>
+                    <button class="btn-import-csv" @click="showManualTimesModal = true" x-show="manualTimestamps.length > 0">
+                        <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                        ATTRIBUER
                     </button>
                 </div>
 

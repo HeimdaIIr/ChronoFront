@@ -123,6 +123,99 @@ class ResultController extends Controller
     }
 
     /**
+     * Add multiple manual timing results in batch
+     * Used for manual timing when RFID fails
+     *
+     * Expected format:
+     * {
+     *   "event_id": 3,
+     *   "times": [
+     *     {"timestamp": "2025-12-01 09:45:32", "bib_number": "422"},
+     *     {"timestamp": "2025-12-01 09:45:38", "bib_number": "156"},
+     *     ...
+     *   ]
+     * }
+     */
+    public function storeManualBatch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'times' => 'required|array',
+            'times.*.timestamp' => 'required|date',
+            'times.*.bib_number' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $created = [];
+            $errors = [];
+
+            foreach ($validated['times'] as $index => $timeData) {
+                // Find entrant by bib number
+                $entrant = Entrant::where('bib_number', $timeData['bib_number'])
+                    ->whereHas('race', function($q) use ($validated) {
+                        $q->where('event_id', $validated['event_id']);
+                    })
+                    ->with('race')
+                    ->first();
+
+                if (!$entrant) {
+                    $errors[] = [
+                        'index' => $index + 1,
+                        'bib_number' => $timeData['bib_number'],
+                        'error' => 'Participant non trouvé'
+                    ];
+                    continue;
+                }
+
+                // Determine lap number
+                $lapNumber = Result::where('race_id', $entrant->race_id)
+                    ->where('entrant_id', $entrant->id)
+                    ->max('lap_number') ?? 0;
+
+                // Create result
+                $result = Result::create([
+                    'race_id' => $entrant->race_id,
+                    'entrant_id' => $entrant->id,
+                    'wave_id' => $entrant->wave_id,
+                    'rfid_tag' => $entrant->rfid_tag,
+                    'reader_location' => 'ARRIVEE',
+                    'raw_time' => $timeData['timestamp'],
+                    'lap_number' => $lapNumber + 1,
+                    'is_manual' => true,
+                    'status' => 'V',
+                ]);
+
+                // Calculate time and speed
+                $this->calculateResult($result);
+
+                $created[] = $result->load(['entrant.category', 'wave', 'race']);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => count($created) . ' temps ajoutés avec succès',
+                'created' => count($created),
+                'errors' => count($errors),
+                'results' => $created,
+                'error_details' => $errors
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création des résultats',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Recalculate all positions for a race
      */
     public function recalculatePositions(int $raceId): JsonResponse

@@ -50,6 +50,7 @@ Route::apiResource('entrants', EntrantController::class);
 Route::get('results', [ResultController::class, 'index']);
 Route::get('results/race/{raceId}', [ResultController::class, 'byRace']);
 Route::post('results/time', [ResultController::class, 'addTime']);
+Route::post('results/manual-batch', [ResultController::class, 'storeManualBatch']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);
 Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);
 Route::put('results/{result}', [ResultController::class, 'update']);
