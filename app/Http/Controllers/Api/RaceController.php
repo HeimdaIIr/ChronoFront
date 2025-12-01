@@ -110,6 +110,7 @@ class RaceController extends Controller
 
     /**
      * Update race start time (for corrections after false start or timing errors)
+     * Also recalculates all existing results for this race
      */
     public function updateStartTime(Request $request, Race $race): JsonResponse
     {
@@ -121,9 +122,46 @@ class RaceController extends Controller
             'start_time' => $validated['start_time']
         ]);
 
+        // Recalculate all results for this race
+        $results = \App\Models\Result::where('race_id', $race->id)->get();
+        $recalculatedCount = 0;
+
+        foreach ($results as $result) {
+            $result->load(['wave', 'race', 'entrant']);
+
+            // Calculate time from wave start or race TOP DÉPART
+            if (($result->wave && $result->wave->start_time) || ($result->race && $result->race->start_time)) {
+                // Use Result model's calculateTime method
+                $result->calculateTime();
+
+                // Calculate speed if distance is available
+                if ($result->race && $result->race->distance > 0 && $result->calculated_time > 0) {
+                    $result->calculateSpeed($result->race->distance);
+                }
+
+                // Calculate lap time if this is not the first lap
+                if ($result->lap_number > 1) {
+                    $previousLap = \App\Models\Result::where('race_id', $result->race_id)
+                        ->where('entrant_id', $result->entrant_id)
+                        ->where('lap_number', $result->lap_number - 1)
+                        ->first();
+
+                    if ($previousLap && $previousLap->calculated_time && $result->calculated_time) {
+                        $result->lap_time = $result->calculated_time - $previousLap->calculated_time;
+                    }
+                } else {
+                    $result->lap_time = $result->calculated_time;
+                }
+
+                $result->save();
+                $recalculatedCount++;
+            }
+        }
+
         return response()->json([
             'message' => 'Start time updated successfully',
-            'race' => $race
+            'race' => $race,
+            'recalculated_results' => $recalculatedCount
         ]);
     }
 

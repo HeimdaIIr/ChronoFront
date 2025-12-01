@@ -1562,12 +1562,16 @@ function chronoApp() {
             this.startingRace = true;
 
             try {
-                await axios.put(`/races/${race.id}/start`, {
+                const response = await axios.put(`/races/${race.id}/start`, {
                     start_time: newStartTime
                 });
 
-                this.showToast(`Départ modifié pour ${race.name}`, 'success');
+                const recalculatedCount = response.data.recalculated_results || 0;
+                this.showToast(`Départ modifié pour ${race.name} - ${recalculatedCount} résultats recalculés`, 'success');
+
+                // Reload races and results to show updated data
                 await this.loadRaces();
+                await this.loadAllResults();
                 this.cancelEditingStartTime();
 
             } catch (error) {
