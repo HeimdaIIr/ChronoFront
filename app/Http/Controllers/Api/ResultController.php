@@ -357,8 +357,8 @@ class ResultController extends Controller
     {
         $result->load(['wave', 'race', 'entrant']);
 
-        // Calculate time from wave start
-        if ($result->wave && $result->wave->start_time) {
+        // Calculate time from wave start or race TOP DÉPART
+        if (($result->wave && $result->wave->start_time) || ($result->race && $result->race->start_time)) {
             $result->calculateTime();
         }
 
