@@ -851,28 +851,46 @@ body {
                     <!-- Checkpoint Timeline -->
                     <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
                         <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: #e4e4e7;">
-                            <i class="bi bi-geo-alt-fill"></i> Checkpoints
+                            <i class="bi bi-geo-alt-fill"></i> Passages enregistrés
                         </h4>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <template x-for="(checkpoint, index) in runnerCheckpoints" :key="index">
+                            <template x-for="(checkpoint, index) in runnerCheckpoints" :key="checkpoint.id || index">
                                 <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #1a1d2e; border-radius: 8px; border-left: 3px solid"
                                      :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
                                     <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
                                          :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
                                     <div style="flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.9rem;" x-text="checkpoint.location"></div>
-                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance + ' km'"></div>
+                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance ? checkpoint.distance + ' km' : ''"></div>
                                     </div>
-                                    <div style="text-align: right;">
+                                    <div style="text-align: right; flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.95rem;"
                                              :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
                                              x-text="checkpoint.time_display"></div>
                                         <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.is_estimated">Estimé</div>
                                     </div>
+                                    <!-- Edit buttons for real checkpoints only -->
+                                    <div style="display: flex; gap: 0.25rem;" x-show="!checkpoint.is_estimated && checkpoint.id">
+                                        <button @click="adjustResultTime(checkpoint.id, 5)"
+                                                style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Ajouter 5 secondes">
+                                            +5s
+                                        </button>
+                                        <button @click="adjustResultTime(checkpoint.id, -5)"
+                                                style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Retirer 5 secondes">
+                                            -5s
+                                        </button>
+                                        <button @click="deleteResult(checkpoint.id)"
+                                                style="padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Supprimer ce passage">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                             <div x-show="runnerCheckpoints.length === 0" style="text-align: center; padding: 1rem; color: #71717a; font-size: 0.85rem;">
-                                Aucun checkpoint configuré
+                                Aucun passage enregistré
                             </div>
                         </div>
                     </div>
@@ -889,14 +907,42 @@ body {
                         </div>
                     </div>
 
-                    <!-- Manual Entry -->
-                    <div class="manual-entry">
-                        <h4>Ajouter temps manuel</h4>
-                        <form @submit.prevent="addManualTime">
-                            <input type="text" placeholder="Numéro de dossard" x-model="manualBib" :disabled="saving">
-                            <button type="submit" class="btn-manual" :disabled="!manualBib || saving">
+                    <!-- Add Intermediate Time -->
+                    <div class="manual-entry" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: #e4e4e7;">
+                            <i class="bi bi-plus-circle-fill"></i> Ajouter temps intermédiaire
+                        </h4>
+                        <form @submit.prevent="addIntermediateTime" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <select x-model="intermediateLocation"
+                                    style="padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                <option value="">Sélectionner checkpoint</option>
+                                <option value="DEPART">DÉPART</option>
+                                <option value="CP1">CP1</option>
+                                <option value="CP2">CP2</option>
+                                <option value="CP3">CP3</option>
+                                <option value="CP4">CP4</option>
+                                <option value="CP5">CP5</option>
+                                <option value="ARRIVEE">ARRIVÉE</option>
+                            </select>
+
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="datetime-local"
+                                       x-model="intermediateTime"
+                                       style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                <button type="button"
+                                        @click="setIntermediateTimeNow()"
+                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    Maintenant
+                                </button>
+                            </div>
+
+                            <button type="submit"
+                                    class="btn-manual"
+                                    :disabled="!intermediateLocation || !intermediateTime || saving"
+                                    style="opacity: 1;"
+                                    :style="(!intermediateLocation || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
                                 <i class="bi bi-stopwatch"></i>
-                                <span x-show="!saving">Enregistrer temps</span>
+                                <span x-show="!saving">Ajouter le temps</span>
                                 <span x-show="saving">Enregistrement...</span>
                             </button>
                         </form>
@@ -1058,6 +1104,8 @@ function chronoApp() {
         manualTimestamps: [],
         csvFile: null,
         importingManualTimes: false,
+        intermediateLocation: '',
+        intermediateTime: '',
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
@@ -1282,6 +1330,7 @@ function chronoApp() {
             const race = this.getSelectedRace();
             if (race && race.start_time) {
                 this.runnerCheckpoints.push({
+                    id: null, // Start time is not editable
                     location: 'DÉPART',
                     distance: 0,
                     time_display: this.formatTime(race.start_time),
@@ -1302,6 +1351,7 @@ function chronoApp() {
                 if (detection && detection.raw_time) {
                     // Real detection
                     this.runnerCheckpoints.push({
+                        id: detection.id, // Include result ID for editing
                         location: reader.location,
                         distance: reader.distance_from_start,
                         time_display: this.formatTime(detection.raw_time),
@@ -1317,6 +1367,7 @@ function chronoApp() {
                     const estimatedTime = this.estimateCheckpointTime(lastRealCheckpoint, reader.distance_from_start);
                     if (estimatedTime) {
                         this.runnerCheckpoints.push({
+                            id: null, // No ID for estimated checkpoints
                             location: reader.location,
                             distance: reader.distance_from_start,
                             time_display: this.formatTime(estimatedTime.toISOString()),
@@ -1619,6 +1670,123 @@ function chronoApp() {
                 alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
             } finally {
                 this.importingManualTimes = false;
+            }
+        },
+
+        // Intermediate time management functions
+        setIntermediateTimeNow() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            // Format for datetime-local input: YYYY-MM-DDTHH:MM
+            this.intermediateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        },
+
+        async addIntermediateTime() {
+            if (!this.selectedResult || !this.intermediateLocation || !this.intermediateTime) {
+                return;
+            }
+
+            this.saving = true;
+
+            try {
+                // Convert datetime-local format to MySQL format
+                const datetime = this.intermediateTime.replace('T', ' ') + ':00';
+
+                const response = await axios.post('/results/time', {
+                    entrant_id: this.selectedResult.entrant_id,
+                    race_id: this.selectedResult.race_id,
+                    reader_location: this.intermediateLocation,
+                    raw_time: datetime,
+                    is_manual: true
+                });
+
+                this.showToast(`Temps intermédiaire ajouté: ${this.intermediateLocation}`, 'success');
+
+                // Reset form
+                this.intermediateLocation = '';
+                this.intermediateTime = '';
+
+                // Reload data
+                await this.loadAllResults();
+                this.calculateRunnerCheckpoints();
+
+            } catch (error) {
+                console.error('Erreur ajout temps:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async adjustResultTime(resultId, seconds) {
+            if (!confirm(`Ajuster ce temps de ${seconds > 0 ? '+' : ''}${seconds} secondes ?`)) {
+                return;
+            }
+
+            this.saving = true;
+
+            try {
+                // Find the result in our data
+                const result = this.results.find(r => r.id === resultId);
+                if (!result) {
+                    throw new Error('Résultat non trouvé');
+                }
+
+                // Calculate new time
+                const currentTime = new Date(result.raw_time);
+                currentTime.setSeconds(currentTime.getSeconds() + seconds);
+
+                const year = currentTime.getFullYear();
+                const month = String(currentTime.getMonth() + 1).padStart(2, '0');
+                const day = String(currentTime.getDate()).padStart(2, '0');
+                const hours = String(currentTime.getHours()).padStart(2, '0');
+                const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+                const secs = String(currentTime.getSeconds()).padStart(2, '0');
+                const newTime = `${year}-${month}-${day} ${hours}:${minutes}:${secs}`;
+
+                const response = await axios.put(`/results/${resultId}`, {
+                    raw_time: newTime
+                });
+
+                this.showToast(`Temps ajusté de ${seconds > 0 ? '+' : ''}${seconds}s`, 'success');
+
+                // Reload data
+                await this.loadAllResults();
+                this.calculateRunnerCheckpoints();
+
+            } catch (error) {
+                console.error('Erreur ajustement:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async deleteResult(resultId) {
+            if (!confirm('Supprimer définitivement ce passage ?')) {
+                return;
+            }
+
+            this.saving = true;
+
+            try {
+                await axios.delete(`/results/${resultId}`);
+
+                this.showToast('Passage supprimé', 'success');
+
+                // Reload data
+                await this.loadAllResults();
+                this.calculateRunnerCheckpoints();
+
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.saving = false;
             }
         }
     }
