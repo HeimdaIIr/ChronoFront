@@ -1064,14 +1064,16 @@ function chronoApp() {
 
         init() {
             this.startClock();
-            this.loadEvent().then(() => this.loadAlertThreshold());
+            this.loadEvent().then(() => {
+                this.loadAlertThreshold();
+                this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
+            });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
             this.loadReaders();
             this.loadAllResults();
             this.startAutoRefresh();
             this.startReaderPing();
             this.startAlertCheck();
-            this.loadManualTimestampsFromStorage();
         },
 
         startClock() {
