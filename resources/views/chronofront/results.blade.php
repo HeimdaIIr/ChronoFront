@@ -13,10 +13,10 @@
             <button
                 class="btn btn-primary me-2"
                 @click="recalculatePositions"
-                :disabled="!selectedRace || results.length === 0 || recalculating"
+                :disabled="recalculating"
             >
                 <span x-show="!recalculating">
-                    <i class="bi bi-calculator"></i> Recalculer positions
+                    <i class="bi bi-calculator"></i> Recalculer TOUTES les positions
                 </span>
                 <span x-show="recalculating">
                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -395,17 +395,22 @@ function resultsManager() {
         },
 
         async recalculatePositions() {
-            if (!this.selectedRace) return;
+            // Confirm action as this will recalculate ALL races
+            if (!confirm('Recalculer les positions pour TOUTES les courses ?\n\nCette opération peut prendre quelques secondes.')) {
+                return;
+            }
 
             this.recalculating = true;
             try {
-                const response = await axios.post(`/results/race/${this.selectedRace}/recalculate`);
+                const response = await axios.post('/results/recalculate-all');
 
                 // Show success message
-                alert(`Positions recalculées avec succès!\n${response.data.total_results} résultats traités.`);
+                alert(`Positions recalculées avec succès!\n\n${response.data.total_races} courses traitées\n${response.data.total_results} résultats traités`);
 
                 // Reload results to show new positions
-                await this.loadResults();
+                if (this.selectedRace) {
+                    await this.loadResults();
+                }
             } catch (error) {
                 console.error('Erreur lors du recalcul des positions', error);
                 alert('Erreur lors du recalcul des positions: ' + (error.response?.data?.message || error.message));

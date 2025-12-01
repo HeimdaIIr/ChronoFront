@@ -422,6 +422,75 @@ class ResultController extends Controller
     }
 
     /**
+     * Recalculate positions for ALL races
+     */
+    public function recalculateAllPositions(): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            $races = Race::all();
+            $totalResults = 0;
+
+            foreach ($races as $race) {
+                // Get all results for this race, grouped by entrant
+                $results = Result::where('race_id', $race->id)
+                    ->where('status', 'V')
+                    ->with(['entrant.category'])
+                    ->get()
+                    ->groupBy('entrant_id')
+                    ->map(function ($entrantResults) use ($race) {
+                        // For best_time races, keep best time
+                        // Otherwise keep last lap
+                        if ($race->best_time) {
+                            return $entrantResults->sortBy('calculated_time')->first();
+                        } else {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        }
+                    })
+                    ->sortBy('calculated_time')
+                    ->values();
+
+                // Calculate overall positions
+                $position = 1;
+                foreach ($results as $result) {
+                    $result->update(['position' => $position++]);
+                }
+
+                // Calculate category positions
+                $resultsByCategory = $results->groupBy(function ($result) {
+                    return $result->entrant->category_id;
+                });
+
+                foreach ($resultsByCategory as $categoryId => $categoryResults) {
+                    $categoryPosition = 1;
+                    foreach ($categoryResults as $result) {
+                        $result->update(['category_position' => $categoryPosition++]);
+                    }
+                }
+
+                $totalResults += $results->count();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Positions recalculées pour toutes les courses',
+                'total_races' => $races->count(),
+                'total_results' => $totalResults
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Erreur lors du recalcul des positions',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Export results to CSV
      */
     public function export(int $raceId): \Illuminate\Http\Response
