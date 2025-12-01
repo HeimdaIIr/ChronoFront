@@ -114,7 +114,7 @@ class ResultController extends Controller
         // Calculate time and speed
         $this->calculateResult($result);
 
-        $result->load(['entrant.category', 'wave']);
+        $result->load(['entrant.category', 'wave', 'race']);
 
         return response()->json([
             'message' => 'Temps ajouté avec succès',

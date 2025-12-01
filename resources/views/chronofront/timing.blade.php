@@ -1719,7 +1719,7 @@ function chronoApp() {
                 });
 
                 // Add the new result to the results array (local update)
-                const newResult = response.data;
+                const newResult = response.data.result; // Get result from response
                 this.results.unshift(newResult);
                 this.filterResults();
 
