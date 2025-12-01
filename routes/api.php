@@ -26,6 +26,7 @@ Route::apiResource('events', EventController::class);
 // Races Routes
 Route::get('races/event/{eventId}', [RaceController::class, 'byEvent']);
 Route::post('races/{race}/start', [RaceController::class, 'start']);
+Route::put('races/{race}/start', [RaceController::class, 'updateStartTime']);
 Route::post('races/{race}/end', [RaceController::class, 'end']);
 Route::post('races/update-order', [RaceController::class, 'updateOrder']);
 Route::apiResource('races', RaceController::class);

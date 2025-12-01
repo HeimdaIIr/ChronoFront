@@ -109,6 +109,25 @@ class RaceController extends Controller
     }
 
     /**
+     * Update race start time (for corrections after false start or timing errors)
+     */
+    public function updateStartTime(Request $request, Race $race): JsonResponse
+    {
+        $validated = $request->validate([
+            'start_time' => 'required|date'
+        ]);
+
+        $race->update([
+            'start_time' => $validated['start_time']
+        ]);
+
+        return response()->json([
+            'message' => 'Start time updated successfully',
+            'race' => $race
+        ]);
+    }
+
+    /**
      * End a race
      */
     public function end(Race $race): JsonResponse

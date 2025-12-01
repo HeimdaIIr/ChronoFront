@@ -986,14 +986,61 @@ body {
     <!-- Top Depart Modal -->
     <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false">
         <div class="modal-content">
-            <h3>Sélectionner le parcours</h3>
+            <h3>Gestion des départs</h3>
             <div class="race-list">
                 <template x-for="race in races" :key="race.id">
-                    <button class="race-btn" @click="topDepart(race)" :disabled="race.start_time || startingRace">
-                        <span x-text="race.name"></span>
-                        <span x-show="race.start_time" class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
-                        <span x-show="!race.start_time">Donner le TOP</span>
-                    </button>
+                    <div style="margin-bottom: 1rem;">
+                        <!-- Race without start time -->
+                        <div x-show="!race.start_time">
+                            <button class="race-btn" @click="topDepart(race)" :disabled="startingRace">
+                                <span x-text="race.name"></span>
+                                <span>Donner le TOP</span>
+                            </button>
+                        </div>
+
+                        <!-- Race with start time -->
+                        <div x-show="race.start_time">
+                            <!-- Display mode -->
+                            <div x-show="editingRaceId !== race.id" style="display: flex; gap: 0.5rem; align-items: center;">
+                                <div class="race-btn" style="flex: 1; cursor: default; background: #22c55e;">
+                                    <span x-text="race.name"></span>
+                                    <span class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
+                                </div>
+                                <button @click="startEditingStartTime(race)"
+                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                                    <i class="bi bi-pencil"></i> Modifier
+                                </button>
+                            </div>
+
+                            <!-- Edit mode -->
+                            <div x-show="editingRaceId === race.id" style="background: #1a1d2e; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
+                                <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
+                                    <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="race.name"></span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                    <input type="date"
+                                           x-model="editStartDate"
+                                           style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                    <input type="time"
+                                           x-model="editStartTime"
+                                           step="1"
+                                           style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button @click="cancelEditingStartTime()"
+                                            style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                        Annuler
+                                    </button>
+                                    <button @click="saveStartTime(race)"
+                                            :disabled="!editStartDate || !editStartTime || startingRace"
+                                            style="flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                                            :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                        <i class="bi bi-check-lg"></i> Enregistrer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </template>
             </div>
             <button class="btn-close-modal" @click="showTopDepartModal = false">Fermer</button>
@@ -1121,6 +1168,9 @@ function chronoApp() {
         intermediateReaderId: '',
         intermediateDate: '',
         intermediateTime: '',
+        editingRaceId: null,
+        editStartDate: '',
+        editStartTime: '',
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
@@ -1476,6 +1526,55 @@ function chronoApp() {
             } finally {
                 this.startingRace = false;
                 this.showTopDepartModal = false;
+            }
+        },
+
+        startEditingStartTime(race) {
+            // Parse current start time to populate inputs
+            if (race.start_time) {
+                const startDate = new Date(race.start_time);
+                const year = startDate.getFullYear();
+                const month = String(startDate.getMonth() + 1).padStart(2, '0');
+                const day = String(startDate.getDate()).padStart(2, '0');
+                const hours = String(startDate.getHours()).padStart(2, '0');
+                const minutes = String(startDate.getMinutes()).padStart(2, '0');
+                const seconds = String(startDate.getSeconds()).padStart(2, '0');
+
+                this.editStartDate = `${year}-${month}-${day}`;
+                this.editStartTime = `${hours}:${minutes}:${seconds}`;
+            }
+            this.editingRaceId = race.id;
+        },
+
+        cancelEditingStartTime() {
+            this.editingRaceId = null;
+            this.editStartDate = '';
+            this.editStartTime = '';
+        },
+
+        async saveStartTime(race) {
+            if (!this.editStartDate || !this.editStartTime) return;
+
+            const newStartTime = `${this.editStartDate} ${this.editStartTime}`;
+
+            if (!confirm(`Modifier le départ de "${race.name}" à ${this.editStartTime} ?`)) return;
+
+            this.startingRace = true;
+
+            try {
+                await axios.put(`/races/${race.id}/start`, {
+                    start_time: newStartTime
+                });
+
+                this.showToast(`Départ modifié pour ${race.name}`, 'success');
+                await this.loadRaces();
+                this.cancelEditingStartTime();
+
+            } catch (error) {
+                console.error('Erreur modification départ:', error);
+                this.showToast('Erreur lors de la modification', 'error');
+            } finally {
+                this.startingRace = false;
             }
         },
 
