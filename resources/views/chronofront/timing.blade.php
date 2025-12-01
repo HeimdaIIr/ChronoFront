@@ -1566,7 +1566,7 @@ function chronoApp() {
                     bib_number: lines[index]
                 }));
 
-                const response = await axios.post('/api/results/manual-batch', {
+                const response = await axios.post('/results/manual-batch', {
                     event_id: this.currentEventId,
                     times: times
                 });
