@@ -728,6 +728,7 @@ body {
                                 <th>Dossard</th>
                                 <th>Nom</th>
                                 <th>Catégorie</th>
+                                <th>Parcours</th>
                                 <th>SAS</th>
                                 <th>Lecteur</th>
                                 <th>Temps</th>
@@ -741,6 +742,7 @@ body {
                                     <td><strong x-text="result.entrant?.bib_number"></strong></td>
                                     <td x-text="(result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '')"></td>
                                     <td><span class="cat-tag" x-text="result.entrant?.category?.name || '-'"></span></td>
+                                    <td x-text="result.race?.name || '-'"></td>
                                     <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
                                     <td><strong x-text="result.formatted_time || '-'"></strong></td>
