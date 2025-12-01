@@ -216,6 +216,132 @@ class ResultController extends Controller
     }
 
     /**
+     * Import RFID detections from reader memory file
+     * Updates existing results or creates new ones (upsert logic)
+     *
+     * Expected format:
+     * {
+     *   "race_id": 1,
+     *   "reader_id": 3,
+     *   "detections": [
+     *     {"rfid_tag": "20000002", "timestamp": "2025-12-01 14:02:20"},
+     *     {"rfid_tag": "20001695", "timestamp": "2025-12-01 14:02:22"},
+     *     ...
+     *   ]
+     * }
+     */
+    public function importRfidBatch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'race_id' => 'sometimes|exists:races,id',
+            'reader_id' => 'required|exists:readers,id',
+            'detections' => 'required|array',
+            'detections.*.rfid_tag' => 'required|string',
+            'detections.*.timestamp' => 'required|date',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $reader = \App\Models\Reader::findOrFail($validated['reader_id']);
+            $updated = [];
+            $created = [];
+            $errors = [];
+
+            foreach ($validated['detections'] as $index => $detection) {
+                try {
+                    // Find entrant by RFID tag
+                    $query = Entrant::where('rfid_tag', $detection['rfid_tag']);
+                    if (isset($validated['race_id'])) {
+                        $query->where('race_id', $validated['race_id']);
+                    }
+                    $entrant = $query->first();
+
+                    if (!$entrant) {
+                        $errors[] = [
+                            'index' => $index + 1,
+                            'rfid_tag' => $detection['rfid_tag'],
+                            'error' => 'Participant non trouvé'
+                        ];
+                        continue;
+                    }
+
+                    // Check if result already exists for this entrant at this checkpoint
+                    $existingResult = Result::where('entrant_id', $entrant->id)
+                        ->where('race_id', $entrant->race_id)
+                        ->where('reader_id', $reader->id)
+                        ->first();
+
+                    if ($existingResult) {
+                        // Update existing result
+                        $existingResult->update([
+                            'raw_time' => $detection['timestamp'],
+                            'is_manual' => false,
+                        ]);
+
+                        // Recalculate time and speed
+                        $this->calculateResult($existingResult);
+
+                        $updated[] = $existingResult->load(['entrant.category', 'wave', 'race']);
+                    } else {
+                        // Determine lap number
+                        $lapNumber = Result::where('race_id', $entrant->race_id)
+                            ->where('entrant_id', $entrant->id)
+                            ->max('lap_number') ?? 0;
+
+                        // Create new result
+                        $result = Result::create([
+                            'race_id' => $entrant->race_id,
+                            'entrant_id' => $entrant->id,
+                            'wave_id' => $entrant->wave_id,
+                            'rfid_tag' => $entrant->rfid_tag,
+                            'reader_id' => $reader->id,
+                            'reader_location' => $reader->location,
+                            'raw_time' => $detection['timestamp'],
+                            'lap_number' => $lapNumber + 1,
+                            'is_manual' => false,
+                            'status' => 'V',
+                        ]);
+
+                        // Calculate time and speed
+                        $this->calculateResult($result);
+
+                        $created[] = $result->load(['entrant.category', 'wave', 'race']);
+                    }
+
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'index' => $index + 1,
+                        'rfid_tag' => $detection['rfid_tag'],
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => count($created) + count($updated) . ' détections traitées',
+                'created' => count($created),
+                'updated' => count($updated),
+                'errors' => count($errors),
+                'results' => array_merge($created, $updated),
+                'error_details' => $errors
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'import des détections RFID',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Recalculate all positions for a race
      */
     public function recalculatePositions(int $raceId): JsonResponse

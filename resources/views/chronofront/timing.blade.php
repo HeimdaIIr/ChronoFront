@@ -1192,7 +1192,12 @@ body {
                 </h4>
                 <div style="color: #374151; font-size: 0.9rem;">
                     <div><strong x-text="rfidImportResults?.total || 0"></strong> détections dans le fichier</div>
-                    <div style="color: #22c55e;"><strong x-text="rfidImportResults?.success || 0"></strong> importées avec succès</div>
+                    <div style="color: #22c55e;" x-show="rfidImportResults?.created > 0">
+                        <strong x-text="rfidImportResults?.created || 0"></strong> nouvelles détections créées
+                    </div>
+                    <div style="color: #3b82f6;" x-show="rfidImportResults?.updated > 0">
+                        <strong x-text="rfidImportResults?.updated || 0"></strong> détections mises à jour
+                    </div>
                     <div x-show="rfidImportResults?.errors > 0" style="color: #ef4444;">
                         <strong x-text="rfidImportResults?.errors || 0"></strong> erreurs
                     </div>
@@ -2090,73 +2095,72 @@ function chronoApp() {
                 const text = await this.rfidFile.text();
                 const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
 
-                let successCount = 0;
-                let errorCount = 0;
-                const errors = [];
+                // Parse all lines into detections array
+                const detections = [];
+                const parseErrors = [];
 
-                // Parse each line and import
                 for (const line of lines) {
-                    try {
-                        // Parse format: [TAG]:aYYYYMMDDHHMMSSmm
-                        const match = line.match(/\[(\d+)\]:a(\d{8})(\d{6})\d+/);
+                    // Parse format: [TAG]:aYYYYMMDDHHMMSSmm
+                    const match = line.match(/\[(\d+)\]:a(\d{8})(\d{6})\d+/);
 
-                        if (!match) {
-                            errorCount++;
-                            errors.push({ line, error: 'Format invalide' });
-                            continue;
-                        }
-
-                        const rfidTag = match[1];
-                        const dateStr = match[2]; // YYYYMMDD
-                        const timeStr = match[3]; // HHMMSS
-
-                        // Build datetime: YYYY-MM-DD HH:MM:SS
-                        const year = dateStr.substring(0, 4);
-                        const month = dateStr.substring(4, 6);
-                        const day = dateStr.substring(6, 8);
-                        const hours = timeStr.substring(0, 2);
-                        const minutes = timeStr.substring(2, 4);
-                        const seconds = timeStr.substring(4, 6);
-
-                        const datetime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-
-                        // Import via API
-                        await axios.post('/results/time', {
-                            rfid_tag: rfidTag,
-                            race_id: this.selectedRaceId || undefined,
-                            reader_id: reader.id,
-                            reader_location: reader.location,
-                            raw_time: datetime,
-                            is_manual: false // Automatic detection from file
-                        });
-
-                        successCount++;
-
-                    } catch (error) {
-                        errorCount++;
-                        errors.push({ line, error: error.response?.data?.message || error.message });
+                    if (!match) {
+                        parseErrors.push({ line, error: 'Format invalide' });
+                        continue;
                     }
+
+                    const rfidTag = match[1];
+                    const dateStr = match[2]; // YYYYMMDD
+                    const timeStr = match[3]; // HHMMSS
+
+                    // Build datetime: YYYY-MM-DD HH:MM:SS
+                    const year = dateStr.substring(0, 4);
+                    const month = dateStr.substring(4, 6);
+                    const day = dateStr.substring(6, 8);
+                    const hours = timeStr.substring(0, 2);
+                    const minutes = timeStr.substring(2, 4);
+                    const seconds = timeStr.substring(4, 6);
+
+                    const datetime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+                    detections.push({
+                        rfid_tag: rfidTag,
+                        timestamp: datetime
+                    });
                 }
+
+                if (parseErrors.length > 0) {
+                    console.warn('Erreurs de parsing:', parseErrors);
+                }
+
+                // Send all detections in one batch request
+                const response = await axios.post('/results/rfid-batch', {
+                    race_id: this.selectedRaceId || undefined,
+                    reader_id: reader.id,
+                    detections: detections
+                });
 
                 // Show results
                 this.rfidImportResults = {
                     total: lines.length,
-                    success: successCount,
-                    errors: errorCount
+                    success: response.data.created + response.data.updated,
+                    errors: response.data.errors + parseErrors.length,
+                    created: response.data.created,
+                    updated: response.data.updated
                 };
 
-                if (errorCount > 0) {
-                    console.warn('Erreurs d\'import RFID:', errors);
+                if (response.data.errors > 0 || parseErrors.length > 0) {
+                    console.warn('Erreurs d\'import RFID:', response.data.error_details, parseErrors);
                 }
 
-                // Reload results to show new detections
+                // Reload results to show new/updated detections
                 await this.loadAllResults();
 
-                this.showToast(`Import terminé: ${successCount}/${lines.length} détections importées`, successCount > 0 ? 'success' : 'error');
+                const message = `Import terminé: ${response.data.created} créées, ${response.data.updated} mises à jour`;
+                this.showToast(message, response.data.success ? 'success' : 'error');
 
             } catch (error) {
                 console.error('Erreur import RFID:', error);
-                alert('Erreur lors de l\'import: ' + error.message);
+                alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
                 this.rfidImportResults = {
                     total: 0,
                     success: 0,
