@@ -933,6 +933,89 @@ body {
             <button class="btn-close-modal" @click="showTopDepartModal = false">Fermer</button>
         </div>
     </div>
+
+    <!-- Manual Times Import Modal -->
+    <div x-show="showManualTimesModal" class="modal-overlay" @click.self="showManualTimesModal = false">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3>Attribution des temps manuels</h3>
+
+            <div style="margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; color: #dc2626;">
+                        <i class="bi bi-clock-history"></i>
+                        <span x-text="manualTimestamps.length"></span> temps enregistrés
+                    </h4>
+                    <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        <i class="bi bi-trash"></i> Tout supprimer
+                    </button>
+                </div>
+
+                <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <template x-for="(ts, index) in manualTimestamps" :key="index">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <div>
+                                <span style="font-weight: 600; margin-right: 1rem;" x-text="`#${index + 1}`"></span>
+                                <span x-text="ts.time"></span>
+                            </div>
+                            <button @click="removeManualTimestamp(index)" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">
+                    <i class="bi bi-info-circle-fill"></i> Format CSV
+                </h4>
+                <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;">
+                    Le fichier CSV doit contenir <strong x-text="manualTimestamps.length"></strong> dossards (un par ligne), dans l'ordre des temps enregistrés.
+                </p>
+                <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.85rem; font-family: monospace;">
+                    Exemple:<br>
+                    422<br>
+                    156<br>
+                    89
+                </p>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Sélectionner le fichier CSV
+                </label>
+                <input
+                    type="file"
+                    accept=".csv,.txt"
+                    @change="csvFile = $event.target.files[0]"
+                    style="width: 100%; padding: 0.75rem; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer;"
+                >
+                <div x-show="csvFile" style="margin-top: 0.5rem; color: #059669;">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span x-text="csvFile?.name"></span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button
+                    @click="showManualTimesModal = false"
+                    style="padding: 0.75rem 1.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                >
+                    Annuler
+                </button>
+                <button
+                    @click="importManualTimesFromCSV()"
+                    :disabled="!csvFile || importingManualTimes"
+                    style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
+                    :style="!csvFile || importingManualTimes ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                >
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span x-show="!importingManualTimes">Importer</span>
+                    <span x-show="importingManualTimes">Import en cours...</span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -964,7 +1047,11 @@ function chronoApp() {
         toastMessage: null,
         toastType: 'success',
         showTopDepartModal: false,
+        showManualTimesModal: false,
         manualBib: '',
+        manualTimestamps: [],
+        csvFile: null,
+        importingManualTimes: false,
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
@@ -978,6 +1065,7 @@ function chronoApp() {
             this.startAutoRefresh();
             this.startReaderPing();
             this.startAlertCheck();
+            this.loadManualTimestampsFromStorage();
         },
 
         startClock() {
@@ -1419,6 +1507,89 @@ function chronoApp() {
         formatTime(datetime) {
             if (!datetime) return '-';
             return new Date(datetime).toLocaleTimeString('fr-FR');
+        },
+
+        // Manual timing functions
+        addManualTimestamp() {
+            const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            this.manualTimestamps.push({
+                timestamp: timestamp,
+                time: new Date().toLocaleTimeString('fr-FR')
+            });
+            this.saveManualTimestampsToStorage();
+            this.showToast(`Temps ${this.manualTimestamps.length} enregistré`, 'success');
+        },
+
+        loadManualTimestampsFromStorage() {
+            const stored = localStorage.getItem(`chronofront_manual_times_${this.currentEventId}`);
+            if (stored) {
+                this.manualTimestamps = JSON.parse(stored);
+            }
+        },
+
+        saveManualTimestampsToStorage() {
+            localStorage.setItem(`chronofront_manual_times_${this.currentEventId}`, JSON.stringify(this.manualTimestamps));
+        },
+
+        clearManualTimestamps() {
+            if (!confirm(`Supprimer ${this.manualTimestamps.length} temps enregistrés ?`)) return;
+            this.manualTimestamps = [];
+            this.saveManualTimestampsToStorage();
+            this.showManualTimesModal = false;
+        },
+
+        removeManualTimestamp(index) {
+            this.manualTimestamps.splice(index, 1);
+            this.saveManualTimestampsToStorage();
+        },
+
+        async importManualTimesFromCSV() {
+            if (!this.csvFile) {
+                alert('Veuillez sélectionner un fichier CSV');
+                return;
+            }
+
+            this.importingManualTimes = true;
+
+            try {
+                const text = await this.csvFile.text();
+                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+
+                if (lines.length !== this.manualTimestamps.length) {
+                    alert(`Erreur : ${lines.length} dossards dans le CSV mais ${this.manualTimestamps.length} temps enregistrés`);
+                    this.importingManualTimes = false;
+                    return;
+                }
+
+                const times = this.manualTimestamps.map((t, index) => ({
+                    timestamp: t.timestamp,
+                    bib_number: lines[index]
+                }));
+
+                const response = await axios.post('/api/results/manual-batch', {
+                    event_id: this.currentEventId,
+                    times: times
+                });
+
+                this.showToast(`${response.data.created} temps ajoutés avec succès`, 'success');
+
+                if (response.data.errors > 0) {
+                    console.warn('Erreurs:', response.data.error_details);
+                    alert(`Attention: ${response.data.errors} dossards non trouvés`);
+                }
+
+                this.manualTimestamps = [];
+                this.csvFile = null;
+                this.saveManualTimestampsToStorage();
+                this.showManualTimesModal = false;
+                await this.loadAllResults();
+
+            } catch (error) {
+                console.error('Erreur import:', error);
+                alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.importingManualTimes = false;
+            }
         }
     }
 }
