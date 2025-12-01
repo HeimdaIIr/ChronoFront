@@ -790,6 +790,10 @@ body {
                         <i class="bi bi-file-earmark-arrow-up-fill"></i>
                         ATTRIBUER
                     </button>
+                    <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6;">
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                        IMPORTER RFID
+                    </button>
                 </div>
 
                 <!-- Table -->
@@ -1129,6 +1133,93 @@ body {
             </div>
         </div>
     </div>
+
+    <!-- RFID File Import Modal -->
+    <div x-show="showRfidFileModal" class="modal-overlay" @click.self="showRfidFileModal = false">
+        <div class="modal-content" style="max-width: 700px;">
+            <h3><i class="bi bi-file-earmark-text-fill"></i> Importer fichier RFID</h3>
+
+            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">
+                    <i class="bi bi-info-circle-fill"></i> Format du fichier
+                </h4>
+                <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;">
+                    Fichier .txt généré par le lecteur RFID
+                </p>
+                <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.85rem; font-family: monospace;">
+                    Exemple:<br>
+                    [20000002]:a20251201140220034<br>
+                    [20001695]:a20251201140222034<br>
+                    [20002113]:a20251201140222036
+                </p>
+            </div>
+
+            <!-- Checkpoint selection -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="bi bi-geo-alt-fill"></i> Checkpoint / Lecteur
+                </label>
+                <select x-model="rfidCheckpointId"
+                        style="width: 100%; padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                    <option value="">Sélectionner le checkpoint</option>
+                    <template x-for="reader in readers" :key="reader.id">
+                        <option :value="reader.id" x-text="reader.location"></option>
+                    </template>
+                </select>
+            </div>
+
+            <!-- File upload -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="bi bi-file-earmark-text"></i> Fichier de détections
+                </label>
+                <input
+                    type="file"
+                    accept=".txt"
+                    @change="rfidFile = $event.target.files[0]"
+                    style="width: 100%; padding: 0.75rem; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer;"
+                >
+                <div x-show="rfidFile" style="margin-top: 0.5rem; color: #059669;">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span x-text="rfidFile?.name"></span>
+                </div>
+            </div>
+
+            <!-- Import progress/results -->
+            <div x-show="rfidImportResults" style="margin-bottom: 1.5rem; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #059669;">
+                    <i class="bi bi-check-circle-fill"></i> Résultat de l'import
+                </h4>
+                <div style="color: #374151; font-size: 0.9rem;">
+                    <div><strong x-text="rfidImportResults?.total || 0"></strong> détections dans le fichier</div>
+                    <div style="color: #22c55e;"><strong x-text="rfidImportResults?.success || 0"></strong> importées avec succès</div>
+                    <div x-show="rfidImportResults?.errors > 0" style="color: #ef4444;">
+                        <strong x-text="rfidImportResults?.errors || 0"></strong> erreurs
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button
+                    @click="closeRfidModal()"
+                    style="padding: 0.75rem 1.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    <span x-show="!rfidImportResults">Annuler</span>
+                    <span x-show="rfidImportResults">Fermer</span>
+                </button>
+                <button
+                    @click="importRfidFile()"
+                    :disabled="!rfidFile || !rfidCheckpointId || importingRfidFile"
+                    style="padding: 0.75rem 1.5rem; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
+                    :style="(!rfidFile || !rfidCheckpointId || importingRfidFile) ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                    x-show="!rfidImportResults">
+                    <i class="bi bi-upload"></i>
+                    <span x-show="!importingRfidFile">Importer</span>
+                    <span x-show="importingRfidFile">Import en cours...</span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -1171,6 +1262,11 @@ function chronoApp() {
         editingRaceId: null,
         editStartDate: '',
         editStartTime: '',
+        showRfidFileModal: false,
+        rfidFile: null,
+        rfidCheckpointId: '',
+        importingRfidFile: false,
+        rfidImportResults: null,
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
@@ -1965,6 +2061,109 @@ function chronoApp() {
                 alert('Erreur: ' + (error.response?.data?.message || error.message));
             } finally {
                 this.saving = false;
+            }
+        },
+
+        // RFID File Import Functions
+        closeRfidModal() {
+            this.showRfidFileModal = false;
+            this.rfidFile = null;
+            this.rfidCheckpointId = '';
+            this.rfidImportResults = null;
+        },
+
+        async importRfidFile() {
+            if (!this.rfidFile || !this.rfidCheckpointId) {
+                return;
+            }
+
+            this.importingRfidFile = true;
+
+            try {
+                // Find the selected reader
+                const reader = this.readers.find(r => r.id == this.rfidCheckpointId);
+                if (!reader) {
+                    throw new Error('Lecteur non trouvé');
+                }
+
+                // Read file content
+                const text = await this.rfidFile.text();
+                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+
+                // Parse each line and import
+                for (const line of lines) {
+                    try {
+                        // Parse format: [TAG]:aYYYYMMDDHHMMSSmm
+                        const match = line.match(/\[(\d+)\]:a(\d{8})(\d{6})\d+/);
+
+                        if (!match) {
+                            errorCount++;
+                            errors.push({ line, error: 'Format invalide' });
+                            continue;
+                        }
+
+                        const rfidTag = match[1];
+                        const dateStr = match[2]; // YYYYMMDD
+                        const timeStr = match[3]; // HHMMSS
+
+                        // Build datetime: YYYY-MM-DD HH:MM:SS
+                        const year = dateStr.substring(0, 4);
+                        const month = dateStr.substring(4, 6);
+                        const day = dateStr.substring(6, 8);
+                        const hours = timeStr.substring(0, 2);
+                        const minutes = timeStr.substring(2, 4);
+                        const seconds = timeStr.substring(4, 6);
+
+                        const datetime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+                        // Import via API
+                        await axios.post('/results/time', {
+                            rfid_tag: rfidTag,
+                            race_id: this.selectedRaceId || undefined,
+                            reader_id: reader.id,
+                            reader_location: reader.location,
+                            raw_time: datetime,
+                            is_manual: false // Automatic detection from file
+                        });
+
+                        successCount++;
+
+                    } catch (error) {
+                        errorCount++;
+                        errors.push({ line, error: error.response?.data?.message || error.message });
+                    }
+                }
+
+                // Show results
+                this.rfidImportResults = {
+                    total: lines.length,
+                    success: successCount,
+                    errors: errorCount
+                };
+
+                if (errorCount > 0) {
+                    console.warn('Erreurs d\'import RFID:', errors);
+                }
+
+                // Reload results to show new detections
+                await this.loadAllResults();
+
+                this.showToast(`Import terminé: ${successCount}/${lines.length} détections importées`, successCount > 0 ? 'success' : 'error');
+
+            } catch (error) {
+                console.error('Erreur import RFID:', error);
+                alert('Erreur lors de l\'import: ' + error.message);
+                this.rfidImportResults = {
+                    total: 0,
+                    success: 0,
+                    errors: 1
+                };
+            } finally {
+                this.importingRfidFile = false;
             }
         }
     }
