@@ -1888,6 +1888,32 @@ function chronoApp() {
             }
         },
 
+        recalculateAllAlerts() {
+            // Clear all existing alerts and recalculate based on current data
+            // This is called after TOP DEPART modification to re-evaluate anomalies
+            console.log('Recalcul de toutes les alertes...');
+
+            // Clear all alerts
+            this.results.forEach(result => {
+                result.alerts = [];
+            });
+
+            // Recalculate alerts for all results
+            this.results.forEach(result => {
+                this.checkForDuplicates(result);
+                this.checkForAberrantTimes(result);
+            });
+
+            // Save to localStorage
+            this.saveAlertsToStorage();
+
+            // Refresh display
+            this.filterResults();
+
+            const alertCount = this.getPendingAlertsCount();
+            console.log(`Recalcul terminé: ${alertCount} alerte(s) détectée(s)`);
+        },
+
         normalizeString(str) {
             if (!str) return '';
             // NFD normalization: decompose accented characters
@@ -2254,6 +2280,10 @@ function chronoApp() {
                 // Reload races and results to show updated data
                 await this.loadRaces();
                 await this.loadAllResults();
+
+                // Recalculate all alerts with new start time
+                this.recalculateAllAlerts();
+
                 this.cancelEditingStartTime();
 
             } catch (error) {
