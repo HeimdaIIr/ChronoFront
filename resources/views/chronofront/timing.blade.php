@@ -295,6 +295,17 @@ body {
     }
 }
 
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Table */
 .table-wrapper {
     flex: 1;
@@ -1432,6 +1443,56 @@ function chronoApp() {
             }
         },
 
+        async checkForNewResults() {
+            // Silent check for new results without loading spinner
+            try {
+                const response = await axios.get('/results');
+                const newResults = response.data;
+
+                // Find truly new results (not in current array)
+                const existingIds = new Set(this.results.map(r => r.id));
+                const addedResults = newResults.filter(r => !existingIds.has(r.id));
+
+                if (addedResults.length > 0) {
+                    // Add new results to beginning of array (most recent first)
+                    this.results = [...addedResults, ...this.results];
+
+                    // Sort all results by raw_time
+                    this.results.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+
+                    // Re-filter to update display
+                    this.filterResults();
+
+                    // Optionally show count of new detections
+                    // this.showToast(`${addedResults.length} nouvelle(s) détection(s)`, 'success');
+                }
+
+                // Update existing results that may have changed (e.g., positions recalculated)
+                const updatedResults = newResults.filter(nr => {
+                    const existing = this.results.find(r => r.id === nr.id);
+                    return existing && (
+                        existing.position !== nr.position ||
+                        existing.category_position !== nr.category_position ||
+                        existing.calculated_time !== nr.calculated_time
+                    );
+                });
+
+                if (updatedResults.length > 0) {
+                    // Update changed results
+                    updatedResults.forEach(nr => {
+                        const index = this.results.findIndex(r => r.id === nr.id);
+                        if (index !== -1) {
+                            this.results[index] = nr;
+                        }
+                    });
+                    this.filterResults();
+                }
+
+            } catch (error) {
+                console.error('Erreur vérification nouveaux résultats:', error);
+            }
+        },
+
         normalizeString(str) {
             if (!str) return '';
             // NFD normalization: decompose accented characters
@@ -1811,9 +1872,10 @@ function chronoApp() {
         startAutoRefresh() {
             // Auto-refresh every 3 seconds for real-time updates
             // Only refresh when there are started races
+            // Use checkForNewResults for smooth updates without visual jump
             this.autoRefreshInterval = setInterval(() => {
                 if (this.hasOngoingRaces()) {
-                    this.loadAllResults();
+                    this.checkForNewResults();
                 }
             }, 3000);
         },
