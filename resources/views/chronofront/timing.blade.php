@@ -1748,7 +1748,8 @@ function chronoApp() {
             }
 
             // Calculate adaptive speed threshold based on exact race distance
-            // 3-zone formula accounting for different physiological systems
+            // 4-zone formula calibrated on REAL race data from actual events
+            // Goal: Alert on suspicious speeds without constant false positives
             let speedThreshold = 18.0; // Default if distance unknown
             let distanceLabel = 'estimée';
             const speedAbsoluteMax = 35.0; // Sprint WR peak ~37 km/h, impossible to sustain
@@ -1756,24 +1757,31 @@ function chronoApp() {
             if (result.race?.distance) {
                 const distance = parseFloat(result.race.distance);
 
-                // 3-zone adaptive formula based on running physiology:
+                // 4-zone adaptive formula based on real winner speeds + 10% margin:
+                // Real data: 5km→21.1, 10km→19.7, 18km→16.9, 20km→18.5, 100km→7.41 km/h
                 if (distance <= 2) {
-                    // Zone 1: Middle-distance (800m-2km) - Anaerobic, very high speeds
-                    // WR references: 800m→28.8 km/h, 1500m→26-27 km/h, 2000m→25-26 km/h
-                    // Examples: 0.8km→30.4, 1km→30, 1.5km→29, 2km→28
-                    speedThreshold = 32 - (2 * distance);
+                    // Zone 1: Middle-distance (800m-2km) - No real data, extrapolated
+                    // Examples: 0.8km→27, 1km→26.5, 1.5km→25.8, 2km→25
+                    speedThreshold = 28 - (1.5 * distance);
                 } else if (distance < 10) {
-                    // Zone 2: Transition (2-10km) - Mixed systems
-                    // Examples: 2km→28, 3km→27, 5km→25, 8km→22, 10km→20
-                    speedThreshold = 28 - (1.0 * (distance - 2));
+                    // Zone 2: Short endurance (2-10km)
+                    // Real: 5km→21.1 (threshold 23), 10km→19.7 (threshold 22)
+                    // Examples: 2km→25, 5km→24, 8km→22.6, 10km→22
+                    speedThreshold = 25 - (0.4 * (distance - 2));
+                } else if (distance < 30) {
+                    // Zone 3a: Medium endurance (10-30km)
+                    // Real: 10km→19.7 (threshold 22), 18km→16.9 (threshold 21), 20km→18.5 (threshold 20)
+                    // Examples: 10km→22, 15km→21.2, 20km→20.5, 25km→19.8, 30km→19
+                    speedThreshold = 22 - (0.15 * (distance - 10));
                 } else {
-                    // Zone 3: Endurance (10km+) - Aerobic, lower sustainable speeds
-                    // Examples: 10km→20, 13km→19.6, 21.1km→18.3, 42km→15.2
-                    speedThreshold = 20 - (0.15 * (distance - 10));
+                    // Zone 3b: Ultra-endurance (30km+)
+                    // Real: 100km→7.41 (threshold 8.5)
+                    // Examples: 30km→19, 42km→17.2, 60km→14.5, 100km→8.5
+                    speedThreshold = 19 - (0.15 * (distance - 30));
                 }
 
                 // Minimum threshold for ultra-long distances (100km+)
-                speedThreshold = Math.max(speedThreshold, 14.5);
+                speedThreshold = Math.max(speedThreshold, 8.0);
 
                 // Round to 1 decimal for display
                 speedThreshold = Math.round(speedThreshold * 10) / 10;
