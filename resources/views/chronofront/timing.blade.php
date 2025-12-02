@@ -1727,9 +1727,9 @@ function chronoApp() {
 
                 this.addAlertToResult(newResult, {
                     type: 'duplicate',
-                    icon: '⚠️',
-                    title: 'Doublon détecté',
-                    details: `Détecté 2 fois au checkpoint "${newResult.reader_location}" à ${timeDiff.toFixed(1)}s d'intervalle`,
+                    icon: '!',
+                    title: 'Passage multiple détecté',
+                    details: `Détection multiple au point "${newResult.reader_location}" (intervalle: ${timeDiff.toFixed(1)}s). Vérifier si doublon ou erreur antenne.`,
                     status: 'pending'
                 });
             }
@@ -1740,20 +1740,23 @@ function chronoApp() {
             if (result.calculated_time && result.calculated_time < 0) {
                 this.addAlertToResult(result, {
                     type: 'negative-time',
-                    icon: '🚫',
-                    title: 'Temps négatif',
-                    details: `Temps calculé négatif (${result.calculated_time}s). Vérifier l'heure de départ et l'horloge système.`,
+                    icon: '×',
+                    title: 'Temps négatif détecté',
+                    details: `Temps calculé négatif (${result.calculated_time}s). Le TOP DÉPART semble postérieur à cette détection. Vérifier l'heure de départ de la course.`,
                     status: 'pending'
                 });
             }
 
-            // Check for aberrant speed (>40 km/h)
-            if (result.speed && parseFloat(result.speed) > 40) {
+            // Check for exceptional speed (>28 km/h sustained)
+            // Reference: Marathon WR ~21 km/h, 10K WR ~22.5 km/h, trail running rarely exceeds 25 km/h
+            const speedThreshold = 28; // km/h - Physiologically exceptional for endurance running
+
+            if (result.speed && parseFloat(result.speed) > speedThreshold) {
                 this.addAlertToResult(result, {
                     type: 'speed',
-                    icon: '⚡',
-                    title: 'Vitesse aberrante',
-                    details: `Vitesse de ${result.speed} km/h (limite: 40 km/h). Vérifier les données.`,
+                    icon: '▲',
+                    title: 'Vitesse élevée détectée',
+                    details: `Vitesse moyenne de ${result.speed} km/h (seuil: ${speedThreshold} km/h). À titre de comparaison, le record du monde du marathon est à ~21 km/h. Vérifier les horaires de passage ou le parcours du coureur.`,
                     status: 'pending'
                 });
             }
@@ -1777,12 +1780,12 @@ function chronoApp() {
                         if (timeHours > 0) {
                             const calculatedSpeed = distance / timeHours;
 
-                            if (calculatedSpeed > 40) {
+                            if (calculatedSpeed > speedThreshold) {
                                 this.addAlertToResult(result, {
                                     type: 'speed',
-                                    icon: '⚡',
-                                    title: 'Vitesse aberrante entre checkpoints',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(2)} km/h entre "${previousReader.location}" et "${currentReader.location}"`,
+                                    icon: '▲',
+                                    title: 'Vitesse élevée entre points de passage',
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil: ${speedThreshold} km/h). Vérifier les horaires de passage.`,
                                     status: 'pending'
                                 });
                             }
