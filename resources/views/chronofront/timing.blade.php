@@ -306,6 +306,95 @@ body {
     }
 }
 
+@keyframes greenFlash {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.detection-flash {
+    animation: greenFlash 0.8s ease-out;
+}
+
+/* Alerts Panel */
+.alerts-panel {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 400px;
+    max-height: 60vh;
+    overflow-y: auto;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.alert-item {
+    background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
+    border-left: 4px solid;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    animation: fadeInDown 0.3s ease-out;
+}
+
+.alert-item.alert-duplicate {
+    border-left-color: #f59e0b;
+}
+
+.alert-item.alert-speed {
+    border-left-color: #ef4444;
+}
+
+.alert-item.alert-negative-time {
+    border-left-color: #dc2626;
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.alert-content {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.alert-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.alert-details {
+    color: #a1a1aa;
+    font-size: 0.85rem;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.alert-close:hover {
+    color: #ffffff;
+}
+
 /* Table */
 .table-wrapper {
     flex: 1;
@@ -725,7 +814,7 @@ body {
             <!-- Left -->
             <div class="chrono-left">
                 <!-- Clock + Readers Status -->
-                <div class="clock-status-section">
+                <div class="clock-status-section" :class="{ 'detection-flash': detectionFlash }">
                     <!-- Race Selector -->
                     <div style="text-align: center; padding-top: 1.5rem; padding-bottom: 0.5rem;">
                         <select x-model="selectedRaceId" @change="switchRaceChrono()"
@@ -1019,6 +1108,22 @@ body {
         <span x-text="toastMessage"></span>
     </div>
 
+    <!-- Alerts Panel -->
+    <div class="alerts-panel" x-show="alerts.length > 0">
+        <template x-for="alert in alerts" :key="alert.id">
+            <div class="alert-item" :class="`alert-${alert.type}`">
+                <div class="alert-icon" x-text="alert.icon"></div>
+                <div class="alert-content">
+                    <div class="alert-title" x-text="alert.title"></div>
+                    <div class="alert-details" x-text="alert.details"></div>
+                </div>
+                <button class="alert-close" @click="removeAlert(alert.id)">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+
     <!-- Top Depart Modal -->
     <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false">
         <div class="modal-content">
@@ -1295,6 +1400,8 @@ function chronoApp() {
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
+        alerts: [],
+        detectionFlash: false,
 
         init() {
             this.startClock();
@@ -1463,8 +1570,14 @@ function chronoApp() {
                     // Re-filter to update display
                     this.filterResults();
 
-                    // Optionally show count of new detections
-                    // this.showToast(`${addedResults.length} nouvelle(s) détection(s)`, 'success');
+                    // Trigger green flash animation
+                    this.triggerDetectionFlash();
+
+                    // Check for duplicates and aberrant times
+                    addedResults.forEach(result => {
+                        this.checkForDuplicates(result);
+                        this.checkForAberrantTimes(result);
+                    });
                 }
 
                 // Update existing results that may have changed (e.g., positions recalculated)
@@ -1491,6 +1604,118 @@ function chronoApp() {
             } catch (error) {
                 console.error('Erreur vérification nouveaux résultats:', error);
             }
+        },
+
+        triggerDetectionFlash() {
+            // Trigger green flash animation around the clock
+            this.detectionFlash = true;
+            setTimeout(() => {
+                this.detectionFlash = false;
+            }, 800); // Match animation duration
+        },
+
+        checkForDuplicates(newResult) {
+            // Check if there's a duplicate detection (same runner, same checkpoint, <10 seconds apart)
+            if (!newResult.entrant_id || !newResult.reader_location) {
+                return;
+            }
+
+            const duplicates = this.results.filter(r => {
+                if (r.id === newResult.id) return false; // Don't compare with itself
+                if (r.entrant_id !== newResult.entrant_id) return false;
+                if (r.reader_location !== newResult.reader_location) return false;
+
+                // Calculate time difference in seconds
+                const timeDiff = Math.abs(new Date(newResult.raw_time) - new Date(r.raw_time)) / 1000;
+                return timeDiff < 10;
+            });
+
+            if (duplicates.length > 0) {
+                const duplicate = duplicates[0];
+                const timeDiff = Math.abs(new Date(newResult.raw_time) - new Date(duplicate.raw_time)) / 1000;
+
+                this.addAlert({
+                    type: 'duplicate',
+                    icon: '⚠️',
+                    title: 'Doublons détectés',
+                    details: `Dossard #${newResult.entrant?.bib_number} - ${newResult.entrant?.firstname} ${newResult.entrant?.lastname} détecté 2 fois au checkpoint "${newResult.reader_location}" à ${timeDiff.toFixed(1)}s d'intervalle`,
+                    timestamp: new Date()
+                });
+            }
+        },
+
+        checkForAberrantTimes(result) {
+            // Check for negative times
+            if (result.calculated_time && result.calculated_time < 0) {
+                this.addAlert({
+                    type: 'negative-time',
+                    icon: '🚫',
+                    title: 'Temps négatif détecté',
+                    details: `Dossard #${result.entrant?.bib_number} - ${result.entrant?.firstname} ${result.entrant?.lastname} a un temps calculé négatif (${result.calculated_time}s). Vérifier l'heure de départ et l'horloge système.`,
+                    timestamp: new Date()
+                });
+            }
+
+            // Check for aberrant speed (>40 km/h)
+            if (result.speed && parseFloat(result.speed) > 40) {
+                this.addAlert({
+                    type: 'speed',
+                    icon: '⚡',
+                    title: 'Vitesse aberrante',
+                    details: `Dossard #${result.entrant?.bib_number} - ${result.entrant?.firstname} ${result.entrant?.lastname} a une vitesse de ${result.speed} km/h (limite: 40 km/h). Vérifier les données.`,
+                    timestamp: new Date()
+                });
+            }
+
+            // Additional check: calculate speed between checkpoints if we have previous results
+            if (result.entrant_id && result.reader_id) {
+                const runnerResults = this.results
+                    .filter(r => r.entrant_id === result.entrant_id && r.reader_id !== result.reader_id)
+                    .sort((a, b) => new Date(a.raw_time) - new Date(b.raw_time));
+
+                if (runnerResults.length > 0) {
+                    const previousResult = runnerResults[runnerResults.length - 1];
+                    const currentReader = this.readers.find(r => r.id === result.reader_id);
+                    const previousReader = this.readers.find(r => r.id === previousResult.reader_id);
+
+                    if (currentReader && previousReader && currentReader.distance_from_start && previousReader.distance_from_start) {
+                        const distance = Math.abs(currentReader.distance_from_start - previousReader.distance_from_start);
+                        const timeMs = new Date(result.raw_time) - new Date(previousResult.raw_time);
+                        const timeHours = timeMs / (1000 * 60 * 60);
+
+                        if (timeHours > 0) {
+                            const calculatedSpeed = distance / timeHours;
+
+                            if (calculatedSpeed > 40) {
+                                this.addAlert({
+                                    type: 'speed',
+                                    icon: '⚡',
+                                    title: 'Vitesse aberrante entre checkpoints',
+                                    details: `Dossard #${result.entrant?.bib_number} - Vitesse calculée de ${calculatedSpeed.toFixed(2)} km/h entre "${previousReader.location}" et "${currentReader.location}"`,
+                                    timestamp: new Date()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        addAlert(alert) {
+            // Add alert to the beginning of the array
+            this.alerts.unshift({
+                id: Date.now() + Math.random(), // Unique ID
+                ...alert
+            });
+
+            // Keep only the last 10 alerts
+            if (this.alerts.length > 10) {
+                this.alerts = this.alerts.slice(0, 10);
+            }
+        },
+
+        removeAlert(alertId) {
+            this.alerts = this.alerts.filter(a => a.id !== alertId);
         },
 
         normalizeString(str) {
