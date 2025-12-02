@@ -322,77 +322,109 @@ body {
     animation: greenFlash 0.8s ease-out;
 }
 
-/* Alerts Panel */
-.alerts-panel {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    width: 400px;
-    max-height: 60vh;
-    overflow-y: auto;
-    z-index: 1000;
+/* Alert Badge */
+.alert-badge {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.alert-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.alert-badge.no-alerts {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Alert section in runner panel */
+.runner-alerts {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.runner-alerts h4 {
+    margin: 0 0 0.75rem 0;
+    color: #ef4444;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
     gap: 0.5rem;
 }
 
-.alert-item {
-    background: linear-gradient(135deg, #1a1d29 0%, #0f1117 100%);
-    border-left: 4px solid;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.alert-list {
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    animation: fadeInDown 0.3s ease-out;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-.alert-item.alert-duplicate {
-    border-left-color: #f59e0b;
-}
-
-.alert-item.alert-speed {
-    border-left-color: #ef4444;
-}
-
-.alert-item.alert-negative-time {
-    border-left-color: #dc2626;
-}
-
-.alert-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.alert-content {
-    flex: 1;
-    font-size: 0.9rem;
-}
-
-.alert-title {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.alert-details {
-    color: #a1a1aa;
+.alert-detail {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem;
+    border-radius: 6px;
     font-size: 0.85rem;
 }
 
-.alert-close {
-    background: none;
-    border: none;
-    color: #a1a1aa;
-    cursor: pointer;
-    padding: 0;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-    transition: color 0.2s;
+.alert-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
-.alert-close:hover {
-    color: #ffffff;
+.alert-detail-text {
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.alert-btn {
+    flex: 1;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.alert-btn-verify {
+    background: #22c55e;
+    color: white;
+}
+
+.alert-btn-verify:hover {
+    background: #16a34a;
+}
+
+.alert-btn-ignore {
+    background: #71717a;
+    color: white;
+}
+
+.alert-btn-ignore:hover {
+    background: #52525b;
 }
 
 /* Table */
@@ -436,6 +468,21 @@ body {
 
 .chrono-table tbody tr.selected {
     background: #1e3a5f;
+}
+
+.chrono-table tbody tr.has-alert-duplicate {
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.chrono-table tbody tr.has-alert-speed {
+    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.chrono-table tbody tr.has-alert-negative-time {
+    border-left: 3px solid #dc2626;
+    background: rgba(220, 38, 38, 0.08);
 }
 
 .chrono-table tbody td {
@@ -804,6 +851,10 @@ body {
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <span>Lecteurs hors ligne</span>
                 </div>
+                <div class="alert-badge" :class="{ 'no-alerts': getPendingAlertsCount() === 0 }" style="margin-left: 1rem;">
+                    <i class="bi bi-bell-fill"></i>
+                    <span x-text="getPendingAlertsCount() + ' alerte' + (getPendingAlertsCount() > 1 ? 's' : '')"></span>
+                </div>
                 <div style="font-size: 1.1rem; font-variant-numeric: tabular-nums; color: #a1a1aa; margin-left: 1rem;" x-text="currentTime"></div>
                 <a href="{{ route('dashboard') }}" class="icon-btn"><i class="bi bi-x-lg"></i></a>
             </div>
@@ -933,7 +984,7 @@ body {
                         </thead>
                         <tbody>
                             <template x-for="result in displayedResults" :key="result.id">
-                                <tr :class="{ 'selected': selectedResult?.id === result.id }" @click="selectResult(result)">
+                                <tr :class="{ 'selected': selectedResult?.id === result.id, [getResultAlertClass(result)]: true }" @click="selectResult(result)">
                                     <td><strong x-text="result.position || '-'"></strong></td>
                                     <td><strong x-text="result.category_position || '-'"></strong></td>
                                     <td><strong x-text="result.entrant?.bib_number"></strong></td>
@@ -971,6 +1022,33 @@ body {
                 </div>
 
                 <div class="detail-body">
+                    <!-- Alerts Section -->
+                    <div x-show="selectedResult?.alerts && selectedResult.alerts.filter(a => a.status === 'pending').length > 0" class="runner-alerts">
+                        <h4>
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span x-text="selectedResult.alerts.filter(a => a.status === 'pending').length + ' alerte' + (selectedResult.alerts.filter(a => a.status === 'pending').length > 1 ? 's' : '')"></span>
+                        </h4>
+                        <div class="alert-list">
+                            <template x-for="alert in (selectedResult?.alerts || []).filter(a => a.status === 'pending')" :key="alert.id">
+                                <div class="alert-detail">
+                                    <div class="alert-detail-header">
+                                        <span x-text="alert.icon"></span>
+                                        <span x-text="alert.title"></span>
+                                    </div>
+                                    <div class="alert-detail-text" x-text="alert.details"></div>
+                                    <div class="alert-actions">
+                                        <button class="alert-btn alert-btn-verify" @click="markAlertAsVerified(selectedResult, alert.id)">
+                                            <i class="bi bi-check-circle-fill"></i> Vérifier
+                                        </button>
+                                        <button class="alert-btn alert-btn-ignore" @click="markAlertAsIgnored(selectedResult, alert.id)">
+                                            <i class="bi bi-x-circle-fill"></i> Ignorer
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     <!-- Info de base -->
                     <div class="mb-3">
                         <div class="row mb-2">
@@ -1106,22 +1184,6 @@ body {
     <div x-show="toastMessage" class="toast" :class="toastType">
         <i class="bi" :class="toastType === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'"></i>
         <span x-text="toastMessage"></span>
-    </div>
-
-    <!-- Alerts Panel -->
-    <div class="alerts-panel" x-show="alerts.length > 0">
-        <template x-for="alert in alerts" :key="alert.id">
-            <div class="alert-item" :class="`alert-${alert.type}`">
-                <div class="alert-icon" x-text="alert.icon"></div>
-                <div class="alert-content">
-                    <div class="alert-title" x-text="alert.title"></div>
-                    <div class="alert-details" x-text="alert.details"></div>
-                </div>
-                <button class="alert-close" @click="removeAlert(alert.id)">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-        </template>
     </div>
 
     <!-- Top Depart Modal -->
@@ -1400,7 +1462,6 @@ function chronoApp() {
         clockInterval: null,
         autoRefreshInterval: null,
         readerPingInterval: null,
-        alerts: [],
         detectionFlash: false,
 
         init() {
@@ -1634,12 +1695,12 @@ function chronoApp() {
                 const duplicate = duplicates[0];
                 const timeDiff = Math.abs(new Date(newResult.raw_time) - new Date(duplicate.raw_time)) / 1000;
 
-                this.addAlert({
+                this.addAlertToResult(newResult, {
                     type: 'duplicate',
                     icon: '⚠️',
-                    title: 'Doublons détectés',
-                    details: `Dossard #${newResult.entrant?.bib_number} - ${newResult.entrant?.firstname} ${newResult.entrant?.lastname} détecté 2 fois au checkpoint "${newResult.reader_location}" à ${timeDiff.toFixed(1)}s d'intervalle`,
-                    timestamp: new Date()
+                    title: 'Doublon détecté',
+                    details: `Détecté 2 fois au checkpoint "${newResult.reader_location}" à ${timeDiff.toFixed(1)}s d'intervalle`,
+                    status: 'pending'
                 });
             }
         },
@@ -1647,23 +1708,23 @@ function chronoApp() {
         checkForAberrantTimes(result) {
             // Check for negative times
             if (result.calculated_time && result.calculated_time < 0) {
-                this.addAlert({
+                this.addAlertToResult(result, {
                     type: 'negative-time',
                     icon: '🚫',
-                    title: 'Temps négatif détecté',
-                    details: `Dossard #${result.entrant?.bib_number} - ${result.entrant?.firstname} ${result.entrant?.lastname} a un temps calculé négatif (${result.calculated_time}s). Vérifier l'heure de départ et l'horloge système.`,
-                    timestamp: new Date()
+                    title: 'Temps négatif',
+                    details: `Temps calculé négatif (${result.calculated_time}s). Vérifier l'heure de départ et l'horloge système.`,
+                    status: 'pending'
                 });
             }
 
             // Check for aberrant speed (>40 km/h)
             if (result.speed && parseFloat(result.speed) > 40) {
-                this.addAlert({
+                this.addAlertToResult(result, {
                     type: 'speed',
                     icon: '⚡',
                     title: 'Vitesse aberrante',
-                    details: `Dossard #${result.entrant?.bib_number} - ${result.entrant?.firstname} ${result.entrant?.lastname} a une vitesse de ${result.speed} km/h (limite: 40 km/h). Vérifier les données.`,
-                    timestamp: new Date()
+                    details: `Vitesse de ${result.speed} km/h (limite: 40 km/h). Vérifier les données.`,
+                    status: 'pending'
                 });
             }
 
@@ -1687,12 +1748,12 @@ function chronoApp() {
                             const calculatedSpeed = distance / timeHours;
 
                             if (calculatedSpeed > 40) {
-                                this.addAlert({
+                                this.addAlertToResult(result, {
                                     type: 'speed',
                                     icon: '⚡',
                                     title: 'Vitesse aberrante entre checkpoints',
-                                    details: `Dossard #${result.entrant?.bib_number} - Vitesse calculée de ${calculatedSpeed.toFixed(2)} km/h entre "${previousReader.location}" et "${currentReader.location}"`,
-                                    timestamp: new Date()
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(2)} km/h entre "${previousReader.location}" et "${currentReader.location}"`,
+                                    status: 'pending'
                                 });
                             }
                         }
@@ -1701,21 +1762,61 @@ function chronoApp() {
             }
         },
 
-        addAlert(alert) {
-            // Add alert to the beginning of the array
-            this.alerts.unshift({
-                id: Date.now() + Math.random(), // Unique ID
-                ...alert
-            });
+        addAlertToResult(result, alert) {
+            // Initialize alerts array if it doesn't exist
+            if (!result.alerts) {
+                result.alerts = [];
+            }
 
-            // Keep only the last 10 alerts
-            if (this.alerts.length > 10) {
-                this.alerts = this.alerts.slice(0, 10);
+            // Check if this alert type already exists for this result
+            const existingAlert = result.alerts.find(a => a.type === alert.type && a.details === alert.details);
+            if (!existingAlert) {
+                result.alerts.push({
+                    id: Date.now() + Math.random(),
+                    ...alert
+                });
             }
         },
 
-        removeAlert(alertId) {
-            this.alerts = this.alerts.filter(a => a.id !== alertId);
+        getPendingAlertsCount() {
+            let count = 0;
+            this.results.forEach(result => {
+                if (result.alerts && result.alerts.length > 0) {
+                    count += result.alerts.filter(a => a.status === 'pending').length;
+                }
+            });
+            return count;
+        },
+
+        getResultAlertClass(result) {
+            if (!result.alerts || result.alerts.length === 0) return '';
+
+            const pendingAlerts = result.alerts.filter(a => a.status === 'pending');
+            if (pendingAlerts.length === 0) return '';
+
+            // Priority: negative-time > speed > duplicate
+            if (pendingAlerts.some(a => a.type === 'negative-time')) return 'has-alert-negative-time';
+            if (pendingAlerts.some(a => a.type === 'speed')) return 'has-alert-speed';
+            if (pendingAlerts.some(a => a.type === 'duplicate')) return 'has-alert-duplicate';
+            return '';
+        },
+
+        markAlertAsVerified(result, alertId) {
+            if (!result.alerts) return;
+            const alert = result.alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.status = 'verified';
+                this.filterResults(); // Refresh display
+            }
+        },
+
+        markAlertAsIgnored(result, alertId) {
+            if (!result.alerts) return;
+            const alert = result.alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.status = 'ignored';
+                this.filterResults(); // Refresh display
+            }
         },
 
         normalizeString(str) {
