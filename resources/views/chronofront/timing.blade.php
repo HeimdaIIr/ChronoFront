@@ -1029,7 +1029,7 @@ body {
                     <div x-show="selectedResult?.alerts && selectedResult.alerts.filter(a => a.status === 'pending').length > 0" class="runner-alerts">
                         <h4>
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <span x-text="selectedResult.alerts.filter(a => a.status === 'pending').length + ' alerte' + (selectedResult.alerts.filter(a => a.status === 'pending').length > 1 ? 's' : '')"></span>
+                            <span x-text="(selectedResult?.alerts?.filter(a => a.status === 'pending').length || 0) + ' alerte' + ((selectedResult?.alerts?.filter(a => a.status === 'pending').length || 0) > 1 ? 's' : '')"></span>
                         </h4>
                         <div class="alert-list">
                             <template x-for="alert in (selectedResult?.alerts || []).filter(a => a.status === 'pending')" :key="alert.id">
