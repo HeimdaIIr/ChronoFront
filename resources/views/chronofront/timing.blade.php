@@ -1601,8 +1601,24 @@ function chronoApp() {
         async loadAllResults() {
             this.loading = true;
             try {
+                // Save existing alerts before reload
+                const alertsMap = new Map();
+                this.results.forEach(r => {
+                    if (r.alerts && r.alerts.length > 0) {
+                        alertsMap.set(r.id, r.alerts);
+                    }
+                });
+
                 const response = await axios.get('/results');
                 this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+
+                // Restore alerts after reload
+                this.results.forEach(r => {
+                    if (alertsMap.has(r.id)) {
+                        r.alerts = alertsMap.get(r.id);
+                    }
+                });
+
                 this.filterResults();
             } catch (error) {
                 console.error('Erreur', error);
@@ -1652,11 +1668,20 @@ function chronoApp() {
                 });
 
                 if (updatedResults.length > 0) {
-                    // Update changed results
+                    // Update changed results while preserving alerts
                     updatedResults.forEach(nr => {
                         const index = this.results.findIndex(r => r.id === nr.id);
                         if (index !== -1) {
+                            // Save alerts before update
+                            const existingAlerts = this.results[index].alerts;
+
+                            // Update result with new data
                             this.results[index] = nr;
+
+                            // Restore alerts
+                            if (existingAlerts && existingAlerts.length > 0) {
+                                this.results[index].alerts = existingAlerts;
+                            }
                         }
                     });
                     this.filterResults();
