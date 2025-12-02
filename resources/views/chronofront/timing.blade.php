@@ -1472,7 +1472,9 @@ function chronoApp() {
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
             this.loadReaders();
-            this.loadAllResults();
+            this.loadAllResults().then(() => {
+                this.loadAlertsFromStorage(); // Restore alerts after loading results
+            });
             this.startAutoRefresh();
             this.startReaderPing();
             this.startAlertCheck();
@@ -1800,6 +1802,7 @@ function chronoApp() {
                     id: Date.now() + Math.random(),
                     ...alert
                 });
+                this.saveAlertsToStorage(); // Persist to localStorage
             }
         },
 
@@ -1831,6 +1834,7 @@ function chronoApp() {
             const alert = result.alerts.find(a => a.id === alertId);
             if (alert) {
                 alert.status = 'verified';
+                this.saveAlertsToStorage(); // Persist to localStorage
                 this.filterResults(); // Refresh display
             }
         },
@@ -1840,7 +1844,41 @@ function chronoApp() {
             const alert = result.alerts.find(a => a.id === alertId);
             if (alert) {
                 alert.status = 'ignored';
+                this.saveAlertsToStorage(); // Persist to localStorage
                 this.filterResults(); // Refresh display
+            }
+        },
+
+        saveAlertsToStorage() {
+            // Save all alerts to localStorage
+            const alertsData = {};
+            this.results.forEach(result => {
+                if (result.alerts && result.alerts.length > 0) {
+                    alertsData[result.id] = result.alerts;
+                }
+            });
+            try {
+                localStorage.setItem('chronofront_alerts', JSON.stringify(alertsData));
+            } catch (error) {
+                console.error('Erreur sauvegarde alertes localStorage:', error);
+            }
+        },
+
+        loadAlertsFromStorage() {
+            // Restore alerts from localStorage
+            try {
+                const alertsJson = localStorage.getItem('chronofront_alerts');
+                if (!alertsJson) return;
+
+                const alertsData = JSON.parse(alertsJson);
+                this.results.forEach(result => {
+                    if (alertsData[result.id]) {
+                        result.alerts = alertsData[result.id];
+                    }
+                });
+                this.filterResults(); // Refresh display with alerts
+            } catch (error) {
+                console.error('Erreur chargement alertes localStorage:', error);
             }
         },
 
