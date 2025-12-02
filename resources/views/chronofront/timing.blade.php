@@ -767,6 +767,23 @@ body {
                             <option :value="wave" x-text="wave"></option>
                         </template>
                     </select>
+                    <select class="filter-select" x-model="raceFilter" @change="filterResults">
+                        <option value="">Tous parcours</option>
+                        <template x-for="race in [...new Set(results.map(r => r.race?.name).filter(r => r))]" :key="race">
+                            <option :value="race" x-text="race"></option>
+                        </template>
+                    </select>
+                    <select class="filter-select" x-model="checkpointFilter" @change="filterResults">
+                        <option value="">Tous checkpoints</option>
+                        <template x-for="checkpoint in [...new Set(results.map(r => r.reader_location).filter(c => c))]" :key="checkpoint">
+                            <option :value="checkpoint" x-text="checkpoint"></option>
+                        </template>
+                    </select>
+                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6;">
+                        <option value="recent">Tri: Plus récent</option>
+                        <option value="position">Tri: Position</option>
+                        <option value="time">Tri: Temps</option>
+                    </select>
                     <button class="btn-filter" @click="showTopDepartModal = true">
                         <i class="bi bi-flag-fill"></i>
                         TOP DÉPART
@@ -1238,6 +1255,9 @@ function chronoApp() {
         searchQuery: '',
         categoryFilter: '',
         sasFilter: '',
+        raceFilter: '',
+        checkpointFilter: '',
+        sortBy: 'recent',
         loading: false,
         saving: false,
         startingRace: false,
@@ -1444,11 +1464,54 @@ function chronoApp() {
                     return false;
                 }
 
+                // Filter by race/parcours
+                if (this.raceFilter && result.race?.name !== this.raceFilter) {
+                    return false;
+                }
+
+                // Filter by checkpoint/reader location
+                if (this.checkpointFilter && result.reader_location !== this.checkpointFilter) {
+                    return false;
+                }
+
                 return true;
             });
 
             // Calculate positions after filtering
             this.calculatePositions();
+
+            // Apply sorting
+            this.sortResults();
+        },
+
+        sortResults() {
+            switch (this.sortBy) {
+                case 'position':
+                    // Sort by position (lowest first)
+                    this.displayedResults.sort((a, b) => {
+                        const posA = a.position || 9999;
+                        const posB = b.position || 9999;
+                        return posA - posB;
+                    });
+                    break;
+
+                case 'time':
+                    // Sort by calculated time (fastest first)
+                    this.displayedResults.sort((a, b) => {
+                        const timeA = a.calculated_time || 999999;
+                        const timeB = b.calculated_time || 999999;
+                        return timeA - timeB;
+                    });
+                    break;
+
+                case 'recent':
+                default:
+                    // Sort by raw_time (most recent first)
+                    this.displayedResults.sort((a, b) => {
+                        return new Date(b.raw_time) - new Date(a.raw_time);
+                    });
+                    break;
+            }
         },
 
         calculatePositions() {
