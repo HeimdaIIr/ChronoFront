@@ -1748,24 +1748,28 @@ function chronoApp() {
             }
 
             // Calculate adaptive speed threshold based on exact race distance
-            // Formula automatically adapts to ANY distance (not fixed ranges)
+            // 3-zone formula accounting for different physiological systems
             let speedThreshold = 18.0; // Default if distance unknown
             let distanceLabel = 'estimée';
-            const speedAbsoluteMax = 25.0; // Physically impossible for any sustained running
+            const speedAbsoluteMax = 35.0; // Sprint WR peak ~37 km/h, impossible to sustain
 
             if (result.race?.distance) {
                 const distance = parseFloat(result.race.distance);
 
-                // Adaptive formula: threshold decreases as distance increases
-                // Based on physiological reality: shorter distances allow higher speeds
-                if (distance < 10) {
-                    // Short distances (< 10km): linear decrease from 22 to 18 km/h
-                    // Examples: 0.8km→21.7, 2km→21.2, 5km→20, 8km→18.8, 9.4km→18.2, 10km→18
-                    speedThreshold = 22 - (0.4 * distance);
+                // 3-zone adaptive formula based on running physiology:
+                if (distance <= 2) {
+                    // Zone 1: Middle-distance (800m-2km) - Anaerobic, very high speeds
+                    // WR references: 800m→28.8 km/h, 1500m→26-27 km/h, 2000m→25-26 km/h
+                    // Examples: 0.8km→30.4, 1km→30, 1.5km→29, 2km→28
+                    speedThreshold = 32 - (2 * distance);
+                } else if (distance < 10) {
+                    // Zone 2: Transition (2-10km) - Mixed systems
+                    // Examples: 2km→28, 3km→27, 5km→25, 8km→22, 10km→20
+                    speedThreshold = 28 - (1.0 * (distance - 2));
                 } else {
-                    // Longer distances (>= 10km): slower decrease
-                    // Examples: 10km→18, 13km→17.7, 15km→17.5, 21.1km→16.9, 42km→14.8
-                    speedThreshold = 18 - (0.1 * (distance - 10));
+                    // Zone 3: Endurance (10km+) - Aerobic, lower sustainable speeds
+                    // Examples: 10km→20, 13km→19.6, 21.1km→18.3, 42km→15.2
+                    speedThreshold = 20 - (0.15 * (distance - 10));
                 }
 
                 // Minimum threshold for ultra-long distances (100km+)
