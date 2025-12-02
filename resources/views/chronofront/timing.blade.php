@@ -308,13 +308,16 @@ body {
 
 @keyframes greenFlash {
     0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0);
+        border: 2px solid transparent;
     }
     50% {
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.6);
+        box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.4);
+        border: 2px solid #10b981;
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        box-shadow: inset 0 0 0 0 rgba(16, 185, 129, 0);
+        border: 2px solid transparent;
     }
 }
 
