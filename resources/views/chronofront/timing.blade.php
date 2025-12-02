@@ -1747,30 +1747,61 @@ function chronoApp() {
                 });
             }
 
-            // Speed thresholds based on human physiology
-            const speedWarning = 28; // km/h - Exceptional for endurance (10K WR ~22.5 km/h)
-            const speedCritical = 35; // km/h - Physically impossible sustained (sprint WR peak ~37 km/h)
+            // Determine speed threshold based on race distance
+            // Realistic thresholds for amateur/local races adapted to distance
+            let speedThreshold = 18.0; // Default: 5-10 km
+            let distanceLabel = '5-10 km';
+            const speedAbsoluteMax = 25.0; // Physically impossible for any sustained running
+
+            if (result.race?.distance) {
+                const distance = parseFloat(result.race.distance);
+                if (distance >= 40) {
+                    // Marathon+ (42.2 km+)
+                    speedThreshold = 15.0;
+                    distanceLabel = 'marathon';
+                } else if (distance >= 20) {
+                    // Semi-marathon (21.1 km - 40 km)
+                    speedThreshold = 16.0;
+                    distanceLabel = 'semi-marathon';
+                } else if (distance >= 10) {
+                    // 10-20 km
+                    speedThreshold = 17.0;
+                    distanceLabel = '10-20 km';
+                } else if (distance >= 5) {
+                    // 5-10 km (8km, 9.4km, etc.)
+                    speedThreshold = 18.0;
+                    distanceLabel = '5-10 km';
+                } else if (distance >= 2) {
+                    // 2-5 km (2km, 3km, etc.)
+                    speedThreshold = 20.0;
+                    distanceLabel = '2-5 km';
+                } else {
+                    // < 2 km (800m, 1km, 1.5km, etc.)
+                    speedThreshold = 22.0;
+                    distanceLabel = '< 2 km';
+                }
+            }
 
             // Check speed from result.speed field (if available)
             if (result.speed) {
                 const speed = parseFloat(result.speed);
 
-                if (speed > speedCritical) {
-                    // Critical: Physically impossible for sustained running
+                if (speed > speedAbsoluteMax) {
+                    // Critical: Physically impossible for any sustained running
                     this.addAlertToResult(result, {
                         type: 'speed',
                         icon: '⚠',
                         title: 'Vitesse physiquement impossible',
-                        details: `Vitesse de ${speed.toFixed(1)} km/h détectée (seuil critique: ${speedCritical} km/h). Le record du monde du 100m sprint en pointe est ~37 km/h. Erreur probable dans les horaires de passage ou confusion de coureur.`,
+                        details: `Vitesse de ${speed.toFixed(1)} km/h détectée (seuil absolu: ${speedAbsoluteMax} km/h). Vitesse impossible pour un humain sur longue distance. Erreur certaine dans les horaires de passage ou confusion de coureur.`,
                         status: 'pending'
                     });
-                } else if (speed > speedWarning) {
-                    // Warning: Exceptional but possible for short distances
+                } else if (speed > speedThreshold) {
+                    // Warning: Exceptional for this distance
                     this.addAlertToResult(result, {
                         type: 'speed',
                         icon: '▲',
-                        title: 'Vitesse élevée détectée',
-                        details: `Vitesse moyenne de ${speed.toFixed(1)} km/h (seuil: ${speedWarning} km/h). Vitesse exceptionnelle pour la course à pied. Vérifier les horaires de passage.`,
+                        title: 'Vitesse élevée pour la distance',
+                        details: `Vitesse moyenne de ${speed.toFixed(1)} km/h (seuil ${distanceLabel}: ${speedThreshold} km/h). Vitesse au-delà d'un excellent coureur amateur pour cette distance. Vérifier les horaires de passage.`,
                         status: 'pending'
                     });
                 }
@@ -1795,22 +1826,22 @@ function chronoApp() {
                         if (timeHours > 0) {
                             const calculatedSpeed = distance / timeHours;
 
-                            if (calculatedSpeed > speedCritical) {
+                            if (calculatedSpeed > speedAbsoluteMax) {
                                 // Critical: Physically impossible
                                 this.addAlertToResult(result, {
                                     type: 'speed',
                                     icon: '⚠',
                                     title: 'Vitesse physiquement impossible',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil critique: ${speedCritical} km/h). Erreur probable dans les horaires ou confusion de coureur.`,
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil absolu: ${speedAbsoluteMax} km/h). Erreur certaine dans les horaires ou confusion de coureur.`,
                                     status: 'pending'
                                 });
-                            } else if (calculatedSpeed > speedWarning) {
+                            } else if (calculatedSpeed > speedThreshold) {
                                 // Warning: Exceptional
                                 this.addAlertToResult(result, {
                                     type: 'speed',
                                     icon: '▲',
                                     title: 'Vitesse élevée entre points de passage',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil: ${speedWarning} km/h). Vérifier les horaires de passage.`,
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil ${distanceLabel}: ${speedThreshold} km/h). Vérifier les horaires de passage.`,
                                     status: 'pending'
                                 });
                             }
