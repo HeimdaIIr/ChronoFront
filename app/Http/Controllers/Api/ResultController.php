@@ -654,4 +654,159 @@ class ResultController extends Controller
             \Log::error("Error recalculating positions for race {$raceId}: " . $e->getMessage());
         }
     }
+
+    /**
+     * Add a single manual entry (time or status like DNS/DNF)
+     *
+     * Expected payload:
+     * {
+     *   "event_id": 1,
+     *   "bib_number": "234",
+     *   "reader_id": 3,
+     *   "status": "normal|dns|dnf",
+     *   "raw_time": "2025-12-01 14:30:00" (optional, only for normal status)
+     * }
+     */
+    public function storeManualSingle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'bib_number' => 'required|string',
+            'reader_id' => 'required|exists:readers,id',
+            'status' => 'required|in:normal,dns,dnf',
+            'raw_time' => 'nullable|date',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Find entrant by bib number
+            $entrant = Entrant::where('bib_number', $validated['bib_number'])
+                ->whereHas('race', function($q) use ($validated) {
+                    $q->where('event_id', $validated['event_id']);
+                })
+                ->with('race')
+                ->first();
+
+            if (!$entrant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dossard ' . $validated['bib_number'] . ' non trouvé dans cet événement'
+                ], 404);
+            }
+
+            // Get reader location
+            $reader = \App\Models\Reader::find($validated['reader_id']);
+            $readerLocation = $reader ? $reader->location : 'UNKNOWN';
+
+            // Determine lap number
+            $lapNumber = Result::where('race_id', $entrant->race_id)
+                ->where('entrant_id', $entrant->id)
+                ->max('lap_number') ?? 0;
+
+            // Map frontend status to database status
+            $statusMap = [
+                'normal' => 'V',    // Validated
+                'dns' => 'DNS',     // Did Not Start
+                'dnf' => 'DNF',     // Did Not Finish
+            ];
+
+            $dbStatus = $statusMap[$validated['status']] ?? 'V';
+
+            // Create result
+            $resultData = [
+                'race_id' => $entrant->race_id,
+                'entrant_id' => $entrant->id,
+                'wave_id' => $entrant->wave_id,
+                'rfid_tag' => $entrant->rfid_tag,
+                'reader_id' => $validated['reader_id'],
+                'reader_location' => $readerLocation,
+                'lap_number' => $lapNumber + 1,
+                'is_manual' => true,
+                'status' => $dbStatus,
+            ];
+
+            // Only add raw_time if status is normal and time is provided
+            if ($validated['status'] === 'normal' && isset($validated['raw_time'])) {
+                $resultData['raw_time'] = $validated['raw_time'];
+            }
+
+            $result = Result::create($resultData);
+
+            // Calculate time and speed only for normal status with time
+            if ($validated['status'] === 'normal' && isset($validated['raw_time'])) {
+                $this->calculateResult($result);
+            }
+
+            // Recalculate positions
+            $this->recalculateRacePositions($entrant->race_id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coureur ajouté avec succès',
+                'result' => $result->load(['entrant.category', 'wave', 'race'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'ajout du coureur',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the status of an existing result
+     *
+     * Expected payload:
+     * {
+     *   "status": "active|dns|dnf"
+     * }
+     */
+    public function updateStatus(Result $result, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:active,dns,dnf',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Map frontend status to database status
+            $statusMap = [
+                'active' => 'V',    // Validated
+                'dns' => 'DNS',     // Did Not Start
+                'dnf' => 'DNF',     // Did Not Finish
+            ];
+
+            $dbStatus = $statusMap[$validated['status']] ?? 'V';
+
+            $result->update(['status' => $dbStatus]);
+
+            // Recalculate positions for the race
+            $this->recalculateRacePositions($result->race_id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Statut mis à jour avec succès',
+                'result' => $result->load(['entrant.category', 'wave', 'race'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour du statut',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

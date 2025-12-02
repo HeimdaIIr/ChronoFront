@@ -1064,6 +1064,22 @@ body {
                         </div>
                     </div>
 
+                    <!-- Runner Status -->
+                    <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
+                        <div class="row mb-2">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Statut:</div>
+                            <div class="col-6" style="text-align: right;">
+                                <select x-model="selectedResult.runner_status"
+                                        @change="updateRunnerStatus(selectedResult, $event.target.value)"
+                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                    <option value="active">Actif</option>
+                                    <option value="dns">Non partant</option>
+                                    <option value="dnf">ABD</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Checkpoint Timeline -->
                     <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
                         <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: #e4e4e7;">
@@ -1284,10 +1300,85 @@ body {
                 </div>
             </div>
 
+            <!-- Individual Entry Form -->
+            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 1rem 0; color: #15803d;">
+                    <i class="bi bi-person-plus-fill"></i> Ajout individuel
+                </h4>
+
+                <form @submit.prevent="addSingleManualEntry()" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Bib Number -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: #15803d; font-weight: 500;">
+                            N° Dossard
+                        </label>
+                        <input type="text"
+                               x-model="singleEntry.bibNumber"
+                               placeholder="Ex: 234"
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #86efac; border-radius: 6px; font-size: 0.95rem;">
+                    </div>
+
+                    <!-- Checkpoint -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: #15803d; font-weight: 500;">
+                            Checkpoint
+                        </label>
+                        <select x-model="singleEntry.checkpointId"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #86efac; border-radius: 6px; font-size: 0.95rem;">
+                            <option value="">Sélectionner checkpoint</option>
+                            <template x-for="reader in readers" :key="reader.id">
+                                <option :value="reader.id" x-text="reader.location"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: #15803d; font-weight: 500;">
+                            Statut / Raison
+                        </label>
+                        <select x-model="singleEntry.status"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #86efac; border-radius: 6px; font-size: 0.95rem;">
+                            <option value="normal">Temps normal</option>
+                            <option value="dns">Non partant</option>
+                            <option value="dnf">ABD (Abandon)</option>
+                        </select>
+                    </div>
+
+                    <!-- Time (only if normal status) -->
+                    <div x-show="singleEntry.status === 'normal'">
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: #15803d; font-weight: 500;">
+                            Temps (si disponible)
+                        </label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="time"
+                                   x-model="singleEntry.time"
+                                   step="1"
+                                   style="flex: 1; padding: 0.75rem; border: 1px solid #86efac; border-radius: 6px; font-size: 0.95rem;">
+                            <button type="button"
+                                    @click="setSingleEntryTimeNow()"
+                                    style="padding: 0.75rem 1rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-weight: 500;">
+                                <i class="bi bi-clock-fill"></i> Maintenant
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit"
+                            :disabled="!singleEntry.bibNumber || !singleEntry.checkpointId || addingSingleEntry"
+                            style="padding: 0.75rem 1.5rem; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                            :style="(!singleEntry.bibNumber || !singleEntry.checkpointId || addingSingleEntry) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span x-show="!addingSingleEntry">Ajouter ce coureur</span>
+                        <span x-show="addingSingleEntry">Ajout en cours...</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- CSV Import Section -->
             <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
                 <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">
-                    <i class="bi bi-info-circle-fill"></i> Format CSV
-                </h4>
+                    <i class="bi bi-info-circle-fill"></i> OU Import CSV (multiple)</h4>
                 <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;">
                     Le fichier CSV doit contenir <strong x-text="manualTimestamps.length"></strong> dossards (un par ligne), dans l'ordre des temps enregistrés.
                 </p>
@@ -1451,6 +1542,13 @@ function chronoApp() {
         manualTimestamps: [],
         csvFile: null,
         importingManualTimes: false,
+        singleEntry: {
+            bibNumber: '',
+            checkpointId: '',
+            status: 'normal',
+            time: ''
+        },
+        addingSingleEntry: false,
         intermediateReaderId: '',
         intermediateDate: '',
         intermediateTime: '',
@@ -2571,6 +2669,92 @@ function chronoApp() {
                 alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
             } finally {
                 this.importingManualTimes = false;
+            }
+        },
+
+        // Single manual entry functions
+        setSingleEntryTimeNow() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            this.singleEntry.time = `${hours}:${minutes}:${seconds}`;
+        },
+
+        async addSingleManualEntry() {
+            if (!this.singleEntry.bibNumber || !this.singleEntry.checkpointId) {
+                return;
+            }
+
+            this.addingSingleEntry = true;
+
+            try {
+                const payload = {
+                    event_id: this.currentEventId,
+                    bib_number: this.singleEntry.bibNumber,
+                    reader_id: this.singleEntry.checkpointId,
+                    status: this.singleEntry.status
+                };
+
+                // Only add timestamp if status is normal and time is provided
+                if (this.singleEntry.status === 'normal' && this.singleEntry.time) {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    payload.raw_time = `${year}-${month}-${day} ${this.singleEntry.time}`;
+                }
+
+                const response = await axios.post('/results/manual-single', payload);
+
+                if (response.data.success) {
+                    const statusLabel = this.singleEntry.status === 'dns' ? 'Non partant' :
+                                      this.singleEntry.status === 'dnf' ? 'ABD' : 'Temps ajouté';
+                    this.showToast(`Dossard ${this.singleEntry.bibNumber}: ${statusLabel}`, 'success');
+
+                    // Reset form
+                    this.singleEntry = {
+                        bibNumber: '',
+                        checkpointId: '',
+                        status: 'normal',
+                        time: ''
+                    };
+
+                    await this.loadAllResults();
+                    this.showManualTimesModal = false;
+                } else {
+                    alert(response.data.message || 'Erreur lors de l\'ajout');
+                }
+
+            } catch (error) {
+                console.error('Erreur ajout:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.addingSingleEntry = false;
+            }
+        },
+
+        // Runner status management
+        async updateRunnerStatus(result, status) {
+            if (!result || !result.id) return;
+
+            try {
+                const response = await axios.post(`/results/${result.id}/status`, {
+                    status: status
+                });
+
+                if (response.data.success) {
+                    const statusLabel = status === 'dns' ? 'Non partant' :
+                                      status === 'dnf' ? 'ABD' : 'Actif';
+                    this.showToast(`Statut mis à jour: ${statusLabel}`, 'success');
+                    await this.loadAllResults();
+                } else {
+                    alert(response.data.message || 'Erreur lors de la mise à jour');
+                }
+
+            } catch (error) {
+                console.error('Erreur mise à jour statut:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
             }
         },
 
