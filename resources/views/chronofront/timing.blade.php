@@ -1747,39 +1747,33 @@ function chronoApp() {
                 });
             }
 
-            // Determine speed threshold based on race distance
-            // Realistic thresholds for amateur/local races adapted to distance
-            let speedThreshold = 18.0; // Default: 5-10 km
-            let distanceLabel = '5-10 km';
+            // Calculate adaptive speed threshold based on exact race distance
+            // Formula automatically adapts to ANY distance (not fixed ranges)
+            let speedThreshold = 18.0; // Default if distance unknown
+            let distanceLabel = 'estimée';
             const speedAbsoluteMax = 25.0; // Physically impossible for any sustained running
 
             if (result.race?.distance) {
                 const distance = parseFloat(result.race.distance);
-                if (distance >= 40) {
-                    // Marathon+ (42.2 km+)
-                    speedThreshold = 15.0;
-                    distanceLabel = 'marathon';
-                } else if (distance >= 20) {
-                    // Semi-marathon (21.1 km - 40 km)
-                    speedThreshold = 16.0;
-                    distanceLabel = 'semi-marathon';
-                } else if (distance >= 10) {
-                    // 10-20 km
-                    speedThreshold = 17.0;
-                    distanceLabel = '10-20 km';
-                } else if (distance >= 5) {
-                    // 5-10 km (8km, 9.4km, etc.)
-                    speedThreshold = 18.0;
-                    distanceLabel = '5-10 km';
-                } else if (distance >= 2) {
-                    // 2-5 km (2km, 3km, etc.)
-                    speedThreshold = 20.0;
-                    distanceLabel = '2-5 km';
+
+                // Adaptive formula: threshold decreases as distance increases
+                // Based on physiological reality: shorter distances allow higher speeds
+                if (distance < 10) {
+                    // Short distances (< 10km): linear decrease from 22 to 18 km/h
+                    // Examples: 0.8km→21.7, 2km→21.2, 5km→20, 8km→18.8, 9.4km→18.2, 10km→18
+                    speedThreshold = 22 - (0.4 * distance);
                 } else {
-                    // < 2 km (800m, 1km, 1.5km, etc.)
-                    speedThreshold = 22.0;
-                    distanceLabel = '< 2 km';
+                    // Longer distances (>= 10km): slower decrease
+                    // Examples: 10km→18, 13km→17.7, 15km→17.5, 21.1km→16.9, 42km→14.8
+                    speedThreshold = 18 - (0.1 * (distance - 10));
                 }
+
+                // Minimum threshold for ultra-long distances (100km+)
+                speedThreshold = Math.max(speedThreshold, 14.5);
+
+                // Round to 1 decimal for display
+                speedThreshold = Math.round(speedThreshold * 10) / 10;
+                distanceLabel = distance + ' km';
             }
 
             // Check speed from result.speed field (if available)
