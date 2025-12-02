@@ -143,9 +143,11 @@ class ResultController extends Controller
     {
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
+            'reader_id' => 'nullable|exists:readers,id',
             'times' => 'required|array',
             'times.*.timestamp' => 'required|date',
             'times.*.bib_number' => 'required|string',
+            'times.*.reader_id' => 'nullable|exists:readers,id',
         ]);
 
         DB::beginTransaction();
@@ -153,6 +155,14 @@ class ResultController extends Controller
         try {
             $created = [];
             $errors = [];
+
+            // Get reader info if provided at batch level
+            $defaultReader = null;
+            $defaultLocation = 'ARRIVEE';
+            if (isset($validated['reader_id'])) {
+                $defaultReader = \App\Models\Reader::find($validated['reader_id']);
+                $defaultLocation = $defaultReader ? $defaultReader->location : 'ARRIVEE';
+            }
 
             foreach ($validated['times'] as $index => $timeData) {
                 // Find entrant by bib number
@@ -177,18 +187,33 @@ class ResultController extends Controller
                     ->where('entrant_id', $entrant->id)
                     ->max('lap_number') ?? 0;
 
+                // Get reader info for this specific time entry (overrides batch level)
+                $readerId = $timeData['reader_id'] ?? $validated['reader_id'] ?? null;
+                $readerLocation = $defaultLocation;
+
+                if (isset($timeData['reader_id']) && $timeData['reader_id'] !== ($validated['reader_id'] ?? null)) {
+                    $reader = \App\Models\Reader::find($timeData['reader_id']);
+                    $readerLocation = $reader ? $reader->location : 'UNKNOWN';
+                }
+
                 // Create result
-                $result = Result::create([
+                $resultData = [
                     'race_id' => $entrant->race_id,
                     'entrant_id' => $entrant->id,
                     'wave_id' => $entrant->wave_id,
                     'rfid_tag' => $entrant->rfid_tag,
-                    'reader_location' => 'ARRIVEE',
+                    'reader_location' => $readerLocation,
                     'raw_time' => $timeData['timestamp'],
                     'lap_number' => $lapNumber + 1,
                     'is_manual' => true,
                     'status' => 'V',
-                ]);
+                ];
+
+                if ($readerId) {
+                    $resultData['reader_id'] = $readerId;
+                }
+
+                $result = Result::create($resultData);
 
                 // Calculate time and speed
                 $this->calculateResult($result);
