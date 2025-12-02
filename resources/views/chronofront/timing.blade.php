@@ -1747,18 +1747,33 @@ function chronoApp() {
                 });
             }
 
-            // Check for exceptional speed (>28 km/h sustained)
-            // Reference: Marathon WR ~21 km/h, 10K WR ~22.5 km/h, trail running rarely exceeds 25 km/h
-            const speedThreshold = 28; // km/h - Physiologically exceptional for endurance running
+            // Speed thresholds based on human physiology
+            const speedWarning = 28; // km/h - Exceptional for endurance (10K WR ~22.5 km/h)
+            const speedCritical = 35; // km/h - Physically impossible sustained (sprint WR peak ~37 km/h)
 
-            if (result.speed && parseFloat(result.speed) > speedThreshold) {
-                this.addAlertToResult(result, {
-                    type: 'speed',
-                    icon: '▲',
-                    title: 'Vitesse élevée détectée',
-                    details: `Vitesse moyenne de ${result.speed} km/h (seuil: ${speedThreshold} km/h). À titre de comparaison, le record du monde du marathon est à ~21 km/h. Vérifier les horaires de passage ou le parcours du coureur.`,
-                    status: 'pending'
-                });
+            // Check speed from result.speed field (if available)
+            if (result.speed) {
+                const speed = parseFloat(result.speed);
+
+                if (speed > speedCritical) {
+                    // Critical: Physically impossible for sustained running
+                    this.addAlertToResult(result, {
+                        type: 'speed',
+                        icon: '⚠',
+                        title: 'Vitesse physiquement impossible',
+                        details: `Vitesse de ${speed.toFixed(1)} km/h détectée (seuil critique: ${speedCritical} km/h). Le record du monde du 100m sprint en pointe est ~37 km/h. Erreur probable dans les horaires de passage ou confusion de coureur.`,
+                        status: 'pending'
+                    });
+                } else if (speed > speedWarning) {
+                    // Warning: Exceptional but possible for short distances
+                    this.addAlertToResult(result, {
+                        type: 'speed',
+                        icon: '▲',
+                        title: 'Vitesse élevée détectée',
+                        details: `Vitesse moyenne de ${speed.toFixed(1)} km/h (seuil: ${speedWarning} km/h). Vitesse exceptionnelle pour la course à pied. Vérifier les horaires de passage.`,
+                        status: 'pending'
+                    });
+                }
             }
 
             // Additional check: calculate speed between checkpoints if we have previous results
@@ -1780,12 +1795,22 @@ function chronoApp() {
                         if (timeHours > 0) {
                             const calculatedSpeed = distance / timeHours;
 
-                            if (calculatedSpeed > speedThreshold) {
+                            if (calculatedSpeed > speedCritical) {
+                                // Critical: Physically impossible
+                                this.addAlertToResult(result, {
+                                    type: 'speed',
+                                    icon: '⚠',
+                                    title: 'Vitesse physiquement impossible',
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil critique: ${speedCritical} km/h). Erreur probable dans les horaires ou confusion de coureur.`,
+                                    status: 'pending'
+                                });
+                            } else if (calculatedSpeed > speedWarning) {
+                                // Warning: Exceptional
                                 this.addAlertToResult(result, {
                                     type: 'speed',
                                     icon: '▲',
                                     title: 'Vitesse élevée entre points de passage',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil: ${speedThreshold} km/h). Vérifier les horaires de passage.`,
+                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil: ${speedWarning} km/h). Vérifier les horaires de passage.`,
                                     status: 'pending'
                                 });
                             }
