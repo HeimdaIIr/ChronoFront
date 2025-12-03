@@ -2714,7 +2714,6 @@ function chronoApp() {
                 // Reset
                 this.manualTimestamps = [];
                 this.manualBibs = [];
-                this.manualCheckpointId = '';
                 this.csvFile = null;
                 this.saveManualTimestampsToStorage();
                 this.showManualTimesModal = false;
@@ -2773,7 +2772,6 @@ function chronoApp() {
                 // Reset
                 this.manualTimestamps = [];
                 this.manualBibs = [];
-                this.manualCheckpointId = '';
                 this.csvFile = null;
                 this.saveManualTimestampsToStorage();
                 this.showManualTimesModal = false;
