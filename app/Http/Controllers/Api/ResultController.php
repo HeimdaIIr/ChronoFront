@@ -841,7 +841,7 @@ class ResultController extends Controller
     public function markAsABD(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'race_id' => 'required|exists:races,id',
+            'event_id' => 'required|exists:events,id',
             'bib_numbers' => 'required|array',
             'bib_numbers.*' => 'required|string',
         ]);
@@ -853,32 +853,37 @@ class ResultController extends Controller
             $created = 0;
             $notFound = [];
             $errors = [];
-
-            $race = Race::findOrFail($validated['race_id']);
+            $racesAffected = [];
 
             foreach ($validated['bib_numbers'] as $bibNumber) {
                 try {
                     // Trim and clean bib number
                     $cleanBib = trim($bibNumber);
 
-                    // Find entrant by bib number in this race's event
-                    $entrant = Entrant::where('event_id', $race->event_id)
+                    // Find entrant by bib number in this event
+                    $entrant = Entrant::where('event_id', $validated['event_id'])
                         ->where('bib_number', $cleanBib)
                         ->first();
 
                     if (!$entrant) {
-                        \Log::warning("ABD - Entrant non trouvé", [
-                            'bib_number' => $cleanBib,
-                            'event_id' => $race->event_id,
-                            'race_id' => $validated['race_id'],
-                            'total_entrants' => Entrant::where('event_id', $race->event_id)->count()
-                        ]);
                         $notFound[] = $cleanBib;
                         continue;
                     }
 
-                    // Check if result already exists for this entrant in this race
-                    $result = Result::where('race_id', $validated['race_id'])
+                    // Use the entrant's race_id (each entrant is registered for a specific race)
+                    if (!$entrant->race_id) {
+                        $errors[] = $cleanBib;
+                        \Log::warning("ABD - Entrant sans race assignée: {$cleanBib}");
+                        continue;
+                    }
+
+                    // Track affected races for position recalculation
+                    if (!in_array($entrant->race_id, $racesAffected)) {
+                        $racesAffected[] = $entrant->race_id;
+                    }
+
+                    // Check if result already exists for this entrant in their race
+                    $result = Result::where('race_id', $entrant->race_id)
                         ->where('entrant_id', $entrant->id)
                         ->first();
 
@@ -889,7 +894,7 @@ class ResultController extends Controller
                     } else {
                         // Create new result with DNF status
                         Result::create([
-                            'race_id' => $validated['race_id'],
+                            'race_id' => $entrant->race_id,
                             'entrant_id' => $entrant->id,
                             'status' => 'DNF',
                             'raw_time' => null,
@@ -901,13 +906,15 @@ class ResultController extends Controller
                         $created++;
                     }
                 } catch (\Exception $e) {
-                    $errors[] = $bibNumber;
-                    \Log::error("Erreur ABD pour dossard {$bibNumber}: " . $e->getMessage());
+                    $errors[] = $cleanBib;
+                    \Log::error("Erreur ABD pour dossard {$cleanBib}: " . $e->getMessage());
                 }
             }
 
-            // Recalculate positions
-            $this->recalculateRacePositions($validated['race_id']);
+            // Recalculate positions for all affected races
+            foreach ($racesAffected as $raceId) {
+                $this->recalculateRacePositions($raceId);
+            }
 
             DB::commit();
 

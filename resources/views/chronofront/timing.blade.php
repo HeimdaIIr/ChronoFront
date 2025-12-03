@@ -2690,7 +2690,7 @@ function chronoApp() {
                 // Special case: ABD (Abandon)
                 if (this.manualCheckpointId === 'ABD') {
                     const response = await axios.post('/results/mark-abd', {
-                        race_id: this.selectedRaceId,
+                        event_id: this.currentEventId,
                         bib_numbers: validBibs
                     });
 
@@ -2774,7 +2774,7 @@ function chronoApp() {
                 // Special case: ABD (Abandon)
                 if (this.manualCheckpointId === 'ABD') {
                     const response = await axios.post('/results/mark-abd', {
-                        race_id: this.selectedRaceId,
+                        event_id: this.currentEventId,
                         bib_numbers: lines
                     });
 
