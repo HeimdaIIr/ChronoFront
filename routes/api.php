@@ -80,3 +80,16 @@ Route::get('health', function () {
         'app' => 'ChronoFront Laravel'
     ]);
 });
+
+// Debug logs (temporary)
+Route::get('debug/logs', function () {
+    $logFile = storage_path('logs/laravel.log');
+    if (!file_exists($logFile)) {
+        return response()->json(['error' => 'Log file not found']);
+    }
+    $lines = file($logFile);
+    $lastLines = array_slice($lines, -100); // Last 100 lines
+    return response()->json([
+        'logs' => implode('', $lastLines)
+    ]);
+});
