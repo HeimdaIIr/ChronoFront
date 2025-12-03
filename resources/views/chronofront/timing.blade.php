@@ -1293,9 +1293,29 @@ body {
                 <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
-                            <div>
-                                <span style="font-weight: 600; margin-right: 1rem;" x-text="`#${index + 1}`"></span>
-                                <span x-text="ts.time"></span>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+                                <span style="font-weight: 600; color: #6b7280;" x-text="`#${index + 1}`"></span>
+
+                                <!-- Editable timestamp -->
+                                <div style="flex: 1;">
+                                    <span x-show="editingTimestampIndex !== index"
+                                          @click="startEditingTimestamp(index)"
+                                          style="cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background 0.2s;"
+                                          :style="'background: ' + (editingTimestampIndex === index ? 'transparent' : 'transparent') + '; &:hover { background: #f3f4f6; }'"
+                                          onmouseover="this.style.background='#f3f4f6'"
+                                          onmouseout="this.style.background='transparent'"
+                                          x-text="ts.time"></span>
+
+                                    <input x-show="editingTimestampIndex === index"
+                                           type="time"
+                                           step="1"
+                                           x-model="editingTimestampValue"
+                                           @blur="saveEditedTimestamp(index)"
+                                           @keydown.enter="saveEditedTimestamp(index)"
+                                           @keydown.escape="cancelEditingTimestamp()"
+                                           x-init="if (editingTimestampIndex === index) $el.focus()"
+                                           style="padding: 0.25rem 0.5rem; border: 2px solid #3b82f6; border-radius: 4px; font-family: monospace;">
+                                </div>
                             </div>
                             <button @click="removeManualTimestamp(index)" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
                                 <i class="bi bi-x-lg"></i>
@@ -1497,6 +1517,8 @@ function chronoApp() {
         manualTimestamps: [],
         manualBibs: [],
         manualCheckpointId: '',
+        editingTimestampIndex: null,
+        editingTimestampValue: '',
         csvFile: null,
         importingManualTimes: false,
         singleEntry: {
@@ -2578,6 +2600,50 @@ function chronoApp() {
         removeManualTimestamp(index) {
             this.manualTimestamps.splice(index, 1);
             this.saveManualTimestampsToStorage();
+        },
+
+        startEditingTimestamp(index) {
+            this.editingTimestampIndex = index;
+            // Extract time from display format (HH:MM:SS)
+            const timestamp = this.manualTimestamps[index];
+            this.editingTimestampValue = timestamp.time;
+        },
+
+        saveEditedTimestamp(index) {
+            if (this.editingTimestampValue) {
+                // Convert edited time back to full timestamp
+                const timestamp = this.manualTimestamps[index];
+                const date = new Date(timestamp.timestamp);
+
+                // Parse the edited time (format: HH:MM:SS)
+                const timeParts = this.editingTimestampValue.split(':');
+                if (timeParts.length >= 2) {
+                    date.setHours(parseInt(timeParts[0]));
+                    date.setMinutes(parseInt(timeParts[1]));
+                    date.setSeconds(timeParts[2] ? parseInt(timeParts[2]) : 0);
+
+                    // Update timestamp
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+                    this.manualTimestamps[index].timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    this.manualTimestamps[index].time = `${hours}:${minutes}:${seconds}`;
+
+                    this.saveManualTimestampsToStorage();
+                    this.showToast('Temps modifié', 'success');
+                }
+            }
+            this.editingTimestampIndex = null;
+            this.editingTimestampValue = '';
+        },
+
+        cancelEditingTimestamp() {
+            this.editingTimestampIndex = null;
+            this.editingTimestampValue = '';
         },
 
         async importManualTimesQuick() {
