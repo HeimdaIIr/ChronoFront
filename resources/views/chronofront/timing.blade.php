@@ -1555,10 +1555,11 @@ function chronoApp() {
             this.loadEvent().then(() => {
                 this.loadAlertThreshold();
                 this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
-                this.loadManualCheckpointFromStorage(); // Load last used checkpoint
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
-            this.loadReaders();
+            this.loadReaders().then(() => {
+                this.loadManualCheckpointFromStorage(); // Load last used checkpoint after readers are loaded
+            });
             this.loadAllResults().then(() => {
                 this.loadAlertsFromStorage(); // Restore alerts after loading results
             });
