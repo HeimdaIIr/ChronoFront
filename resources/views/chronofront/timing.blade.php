@@ -1271,26 +1271,28 @@ body {
 
     <!-- Manual Times Import Modal -->
     <div x-show="showManualTimesModal" class="modal-overlay" @click.self="showManualTimesModal = false">
-        <div class="modal-content" style="max-width: 600px;">
-            <h3>Attribution des temps manuels</h3>
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 1.5rem 0;">Attribution des temps manuels</h3>
 
-            <div style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="margin: 0; color: #dc2626;">
-                        <i class="bi bi-clock-history"></i>
-                        <span x-text="manualTimestamps.length"></span> temps enregistrés
-                    </h4>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button @click="addManualTimestamp()" style="padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                            <i class="bi bi-plus-circle-fill"></i> Ajouter temps
-                        </button>
-                        <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            <i class="bi bi-trash"></i> Tout supprimer
-                        </button>
+            <!-- Scrollable content -->
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 1rem;">
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: #dc2626;">
+                            <i class="bi bi-clock-history"></i>
+                            <span x-text="manualTimestamps.length"></span> temps enregistrés
+                        </h4>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button @click="addManualTimestamp()" style="padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                                <i class="bi bi-plus-circle-fill"></i> Ajouter temps
+                            </button>
+                            <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="bi bi-trash"></i> Tout supprimer
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
@@ -1339,49 +1341,50 @@ body {
                 </select>
             </div>
 
-            <!-- Quick Bib Entry -->
-            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
-                    <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <template x-for="(ts, index) in manualTimestamps" :key="index">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
-                                <span x-text="`#${index + 1}`"></span>
-                                <span style="font-size: 0.75rem; margin-left: 0.25rem;" x-text="ts.time"></span>
+                <!-- Quick Bib Entry -->
+                <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
+                        <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <template x-for="(ts, index) in manualTimestamps" :key="index">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
+                                    <span x-text="`#${index + 1}`"></span>
+                                    <span style="font-size: 0.75rem; margin-left: 0.25rem;" x-text="ts.time"></span>
+                                </div>
+                                <input type="text"
+                                       x-model="manualBibs[index]"
+                                       :placeholder="`Dossard ${index + 1}`"
+                                       @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
+                                       style="flex: 1; padding: 0.75rem; border: 2px solid #86efac; border-radius: 6px; font-size: 1rem; font-weight: 600;">
                             </div>
-                            <input type="text"
-                                   x-model="manualBibs[index]"
-                                   :placeholder="`Dossard ${index + 1}`"
-                                   @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
-                                   style="flex: 1; padding: 0.75rem; border: 2px solid #86efac; border-radius: 6px; font-size: 1rem; font-weight: 600;">
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- OR CSV Import -->
-            <details style="margin-bottom: 1rem;">
-                <summary style="cursor: pointer; padding: 0.5rem; background: #f3f4f6; border-radius: 6px; font-weight: 500; color: #6b7280;">
-                    <i class="bi bi-file-earmark-arrow-up"></i> OU importer depuis CSV
-                </summary>
-                <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 0.5rem;">
-                    <input
-                        type="file"
-                        accept=".csv,.txt"
-                        @change="csvFile = $event.target.files[0]"
-                        style="width: 100%; padding: 0.5rem; border: 2px dashed #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem;"
-                    >
-                    <div x-show="csvFile" style="margin-top: 0.5rem; color: #059669; font-size: 0.9rem;">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span x-text="csvFile?.name"></span>
+                        </template>
                     </div>
                 </div>
-            </details>
 
-            <!-- Action Buttons -->
-            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <!-- OR CSV Import -->
+                <details style="margin-bottom: 1rem;">
+                    <summary style="cursor: pointer; padding: 0.5rem; background: #f3f4f6; border-radius: 6px; font-weight: 500; color: #6b7280;">
+                        <i class="bi bi-file-earmark-arrow-up"></i> OU importer depuis CSV
+                    </summary>
+                    <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 0.5rem;">
+                        <input
+                            type="file"
+                            accept=".csv,.txt"
+                            @change="csvFile = $event.target.files[0]"
+                            style="width: 100%; padding: 0.5rem; border: 2px dashed #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem;"
+                        >
+                        <div x-show="csvFile" style="margin-top: 0.5rem; color: #059669; font-size: 0.9rem;">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span x-text="csvFile?.name"></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Fixed footer with action buttons -->
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end; background: white;">
                 <button
                     @click="showManualTimesModal = false"
                     style="padding: 0.75rem 1.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
