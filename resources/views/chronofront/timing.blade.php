@@ -1292,8 +1292,8 @@ body {
                         </div>
                     </div>
 
-                    <!-- Scrollable list of timestamps -->
-                    <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <!-- Scrollable list of timestamps (max 3 lines visible) -->
+                    <div style="max-height: 150px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
@@ -1348,8 +1348,8 @@ body {
                 <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
                     <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
                 </h4>
-                <!-- Scrollable list of bib inputs -->
-                <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Scrollable list of bib inputs (max 3 lines visible) -->
+                <div style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
