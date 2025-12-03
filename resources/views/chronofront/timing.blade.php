@@ -1271,40 +1271,39 @@ body {
 
     <!-- Manual Times Import Modal -->
     <div x-show="showManualTimesModal" class="modal-overlay" @click.self="showManualTimesModal = false">
-        <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
-            <h3 style="margin: 0 0 1.5rem 0;">Attribution des temps manuels</h3>
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 1.1rem;">Attribution des temps manuels</h3>
 
             <!-- Content (no scroll here) -->
-            <div style="margin-bottom: 1rem;">
-                <div style="margin-bottom: 1.5rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h4 style="margin: 0; color: #dc2626;">
+            <div style="margin-bottom: 0.5rem;">
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="margin: 0; color: #dc2626; font-size: 0.9rem;">
                             <i class="bi bi-clock-history"></i>
-                            <span x-text="manualTimestamps.length"></span> temps enregistrés
+                            <span x-text="manualTimestamps.length"></span> temps
                         </h4>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button @click="addManualTimestamp()" style="padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-                                <i class="bi bi-plus-circle-fill"></i> Ajouter temps
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button @click="addManualTimestamp()" style="padding: 0.35rem 0.65rem; background: #22c55e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem;">
+                                <i class="bi bi-plus-circle-fill"></i> Ajouter
                             </button>
-                            <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                <i class="bi bi-trash"></i> Tout supprimer
+                            <button @click="clearManualTimestamps()" style="padding: 0.35rem 0.65rem; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                <i class="bi bi-trash"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- Scrollable list of timestamps (max 3 lines visible) -->
-                    <div style="max-height: 150px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <div style="max-height: 120px; overflow-y: auto; background: #f9fafb; border-radius: 4px; padding: 0.5rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
-                                <span style="font-weight: 600; color: #6b7280;" x-text="`#${index + 1}`"></span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem; background: white; border-radius: 4px; margin-bottom: 0.35rem; font-size: 0.85rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                                <span style="font-weight: 600; color: #6b7280; font-size: 0.8rem;" x-text="`#${index + 1}`"></span>
 
                                 <!-- Editable timestamp -->
                                 <div style="flex: 1;">
                                     <span x-show="editingTimestampIndex !== index"
                                           @click="startEditingTimestamp(index)"
-                                          style="cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 4px; transition: background 0.2s;"
-                                          :style="'background: ' + (editingTimestampIndex === index ? 'transparent' : 'transparent') + '; &:hover { background: #f3f4f6; }'"
+                                          style="cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 3px; transition: background 0.2s; font-size: 0.85rem;"
                                           onmouseover="this.style.background='#f3f4f6'"
                                           onmouseout="this.style.background='transparent'"
                                           x-text="ts.time"></span>
@@ -1317,10 +1316,10 @@ body {
                                            @keydown.enter="saveEditedTimestamp(index)"
                                            @keydown.escape="cancelEditingTimestamp()"
                                            x-init="if (editingTimestampIndex === index) $el.focus()"
-                                           style="padding: 0.25rem 0.5rem; border: 2px solid #3b82f6; border-radius: 4px; font-family: monospace;">
+                                           style="padding: 0.2rem 0.4rem; border: 1px solid #3b82f6; border-radius: 3px; font-family: monospace; font-size: 0.85rem;">
                                 </div>
                             </div>
-                            <button @click="removeManualTimestamp(index)" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
+                            <button @click="removeManualTimestamp(index)" style="padding: 0.2rem 0.4rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -1329,15 +1328,15 @@ body {
             </div>
 
             <!-- Checkpoint Selection -->
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+            <div style="margin-bottom: 0.5rem;">
+                <label style="display: block; margin-bottom: 0.35rem; font-weight: 600; color: #374151; font-size: 0.85rem;">
                     <i class="bi bi-geo-alt-fill"></i> Point de passage
                 </label>
                 <select x-model="manualCheckpointId"
                         @change="saveManualCheckpointToStorage()"
-                        style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1rem; font-weight: 500;">
+                        style="width: 100%; padding: 0.5rem; border: 2px solid #3b82f6; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">
                     <option value="">Sélectionner le checkpoint</option>
-                    <option value="ABD" style="background: #fef3c7; color: #92400e; font-weight: 600;">🚫 ABD (Abandon)</option>
+                    <option value="ABD" style="background: #fef3c7; color: #92400e; font-weight: 600;">🚫 ABD</option>
                     <template x-for="reader in readers" :key="reader.id">
                         <option :value="reader.id" x-text="reader.location"></option>
                     </template>
@@ -1345,41 +1344,41 @@ body {
             </div>
 
             <!-- Quick Bib Entry with scroll -->
-            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
-                    <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
+            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 4px; padding: 0.5rem; margin-bottom: 0.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #15803d; font-size: 0.85rem;">
+                    <i class="bi bi-pencil-fill"></i> Dossards (ordre des temps)
                 </h4>
                 <!-- Scrollable list of bib inputs (max 3 lines visible) -->
-                <div style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="flex-shrink: 0; width: 40px; font-weight: 600; color: #15803d; font-size: 0.8rem;">
                                 <span x-text="`#${index + 1}`"></span>
-                                <span style="font-size: 0.75rem; margin-left: 0.25rem;" x-text="ts.time"></span>
+                                <span style="font-size: 0.7rem; margin-left: 0.15rem;" x-text="ts.time"></span>
                             </div>
                             <input type="text"
                                    x-model="manualBibs[index]"
                                    :placeholder="`Dossard ${index + 1}`"
                                    @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
-                                   style="flex: 1; padding: 0.75rem; border: 2px solid #86efac; border-radius: 6px; font-size: 1rem; font-weight: 600;">
+                                   style="flex: 1; padding: 0.5rem; border: 2px solid #86efac; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
                         </div>
                     </template>
                 </div>
             </div>
 
                 <!-- OR CSV Import -->
-                <details style="margin-bottom: 1rem;">
-                    <summary style="cursor: pointer; padding: 0.5rem; background: #f3f4f6; border-radius: 6px; font-weight: 500; color: #6b7280;">
+                <details style="margin-bottom: 0.5rem;">
+                    <summary style="cursor: pointer; padding: 0.35rem; background: #f3f4f6; border-radius: 4px; font-weight: 500; color: #6b7280; font-size: 0.85rem;">
                         <i class="bi bi-file-earmark-arrow-up"></i> OU importer depuis CSV
                     </summary>
-                    <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 0.5rem;">
+                    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px; margin-top: 0.35rem;">
                         <input
                             type="file"
                             accept=".csv,.txt"
                             @change="csvFile = $event.target.files[0]"
-                            style="width: 100%; padding: 0.5rem; border: 2px dashed #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem;"
+                            style="width: 100%; padding: 0.35rem; border: 2px dashed #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.8rem;"
                         >
-                        <div x-show="csvFile" style="margin-top: 0.5rem; color: #059669; font-size: 0.9rem;">
+                        <div x-show="csvFile" style="margin-top: 0.35rem; color: #059669; font-size: 0.8rem;">
                             <i class="bi bi-check-circle-fill"></i>
                             <span x-text="csvFile?.name"></span>
                         </div>
@@ -1388,17 +1387,17 @@ body {
             </div>
 
             <!-- Fixed footer with action buttons -->
-            <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end; background: white;">
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end; background: white;">
                 <button
                     @click="showManualTimesModal = false"
-                    style="padding: 0.75rem 1.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                    style="padding: 0.5rem 1rem; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 0.9rem;"
                 >
                     Annuler
                 </button>
                 <button
                     @click="csvFile ? importManualTimesFromCSV() : importManualTimesQuick()"
                     :disabled="(!manualCheckpointId || importingManualTimes) || (!csvFile && manualBibs.filter(b => b).length !== manualTimestamps.length)"
-                    style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
+                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem;"
                     :style="((!manualCheckpointId || importingManualTimes) || (!csvFile && manualBibs.filter(b => b).length !== manualTimestamps.length)) ? 'opacity: 0.5; cursor: not-allowed;' : ''"
                 >
                     <i class="bi bi-check-circle-fill"></i>
