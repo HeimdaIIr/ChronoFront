@@ -1556,11 +1556,9 @@ function chronoApp() {
             this.loadEvent().then(() => {
                 this.loadAlertThreshold();
                 this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
+                // Checkpoint is now loaded in loadEvent() after readers are loaded
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
-            this.loadReaders().then(() => {
-                this.loadManualCheckpointFromStorage(); // Load last used checkpoint after readers are loaded
-            });
             this.loadAllResults().then(() => {
                 this.loadAlertsFromStorage(); // Restore alerts after loading results
             });
@@ -1624,8 +1622,9 @@ function chronoApp() {
                     this.currentEvent = activeEvent;
                     this.eventName = activeEvent.name;
                     this.currentEventId = activeEvent.id;
-                    // Reload readers when event is loaded
-                    this.loadReaders();
+                    // Reload readers when event is loaded, then load checkpoint
+                    await this.loadReaders();
+                    this.loadManualCheckpointFromStorage();
                 }
             } catch (error) {
                 console.error('Erreur chargement événement', error);
