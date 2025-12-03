@@ -858,13 +858,22 @@ class ResultController extends Controller
 
             foreach ($validated['bib_numbers'] as $bibNumber) {
                 try {
+                    // Trim and clean bib number
+                    $cleanBib = trim($bibNumber);
+
                     // Find entrant by bib number in this race's event
                     $entrant = Entrant::where('event_id', $race->event_id)
-                        ->where('bib_number', $bibNumber)
+                        ->where('bib_number', $cleanBib)
                         ->first();
 
                     if (!$entrant) {
-                        $notFound[] = $bibNumber;
+                        \Log::warning("ABD - Entrant non trouvé", [
+                            'bib_number' => $cleanBib,
+                            'event_id' => $race->event_id,
+                            'race_id' => $validated['race_id'],
+                            'total_entrants' => Entrant::where('event_id', $race->event_id)->count()
+                        ]);
+                        $notFound[] = $cleanBib;
                         continue;
                     }
 
