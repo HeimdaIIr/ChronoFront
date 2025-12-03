@@ -1280,9 +1280,14 @@ body {
                         <i class="bi bi-clock-history"></i>
                         <span x-text="manualTimestamps.length"></span> temps enregistrés
                     </h4>
-                    <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                        <i class="bi bi-trash"></i> Tout supprimer
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button @click="addManualTimestamp()" style="padding: 0.5rem 1rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                            <i class="bi bi-plus-circle-fill"></i> Ajouter temps
+                        </button>
+                        <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            <i class="bi bi-trash"></i> Tout supprimer
+                        </button>
+                    </div>
                 </div>
 
                 <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
