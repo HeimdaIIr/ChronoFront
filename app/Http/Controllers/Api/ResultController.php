@@ -834,4 +834,93 @@ class ResultController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Mark runners as ABD (DNF) by bib numbers
+     */
+    public function markAsABD(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'race_id' => 'required|exists:races,id',
+            'bib_numbers' => 'required|array',
+            'bib_numbers.*' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $updated = 0;
+            $created = 0;
+            $notFound = [];
+            $errors = [];
+
+            $race = Race::findOrFail($validated['race_id']);
+
+            foreach ($validated['bib_numbers'] as $bibNumber) {
+                try {
+                    // Find entrant by bib number in this race's event
+                    $entrant = Entrant::where('event_id', $race->event_id)
+                        ->where('bib_number', $bibNumber)
+                        ->first();
+
+                    if (!$entrant) {
+                        $notFound[] = $bibNumber;
+                        continue;
+                    }
+
+                    // Check if result already exists for this entrant in this race
+                    $result = Result::where('race_id', $validated['race_id'])
+                        ->where('entrant_id', $entrant->id)
+                        ->first();
+
+                    if ($result) {
+                        // Update existing result to DNF
+                        $result->update(['status' => 'DNF']);
+                        $updated++;
+                    } else {
+                        // Create new result with DNF status
+                        Result::create([
+                            'race_id' => $validated['race_id'],
+                            'entrant_id' => $entrant->id,
+                            'status' => 'DNF',
+                            'raw_time' => null,
+                            'chip_time' => null,
+                            'gun_time' => null,
+                            'position' => null,
+                            'wave_id' => $entrant->wave_id,
+                        ]);
+                        $created++;
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = $bibNumber;
+                    \Log::error("Erreur ABD pour dossard {$bibNumber}: " . $e->getMessage());
+                }
+            }
+
+            // Recalculate positions
+            $this->recalculateRacePositions($validated['race_id']);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ABD enregistrés avec succès',
+                'updated' => $updated,
+                'created' => $created,
+                'not_found' => $notFound,
+                'errors' => $errors,
+                'not_found_count' => count($notFound),
+                'error_count' => count($errors),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du traitement des ABD',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

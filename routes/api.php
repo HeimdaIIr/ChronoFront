@@ -54,6 +54,7 @@ Route::post('results/time', [ResultController::class, 'addTime']);
 Route::post('results/manual-batch', [ResultController::class, 'storeManualBatch']);
 Route::post('results/manual-single', [ResultController::class, 'storeManualSingle']);
 Route::post('results/{result}/status', [ResultController::class, 'updateStatus']);
+Route::post('results/mark-abd', [ResultController::class, 'markAsABD']);
 Route::post('results/rfid-batch', [ResultController::class, 'importRfidBatch']);
 Route::post('results/recalculate-all', [ResultController::class, 'recalculateAllPositions']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);

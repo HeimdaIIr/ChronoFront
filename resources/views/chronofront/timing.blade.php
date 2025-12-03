@@ -2689,41 +2689,24 @@ function chronoApp() {
             try {
                 // Special case: ABD (Abandon)
                 if (this.manualCheckpointId === 'ABD') {
-                    let updated = 0;
-                    let notFound = [];
-                    let errors = [];
+                    const response = await axios.post('/results/mark-abd', {
+                        race_id: this.selectedRaceId,
+                        bib_numbers: validBibs
+                    });
 
-                    for (const bib of validBibs) {
-                        try {
-                            const result = this.results.find(r =>
-                                r.entrant?.bib_number === bib &&
-                                r.race_id == this.selectedRaceId
-                            );
-
-                            if (result) {
-                                await axios.post(`/results/${result.id}/status`, {
-                                    status: 'dnf'
-                                });
-                                updated++;
-                            } else {
-                                notFound.push(bib);
-                            }
-                        } catch (error) {
-                            console.error(`Erreur pour dossard ${bib}:`, error);
-                            errors.push(bib);
-                        }
+                    let message = `${response.data.updated + response.data.created} coureur(s) marqué(s) comme ABD`;
+                    if (response.data.created > 0) {
+                        message += `\n(${response.data.created} nouveaux résultats créés)`;
                     }
-
-                    let message = `${updated} coureur(s) marqué(s) comme ABD`;
-                    if (notFound.length > 0) {
-                        message += `\n${notFound.length} dossard(s) non trouvé(s): ${notFound.join(', ')}`;
+                    if (response.data.not_found_count > 0) {
+                        message += `\n${response.data.not_found_count} dossard(s) non trouvé(s): ${response.data.not_found.join(', ')}`;
                     }
-                    if (errors.length > 0) {
-                        message += `\n${errors.length} erreur(s): ${errors.join(', ')}`;
+                    if (response.data.error_count > 0) {
+                        message += `\n${response.data.error_count} erreur(s): ${response.data.errors.join(', ')}`;
                     }
 
                     alert(message);
-                    this.showToast(`${updated} ABD enregistré(s)`, 'success');
+                    this.showToast(`${response.data.updated + response.data.created} ABD enregistré(s)`, 'success');
 
                     // Reset
                     this.manualTimestamps = [];
@@ -2790,41 +2773,24 @@ function chronoApp() {
 
                 // Special case: ABD (Abandon)
                 if (this.manualCheckpointId === 'ABD') {
-                    let updated = 0;
-                    let notFound = [];
-                    let errors = [];
+                    const response = await axios.post('/results/mark-abd', {
+                        race_id: this.selectedRaceId,
+                        bib_numbers: lines
+                    });
 
-                    for (const bib of lines) {
-                        try {
-                            const result = this.results.find(r =>
-                                r.entrant?.bib_number === bib &&
-                                r.race_id == this.selectedRaceId
-                            );
-
-                            if (result) {
-                                await axios.post(`/results/${result.id}/status`, {
-                                    status: 'dnf'
-                                });
-                                updated++;
-                            } else {
-                                notFound.push(bib);
-                            }
-                        } catch (error) {
-                            console.error(`Erreur pour dossard ${bib}:`, error);
-                            errors.push(bib);
-                        }
+                    let message = `${response.data.updated + response.data.created} coureur(s) marqué(s) comme ABD`;
+                    if (response.data.created > 0) {
+                        message += `\n(${response.data.created} nouveaux résultats créés)`;
                     }
-
-                    let message = `${updated} coureur(s) marqué(s) comme ABD`;
-                    if (notFound.length > 0) {
-                        message += `\n${notFound.length} dossard(s) non trouvé(s): ${notFound.join(', ')}`;
+                    if (response.data.not_found_count > 0) {
+                        message += `\n${response.data.not_found_count} dossard(s) non trouvé(s): ${response.data.not_found.join(', ')}`;
                     }
-                    if (errors.length > 0) {
-                        message += `\n${errors.length} erreur(s): ${errors.join(', ')}`;
+                    if (response.data.error_count > 0) {
+                        message += `\n${response.data.error_count} erreur(s): ${response.data.errors.join(', ')}`;
                     }
 
                     alert(message);
-                    this.showToast(`${updated} ABD enregistré(s)`, 'success');
+                    this.showToast(`${response.data.updated + response.data.created} ABD enregistré(s)`, 'success');
 
                     // Reset
                     this.manualTimestamps = [];
