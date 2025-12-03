@@ -2704,23 +2704,19 @@ function chronoApp() {
         saveManualCheckpointToStorage() {
             if (this.manualCheckpointId && this.currentEventId) {
                 localStorage.setItem(`chronofront_manual_checkpoint_${this.currentEventId}`, this.manualCheckpointId);
-                console.log('Checkpoint sauvegardé:', this.manualCheckpointId, 'pour event:', this.currentEventId);
             }
         },
 
         loadManualCheckpointFromStorage() {
             if (!this.currentEventId) {
-                console.log('currentEventId non défini, impossible de charger le checkpoint');
                 return;
             }
 
             const key = `chronofront_manual_checkpoint_${this.currentEventId}`;
             const stored = localStorage.getItem(key);
-            console.log('Chargement checkpoint - key:', key, 'stored:', stored, 'readers disponibles:', this.readers.length);
 
             if (stored) {
                 this.manualCheckpointId = stored;
-                console.log('Checkpoint restauré:', this.manualCheckpointId);
             }
         },
 
