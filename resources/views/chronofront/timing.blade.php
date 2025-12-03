@@ -1384,6 +1384,50 @@ body {
                         </div>
                     </div>
                 </details>
+
+                <!-- ABD (Abandons) Section -->
+                <details style="margin-bottom: 1rem;">
+                    <summary style="cursor: pointer; padding: 0.5rem; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 6px; font-weight: 600; color: #92400e;">
+                        <i class="bi bi-person-x-fill"></i> Marquer des coureurs comme ABD (Abandon)
+                    </summary>
+                    <div style="padding: 1rem; border: 2px solid #f59e0b; border-radius: 6px; margin-top: 0.5rem; background: #fffbeb;">
+                        <p style="margin: 0 0 0.75rem 0; color: #78350f; font-size: 0.9rem;">
+                            <i class="bi bi-info-circle"></i> Saisissez les dossards séparés par des virgules, espaces ou retours à la ligne
+                        </p>
+                        <textarea
+                            x-model="abdBibsText"
+                            placeholder="Ex: 101, 105, 110 ou un dossard par ligne"
+                            rows="3"
+                            style="width: 100%; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 6px; font-family: monospace; font-size: 0.95rem; resize: vertical;"
+                        ></textarea>
+
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #fbbf24;">
+                            <p style="margin: 0 0 0.5rem 0; color: #78350f; font-size: 0.85rem; font-weight: 500;">
+                                <i class="bi bi-file-earmark-arrow-up"></i> Ou importer depuis CSV
+                            </p>
+                            <input
+                                type="file"
+                                accept=".csv,.txt"
+                                @change="abdCsvFile = $event.target.files[0]"
+                                style="width: 100%; padding: 0.5rem; border: 2px dashed #fbbf24; border-radius: 6px; cursor: pointer; font-size: 0.85rem; background: white;"
+                            >
+                            <div x-show="abdCsvFile" style="margin-top: 0.5rem; color: #92400e; font-size: 0.85rem; font-weight: 500;">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span x-text="abdCsvFile?.name"></span>
+                            </div>
+                        </div>
+
+                        <button
+                            @click="markAsABD()"
+                            :disabled="processingABD || (!abdBibsText.trim() && !abdCsvFile)"
+                            style="margin-top: 0.75rem; width: 100%; padding: 0.75rem; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                            :style="(processingABD || (!abdBibsText.trim() && !abdCsvFile)) ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                        >
+                            <i class="bi bi-person-x-fill"></i>
+                            <span x-text="processingABD ? 'Traitement en cours...' : 'Marquer comme ABD'"></span>
+                        </button>
+                    </div>
+                </details>
             </div>
 
             <!-- Fixed footer with action buttons -->
@@ -1527,6 +1571,9 @@ function chronoApp() {
         editingTimestampValue: '',
         csvFile: null,
         importingManualTimes: false,
+        abdBibsText: '',
+        abdCsvFile: null,
+        processingABD: false,
         singleEntry: {
             bibNumber: '',
             checkpointId: '',
@@ -2782,6 +2829,82 @@ function chronoApp() {
                 alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
             } finally {
                 this.importingManualTimes = false;
+            }
+        },
+
+        async markAsABD() {
+            this.processingABD = true;
+
+            try {
+                let bibs = [];
+
+                // Parse manual input or CSV
+                if (this.abdCsvFile) {
+                    const text = await this.abdCsvFile.text();
+                    bibs = text.trim().split(/[\n,\s]+/).map(b => b.trim()).filter(b => b);
+                } else if (this.abdBibsText.trim()) {
+                    bibs = this.abdBibsText.trim().split(/[\n,\s]+/).map(b => b.trim()).filter(b => b);
+                }
+
+                if (bibs.length === 0) {
+                    alert('Aucun dossard à traiter');
+                    return;
+                }
+
+                console.log('Dossards ABD à traiter:', bibs);
+
+                // Find results for these bibs and mark them as ABD
+                let updated = 0;
+                let notFound = [];
+                let errors = [];
+
+                for (const bib of bibs) {
+                    try {
+                        // Find the result for this bib in current race
+                        const result = this.results.find(r =>
+                            r.entrant?.bib_number === bib &&
+                            r.race_id == this.selectedRaceId
+                        );
+
+                        if (result) {
+                            // Update status to DNF (ABD)
+                            await axios.post(`/results/${result.id}/status`, {
+                                status: 'dnf'
+                            });
+                            updated++;
+                        } else {
+                            notFound.push(bib);
+                        }
+                    } catch (error) {
+                        console.error(`Erreur pour dossard ${bib}:`, error);
+                        errors.push(bib);
+                    }
+                }
+
+                // Show results
+                let message = `${updated} coureur(s) marqué(s) comme ABD`;
+                if (notFound.length > 0) {
+                    message += `\n${notFound.length} dossard(s) non trouvé(s): ${notFound.join(', ')}`;
+                }
+                if (errors.length > 0) {
+                    message += `\n${errors.length} erreur(s): ${errors.join(', ')}`;
+                }
+
+                alert(message);
+                this.showToast(`${updated} ABD enregistré(s)`, 'success');
+
+                // Reset
+                this.abdBibsText = '';
+                this.abdCsvFile = null;
+
+                // Reload results
+                await this.loadAllResults();
+
+            } catch (error) {
+                console.error('Erreur ABD:', error);
+                alert('Erreur lors du traitement des ABD: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.processingABD = false;
             }
         },
 
