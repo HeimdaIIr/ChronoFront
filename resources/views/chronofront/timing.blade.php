@@ -1274,8 +1274,8 @@ body {
         <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
             <h3 style="margin: 0 0 1.5rem 0;">Attribution des temps manuels</h3>
 
-            <!-- Scrollable content -->
-            <div style="flex: 1; overflow-y: auto; margin-bottom: 1rem;">
+            <!-- Content (no scroll here) -->
+            <div style="margin-bottom: 1rem;">
                 <div style="margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: #dc2626;">
@@ -1292,6 +1292,7 @@ body {
                         </div>
                     </div>
 
+                    <!-- Scrollable list of timestamps -->
                     <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
@@ -1333,6 +1334,7 @@ body {
                     <i class="bi bi-geo-alt-fill"></i> Point de passage
                 </label>
                 <select x-model="manualCheckpointId"
+                        @change="saveManualCheckpointToStorage()"
                         style="width: 100%; padding: 0.75rem; border: 2px solid #3b82f6; border-radius: 8px; font-size: 1rem; font-weight: 500;">
                     <option value="">Sélectionner le checkpoint</option>
                     <template x-for="reader in readers" :key="reader.id">
@@ -1341,27 +1343,28 @@ body {
                 </select>
             </div>
 
-                <!-- Quick Bib Entry -->
-                <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                    <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
-                        <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
-                    </h4>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <template x-for="(ts, index) in manualTimestamps" :key="index">
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
-                                    <span x-text="`#${index + 1}`"></span>
-                                    <span style="font-size: 0.75rem; margin-left: 0.25rem;" x-text="ts.time"></span>
-                                </div>
-                                <input type="text"
-                                       x-model="manualBibs[index]"
-                                       :placeholder="`Dossard ${index + 1}`"
-                                       @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
-                                       style="flex: 1; padding: 0.75rem; border: 2px solid #86efac; border-radius: 6px; font-size: 1rem; font-weight: 600;">
+            <!-- Quick Bib Entry with scroll -->
+            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #15803d; font-size: 0.95rem;">
+                    <i class="bi bi-pencil-fill"></i> Entrer les dossards (dans l'ordre des temps)
+                </h4>
+                <!-- Scrollable list of bib inputs -->
+                <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <template x-for="(ts, index) in manualTimestamps" :key="index">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="flex-shrink: 0; width: 50px; font-weight: 600; color: #15803d; font-size: 0.9rem;">
+                                <span x-text="`#${index + 1}`"></span>
+                                <span style="font-size: 0.75rem; margin-left: 0.25rem;" x-text="ts.time"></span>
                             </div>
-                        </template>
-                    </div>
+                            <input type="text"
+                                   x-model="manualBibs[index]"
+                                   :placeholder="`Dossard ${index + 1}`"
+                                   @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
+                                   style="flex: 1; padding: 0.75rem; border: 2px solid #86efac; border-radius: 6px; font-size: 1rem; font-weight: 600;">
+                        </div>
+                    </template>
                 </div>
+            </div>
 
                 <!-- OR CSV Import -->
                 <details style="margin-bottom: 1rem;">
@@ -1552,6 +1555,7 @@ function chronoApp() {
             this.loadEvent().then(() => {
                 this.loadAlertThreshold();
                 this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
+                this.loadManualCheckpointFromStorage(); // Load last used checkpoint
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
             this.loadReaders();
@@ -2647,6 +2651,19 @@ function chronoApp() {
         cancelEditingTimestamp() {
             this.editingTimestampIndex = null;
             this.editingTimestampValue = '';
+        },
+
+        saveManualCheckpointToStorage() {
+            if (this.manualCheckpointId) {
+                localStorage.setItem(`chronofront_manual_checkpoint_${this.currentEventId}`, this.manualCheckpointId);
+            }
+        },
+
+        loadManualCheckpointFromStorage() {
+            const stored = localStorage.getItem(`chronofront_manual_checkpoint_${this.currentEventId}`);
+            if (stored) {
+                this.manualCheckpointId = stored;
+            }
         },
 
         async importManualTimesQuick() {
