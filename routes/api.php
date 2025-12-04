@@ -93,3 +93,16 @@ Route::get('debug/logs', function () {
         'logs' => implode('', $lastLines)
     ]);
 });
+
+// Fix existing entrants without event_id (temporary)
+Route::post('debug/fix-event-ids', function () {
+    $updated = DB::update('
+        UPDATE entrants
+        SET event_id = (SELECT event_id FROM races WHERE races.id = entrants.race_id)
+        WHERE event_id IS NULL AND race_id IS NOT NULL
+    ');
+    return response()->json([
+        'message' => 'Event IDs fixed',
+        'updated' => $updated
+    ]);
+});
