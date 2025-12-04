@@ -45,6 +45,7 @@ Route::apiResource('categories', CategoryController::class);
 // Entrants Routes
 Route::get('entrants/search', [EntrantController::class, 'search']);
 Route::post('entrants/import', [EntrantController::class, 'import']);
+Route::delete('entrants/delete-all', [EntrantController::class, 'deleteAll']);
 Route::apiResource('entrants', EntrantController::class);
 
 // Results/Timing Routes
