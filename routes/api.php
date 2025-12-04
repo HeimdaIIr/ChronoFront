@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\RaceController;
 use App\Http\Controllers\Api\WaveController;
@@ -97,13 +98,26 @@ Route::get('debug/logs', function () {
 
 // Fix existing entrants without event_id (temporary)
 Route::post('debug/fix-event-ids', function () {
-    $updated = DB::update('
-        UPDATE entrants
-        SET event_id = (SELECT event_id FROM races WHERE races.id = entrants.race_id)
-        WHERE event_id IS NULL AND race_id IS NOT NULL
-    ');
-    return response()->json([
-        'message' => 'Event IDs fixed',
-        'updated' => $updated
-    ]);
+    try {
+        $updated = 0;
+        $entrants = \App\Models\Entrant::whereNull('event_id')->whereNotNull('race_id')->get();
+
+        foreach ($entrants as $entrant) {
+            $race = \App\Models\Race::find($entrant->race_id);
+            if ($race && $race->event_id) {
+                $entrant->event_id = $race->event_id;
+                $entrant->save();
+                $updated++;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Event IDs fixed',
+            'updated' => $updated
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });

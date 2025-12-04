@@ -294,9 +294,12 @@ class EntrantController extends Controller
                 ];
 
                 // Check if entrant already exists (by bib_number + event_id)
-                $entrant = Entrant::where('event_id', $eventId)
-                    ->where('bib_number', $bibNumber)
-                    ->first();
+                $entrant = null;
+                if (!empty($bibNumber)) {
+                    $entrant = Entrant::where('event_id', $eventId)
+                        ->where('bib_number', $bibNumber)
+                        ->first();
+                }
 
                 if ($entrant) {
                     // Update existing entrant
