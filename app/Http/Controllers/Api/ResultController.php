@@ -896,12 +896,12 @@ class ResultController extends Controller
                         Result::create([
                             'race_id' => $entrant->race_id,
                             'entrant_id' => $entrant->id,
+                            'rfid_tag' => $entrant->rfid_tag ?? 'ABD',
+                            'raw_time' => now(),
                             'status' => 'DNF',
-                            'raw_time' => null,
-                            'chip_time' => null,
-                            'gun_time' => null,
                             'position' => null,
                             'wave_id' => $entrant->wave_id,
+                            'is_manual' => true,
                         ]);
                         $created++;
                     }
