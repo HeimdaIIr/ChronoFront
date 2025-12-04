@@ -20,6 +20,7 @@ class Entrant extends Model
         'phone',
         'rfid_tag',
         'bib_number',
+        'event_id',
         'category_id',
         'race_id',
         'wave_id',
