@@ -662,51 +662,122 @@ speed (km/h) = distance / (calculated_time / 3600)
 
 ---
 
-**Version:** 1.0
-**Dernière mise à jour:** 2025-11-27
+**Version:** 2.0
+**Dernière mise à jour:** 2025-12-04
 **Commits récents:**
-- `4109b99` - Statut lecteur explicite (jamais connecté vs hors ligne)
-- `2a36846` - Détection RÉELLE connexion lecteurs via date_test
-- `0f3040c` - Lecteurs par événement + calcul temps réel
-- `55fd7fc` - Interface chronométrage données réelles uniquement
-- `9f24606` - Correction import CSV
+- `790ca94` - Ajout status.md avec tracking complet
+- `42556ea` - ABD avec rfid_tag et raw_time requis
+- `7f3e754` - Ajout event_id dans fillable Entrant
+- `c73c31d` - Migration event_id pour table entrants
+- `071a645` - Import sans doublons + bouton supprimer tous
 
 ---
 
-## 🆕 AMÉLIORATIONS PRÉVUES - VERSION 2.0
+## ✅ VERSION 2.0 - IMPLÉMENTÉE
 
-### 📊 MODIFICATIONS BASE DE DONNÉES
+### 📊 MODIFICATIONS BASE DE DONNÉES - ✅ TERMINÉ
 
-#### Table `events` - Nouveaux champs
-```sql
-ALTER TABLE events ADD COLUMN alert_threshold_minutes INT DEFAULT 5 
-  COMMENT 'Seuil en minutes pour alertes coureurs en retard';
-```
+#### Table `events` - ✅ Champ ajouté
+- `alert_threshold_minutes` (integer, default: 5)
+- Migration: `2025_11_28_100000_add_alert_threshold_to_events.php`
+- Utilisé pour alertes coureurs en retard
 
-**Champ ajouté :**
-- `alert_threshold_minutes` - Seuil d'alerte si coureur en retard (integer, default: 5)
-  - Utilisé pour détecter si un coureur devrait être détecté mais ne l'est pas
-  - Exemple: Si estimé à 00:30:00 et temps actuel 00:36:00, seuil 5min → ALERTE
+#### Table `readers` - ✅ Champs ajoutés
+- `distance_from_start` (decimal 8,2, default: 0)
+- `checkpoint_order` (integer, nullable)
+- Migration: `2025_11_28_100001_add_checkpoint_fields_to_readers.php`
+- Utilisés pour calculs vitesses et temps estimés
 
-#### Table `readers` - Nouveaux champs
-```sql
-ALTER TABLE readers ADD COLUMN distance_from_start DECIMAL(8,2) DEFAULT 0 
-  COMMENT 'Distance en km depuis le point de départ';
-ALTER TABLE readers ADD COLUMN checkpoint_order INT 
-  COMMENT 'Ordre du checkpoint (1=Départ, 2=Inter1, 3=Arrivée...)';
-```
+#### Table `entrants` - ✅ Champ ajouté (4 décembre 2025)
+- `event_id` (foreign key vers events)
+- Migration: `2025_12_04_095849_add_event_id_to_entrants_table.php`
+- Permet lier participants à événements pour imports multiples
 
-**Champs ajoutés :**
-- `distance_from_start` - Distance en km depuis le départ (decimal 8,2, default: 0)
-  - Exemple: Départ = 0, KM5 = 5.0, KM10 = 10.0, Arrivée = 21.0
-  - Utilisé pour calculer vitesse moyenne et temps estimés
-- `checkpoint_order` - Ordre du checkpoint (integer, nullable)
-  - Calculé automatiquement selon distance_from_start
-  - 1 = Départ, 2 = Premier intermédiaire, N = Arrivée
+### 🖥️ PAGE CONFIGURATION LECTEURS - ✅ IMPLÉMENTÉE
 
-**Calcul IP automatique :**
-```php
-// Formule: 192.168.10.1(50+XX) où XX = 2 derniers chiffres du serial
+**Route:** `GET /events/{id}/readers`
+**Vue:** `resources/views/chronofront/readers.blade.php`
+
+**Fonctionnalités:**
+- ✅ Liste lecteurs configurés pour événement
+- ✅ Ajout/modification lecteurs (serial, location, distance)
+- ✅ Calcul automatique checkpoint_order selon distance
+- ✅ IP calculée automatiquement (192.168.10.1XX)
+- ✅ Test connexion lecteur (ping)
+- ✅ Gestion date_min/date_max activation
+
+### ⏱️ INTERFACE CHRONOMÉTRAGE - ✅ AMÉLIORATIONS IMPLÉMENTÉES
+
+#### 1. ✅ Horloge temps réel
+- Petite horloge en haut (HH:MM:SS)
+- Update chaque seconde
+- Affichée dans header (ligne 861 timing.blade.php)
+
+#### 2. ✅ Recherche normalisée sans accents
+- Fonction `normalizeString()` (ligne 2063-2068)
+- Supprime accents automatiquement
+- "jose" trouve "José", "anais" trouve "Anaïs"
+- Appliquée dans `filterResults()` (ligne 2074-2080)
+
+#### 3. ✅ Timeline dynamique panneau détail
+- Affichage checkpoints chronologiques
+- CSS timeline (lignes 546-581)
+- Template HTML (ligne 1083)
+- Méthode `calculateRunnerCheckpoints()` (ligne 2219)
+
+#### 4. ✅ Temps estimés checkpoints manquants
+- Fonction `estimateCheckpointTime()` (ligne 2286)
+- Calcul basé sur vitesse moyenne entre 2 dernières détections
+- Affichage temps estimé si checkpoint non détecté
+- Style "~HH:MM:SS (estimé)" en orange/italique
+
+#### 5. ✅ Système alertes coureurs en retard
+- Fonction `checkForLateRunners()` (ligne 2461)
+- Vérification toutes les minutes (ligne 2456)
+- Détecte coureurs dépassant seuil `alert_threshold_minutes`
+- Alert bar affiche coureurs problématiques
+
+#### 6. ✅ ABD (Abandon) intégré
+- Option "ABD (Abandon)" dans dropdown checkpoints
+- Saisie manuelle ou import CSV
+- API: `POST /results/mark-abd` avec event_id + bib_numbers
+- Crée résultats avec status='DNF', rfid_tag, raw_time, is_manual=true
+
+#### 7. ✅ Persistance checkpoint sélectionné
+- localStorage: `chronofront_manual_checkpoint_${eventId}`
+- Conserve sélection après import/refresh
+- Chargement dans `loadEvent()` après `loadReaders()`
+
+#### 8. ✅ Modal compact saisie manuelle
+- Dimensions réduites: 500px max-width
+- Scroll interne pour 3+ entrées
+- Tous éléments redimensionnés (paddings, fonts)
+
+### 📦 GESTION PARTICIPANTS - ✅ AMÉLIORATIONS
+
+#### 1. ✅ Import CSV sans doublons
+- Vérification `bib_number` + `event_id` avant création
+- Update au lieu de create si participant existe
+- Code: `EntrantController::import()` lignes 296-310
+
+#### 2. ✅ Bouton "Supprimer Tous"
+- Bouton rouge avec double confirmation
+- API: `DELETE /entrants/delete-all`
+- Méthode: `EntrantController::deleteAll()` lignes 365-381
+- Interface: `entrants.blade.php` ligne 16-18
+
+### 🔧 CORRECTIFS SESSION 4 DÉCEMBRE 2025
+
+1. ✅ **Checkpoint non persistant** - Ordre chargement corrigé
+2. ✅ **Modal trop grande** - Taille réduite + scroll interne
+3. ✅ **Import doublons** - Vérification bib+event_id
+4. ✅ **Colonne event_id manquante** - Migration ajoutée
+5. ✅ **event_id non sauvegardé** - Ajouté dans $fillable
+6. ✅ **ABD échouait** - rfid_tag + raw_time requis ajoutés
+
+---
+
+## 🚀 PROCHAINES ÉTAPES POSSIBLES
 // Exemples:
 serial: '107' → ip_address: '192.168.10.157'
 serial: '112' → ip_address: '192.168.10.162'
@@ -1211,7 +1282,7 @@ GET /api/events/{id}/alerts
 
 ---
 
-**Version:** 2.0 (Prévue)
-**Date planification:** 2025-11-28
-**Statut:** 📋 Spécifications complètes - Prêt pour implémentation
+**Version:** 2.0 ✅ IMPLÉMENTÉE
+**Date completion:** 2025-12-04
+**Statut:** ✅ Toutes fonctionnalités V2.0 opérationnelles
 
