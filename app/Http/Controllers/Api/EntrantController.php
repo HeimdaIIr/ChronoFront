@@ -288,6 +288,7 @@ class EntrantController extends Controller
                     'bib_number' => $bibNumber,
                     'rfid_tag' => $rfidTag,
                     'club' => $club,
+                    'event_id' => $eventId,
                     'race_id' => $race->id,
                     'wave_id' => $waveId,
                 ];
