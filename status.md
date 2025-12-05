@@ -76,6 +76,37 @@ Dernière mise à jour : 4 décembre 2025
 - ✅ `event_id` ajouté au `$fillable` du modèle Entrant
 - ✅ Contrainte unique sur `results` : (`race_id`, `entrant_id`, `lap_number`)
 
+### Écran Speaker/Animateur (speaker.blade.php)
+
+#### Affichage Live
+- ✅ Route `/screens/speaker` pour affichage déporté
+- ✅ Flux live ultra-rapide (rafraîchissement toutes les 2 secondes)
+- ✅ API endpoint `/api/results/live-feed` pour les derniers résultats
+
+#### Design et Typographie
+- ✅ Police professionnelle Bebas Neue (style timing4you)
+- ✅ Design noir/doré très sport et professionnel
+- ✅ Affichage plein écran sans distractions
+
+#### Affichage Adaptatif
+- ✅ Tailles configurables : 5, 10 ou 20 lignes
+- ✅ Sizing viewport-based pour adaptation à toutes résolutions
+- ✅ Calcul dynamique des hauteurs : `calc((100vh - header) / nombre_lignes)`
+- ✅ Fonts adaptatifs avec `calc(100vh / diviseur)`
+
+#### Informations Affichées
+- ✅ Colonnes : Dossard / Pos / Pos/Cat / Nom et Prénom / Cat. / Sexe / Parcours / Club / Temps
+- ✅ Colonne Intermédiaires (affichée uniquement si checkpoints configurés)
+- ✅ Temps intermédiaires automatiques depuis les lecteurs RFID
+- ✅ Tri par ordre de passage (plus récent en haut)
+- ✅ Animation de surbrillance pour nouveaux passages
+
+#### Backend Intermédiaires
+- ✅ Calcul automatique des temps intermédiaires par checkpoint
+- ✅ Utilisation de `checkpoint_order` et `distance_from_start` des readers
+- ✅ Format : location + temps (ex: "KM5: 00:23:45")
+- ✅ Tri automatique par ordre de checkpoints
+
 ### API Backend
 
 #### Endpoints ABD
@@ -96,9 +127,21 @@ Dernière mise à jour : 4 décembre 2025
 #### Endpoints Entrants
 - ✅ `DELETE /entrants/delete-all` - Supprimer tous les participants
 
+#### Endpoints Live Feed
+- ✅ `GET /results/live-feed` - Flux live pour écran speaker
+  - Retourne les 50 derniers résultats validés
+  - Inclut les temps intermédiaires calculés par checkpoint
+  - Relations : entrant, category, race, reader
+
 ## 🔧 Correctifs Appliqués
 
-### Session actuelle (4 décembre 2025)
+### Session actuelle (5 décembre 2025)
+1. **Écran speaker créé** - Interface live pour animateur avec design professionnel
+2. **Font Bebas Neue** - Typographie sport professionnelle style timing4you
+3. **Sizing adaptatif** - Viewport-based responsive design (5/10/20 lignes exactes)
+4. **Temps intermédiaires** - Calcul automatique et affichage des checkpoints
+
+### Session précédente (4 décembre 2025)
 1. **Checkpoint non persistant** - Ordre de chargement corrigé dans `loadEvent()`
 2. **Modal trop grande** - Dimensions réduites (600px → 500px) avec scroll interne
 3. **Import créant des doublons** - Vérification `bib_number` + `event_id` avant création
