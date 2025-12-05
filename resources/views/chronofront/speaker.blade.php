@@ -7,6 +7,13 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
+        @font-face {
+            font-family: 'BN';
+            src: url('https://timing4you.com/resultats/G-Live-9.4/fonts/BN.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +21,7 @@
         }
 
         body {
-            font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
+            font-family: 'BN', 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
             background: #000;
             color: #FFD700;
             overflow: hidden;
@@ -162,6 +169,20 @@
             color: #FFD700;
             font-weight: 700;
             font-size: 1.3em;
+            text-align: center;
+        }
+
+        .col-position {
+            color: #4CAF50;
+            font-weight: 700;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .col-category-pos {
+            color: #2196F3;
+            font-weight: 600;
+            text-align: center;
         }
 
         .col-name {
@@ -169,14 +190,20 @@
             font-weight: 600;
         }
 
-        .col-position {
-            color: #4CAF50;
-            font-weight: 700;
-            font-size: 1.2em;
+        .col-category {
+            color: #9C27B0;
+            font-weight: 600;
+            text-align: center;
         }
 
-        .col-category-pos {
-            color: #2196F3;
+        .col-gender {
+            color: #FF9800;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .col-race {
+            color: #00BCD4;
             font-weight: 600;
         }
 
@@ -197,20 +224,6 @@
             font-size: 0.9em;
             font-variant-numeric: tabular-nums;
         }
-
-        /* Status badge */
-        .status-badge {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            border-radius: 3px;
-            font-size: 0.8em;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .status-v { background: #4CAF50; color: #000; }
-        .status-dnf { background: #f44336; color: #fff; }
-        .status-dsq { background: #ff9800; color: #000; }
 
         /* Loading indicator */
         .loading {
@@ -265,36 +278,37 @@
                 <table class="results-table">
                     <thead>
                         <tr>
-                            <th style="width: 8%">Dossard</th>
-                            <th style="width: 20%">Nom</th>
-                            <th style="width: 7%">Pos.</th>
-                            <th style="width: 8%">Cat.</th>
-                            <th style="width: 17%">Club</th>
-                            <th style="width: 12%">Temps</th>
-                            <th style="width: 28%">Intermédiaires</th>
+                            <th style="width: 7%">Dossard</th>
+                            <th style="width: 5%">Pos</th>
+                            <th style="width: 6%">Pos/Cat</th>
+                            <th style="width: 20%">Nom et Prénom</th>
+                            <th style="width: 7%">Cat.</th>
+                            <th style="width: 5%">Sexe</th>
+                            <th style="width: 10%">Parcours</th>
+                            <th style="width: 15%">Club</th>
+                            <th x-show="hasIntermediates" style="width: 15%">Intermédiaires</th>
+                            <th style="width: 10%">Temps</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-for="(result, index) in displayedResults" :key="result.id">
                             <tr :class="{ 'new-entry': result.is_new }">
                                 <td class="col-bib" x-text="result.bib_number"></td>
-                                <td class="col-name">
-                                    <span x-text="result.firstname + ' ' + result.lastname"></span>
-                                </td>
                                 <td class="col-position" x-text="result.position || '-'"></td>
-                                <td class="col-category-pos">
-                                    <span x-text="result.category_name"></span>
-                                    <span x-show="result.category_position" x-text="'(' + result.category_position + ')'"></span>
-                                </td>
+                                <td class="col-category-pos" x-text="result.category_position || '-'"></td>
+                                <td class="col-name" x-text="result.firstname + ' ' + result.lastname"></td>
+                                <td class="col-category" x-text="result.category_name || '-'"></td>
+                                <td class="col-gender" x-text="result.gender || '-'"></td>
+                                <td class="col-race" x-text="result.race_name || '-'"></td>
                                 <td class="col-club" x-text="result.club || '-'"></td>
-                                <td class="col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
-                                <td class="col-intermediate">
+                                <td x-show="hasIntermediates" class="col-intermediate">
                                     <template x-for="inter in result.intermediates" :key="inter.checkpoint">
                                         <span style="margin-right: 1rem;">
                                             <span x-text="inter.checkpoint"></span>: <span x-text="inter.time"></span>
                                         </span>
                                     </template>
                                 </td>
+                                <td class="col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
                             </tr>
                         </template>
                     </tbody>
@@ -312,6 +326,7 @@
                 loading: false,
                 lineSize: 'medium',
                 lastResultId: 0,
+                hasIntermediates: false,
 
                 get displayedResults() {
                     const maxLines = {
@@ -361,8 +376,10 @@
                             bib_number: r.entrant?.bib_number || 'N/A',
                             firstname: r.entrant?.firstname || '',
                             lastname: r.entrant?.lastname || '',
+                            gender: r.entrant?.gender || '',
                             category_name: r.entrant?.category?.name || '',
                             category_position: r.category_position,
+                            race_name: r.race?.name || '',
                             club: r.entrant?.club || '',
                             calculated_time_formatted: this.formatSeconds(r.calculated_time),
                             intermediates: this.getIntermediateTimes(r),
@@ -372,6 +389,9 @@
                         if (newResults.length > 0) {
                             this.lastResultId = Math.max(...newResults.map(r => r.id));
                         }
+
+                        // Check if any result has intermediates
+                        this.hasIntermediates = newResults.some(r => r.intermediates && r.intermediates.length > 0);
 
                         this.results = newResults;
 
@@ -388,7 +408,7 @@
                 },
 
                 getIntermediateTimes(result) {
-                    // TODO: Implement intermediate times logic
+                    // TODO: Implement intermediate times logic based on configured readers
                     // For now, return empty array
                     return [];
                 },
