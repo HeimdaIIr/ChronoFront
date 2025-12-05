@@ -939,4 +939,25 @@ class ResultController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Live feed pour écran speaker - retourne les derniers résultats
+     */
+    public function liveFeed(): JsonResponse
+    {
+        try {
+            $results = Result::with(['entrant.category', 'race', 'reader'])
+                ->where('status', 'V') // Only validated results
+                ->orderBy('created_at', 'desc')
+                ->limit(50) // Last 50 results
+                ->get();
+
+            return response()->json($results);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors du chargement du flux live',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -85,4 +85,12 @@ class ChronoFrontController extends Controller
     {
         return view('chronofront.readers', ['eventId' => $id]);
     }
+
+    /**
+     * Écran speaker/animateur - Affichage live
+     */
+    public function speakerScreen()
+    {
+        return view('chronofront.speaker');
+    }
 }

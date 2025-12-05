@@ -13,3 +13,4 @@ Route::get('/timing', [ChronoFrontController::class, 'timing'])->name('timing');
 Route::get('/results', [ChronoFrontController::class, 'results'])->name('results');
 Route::get('/categories', [ChronoFrontController::class, 'categories'])->name('categories');
 Route::get('/events/{id}/readers', [ChronoFrontController::class, 'readers'])->name('events.readers');
+Route::get('/screens/speaker', [ChronoFrontController::class, 'speakerScreen'])->name('screens.speaker');
