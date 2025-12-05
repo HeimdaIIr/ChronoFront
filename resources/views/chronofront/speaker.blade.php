@@ -7,12 +7,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        @font-face {
-            font-family: 'BN';
-            src: url('https://timing4you.com/resultats/G-Live-9.4/fonts/BN.woff2') format('woff2');
-            font-weight: normal;
-            font-style: normal;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto+Condensed:wght@300;400;600;700&display=swap');
 
         * {
             margin: 0;
@@ -21,7 +16,7 @@
         }
 
         body {
-            font-family: 'BN', 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
+            font-family: 'Bebas Neue', 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
             background: #000;
             color: #FFD700;
             overflow: hidden;
@@ -42,6 +37,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 90px;
+            flex-shrink: 0;
         }
 
         .event-title {
@@ -84,38 +81,53 @@
         .results-container {
             flex: 1;
             overflow: hidden;
-            padding: 1rem;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .results-table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 0.5rem;
+            border-collapse: collapse;
+            height: 100%;
+        }
+
+        .results-table thead {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .results-table tbody {
+            display: block;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .results-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
 
         .results-table thead th {
             background: #1a1a1a;
             color: #FFD700;
-            padding: 1rem;
             text-align: left;
-            font-size: 1.2rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
             border-bottom: 2px solid #FFD700;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
 
         .results-table tbody tr {
             background: #0a0a0a;
             transition: all 0.2s;
+            border-bottom: 1px solid #222;
         }
 
         .results-table tbody tr:hover {
             background: #1a1a1a;
-            transform: scale(1.01);
         }
 
         .results-table tbody tr.new-entry {
@@ -127,41 +139,65 @@
             50% { background: #2a4a2a; }
         }
 
-        .results-table tbody td {
-            padding: 0.8rem 1rem;
-            border-bottom: 1px solid #222;
-            font-weight: 500;
-        }
-
-        /* Size modifiers */
-        .size-large .results-table tbody td {
-            padding: 2.5rem 1.5rem;
-            font-size: 2.5rem;
-        }
-
+        /* Dynamic sizing based on line count */
         .size-large .results-table thead th {
-            font-size: 1.8rem;
-            padding: 1.5rem;
+            padding: 1.5vh 1rem;
+            font-size: calc(100vh / 30);
         }
 
-        .size-medium .results-table tbody td {
-            padding: 1.5rem 1rem;
-            font-size: 1.8rem;
+        .size-large .results-table tbody {
+            height: calc(100vh - 90px - 8vh);
+        }
+
+        .size-large .results-table tbody tr {
+            height: calc((100vh - 90px - 8vh) / 5);
+        }
+
+        .size-large .results-table tbody td {
+            padding: 1.5vh 1rem;
+            font-size: calc(100vh / 25);
+            font-weight: 500;
+            vertical-align: middle;
         }
 
         .size-medium .results-table thead th {
-            font-size: 1.4rem;
-            padding: 1.2rem 1rem;
+            padding: 1vh 1rem;
+            font-size: calc(100vh / 40);
         }
 
-        .size-small .results-table tbody td {
-            padding: 0.8rem 1rem;
-            font-size: 1.2rem;
+        .size-medium .results-table tbody {
+            height: calc(100vh - 90px - 5vh);
+        }
+
+        .size-medium .results-table tbody tr {
+            height: calc((100vh - 90px - 5vh) / 10);
+        }
+
+        .size-medium .results-table tbody td {
+            padding: 1vh 1rem;
+            font-size: calc(100vh / 35);
+            font-weight: 500;
+            vertical-align: middle;
         }
 
         .size-small .results-table thead th {
-            font-size: 1rem;
-            padding: 0.8rem 1rem;
+            padding: 0.5vh 1rem;
+            font-size: calc(100vh / 50);
+        }
+
+        .size-small .results-table tbody {
+            height: calc(100vh - 90px - 3vh);
+        }
+
+        .size-small .results-table tbody tr {
+            height: calc((100vh - 90px - 3vh) / 20);
+        }
+
+        .size-small .results-table tbody td {
+            padding: 0.5vh 1rem;
+            font-size: calc(100vh / 50);
+            font-weight: 500;
+            vertical-align: middle;
         }
 
         /* Column specific styles */
