@@ -952,6 +952,49 @@ class ResultController extends Controller
                 ->limit(50) // Last 50 results
                 ->get();
 
+            // Add intermediate times for each result
+            $results = $results->map(function($result) {
+                $intermediates = [];
+
+                if ($result->entrant_id && $result->race_id) {
+                    // Get all checkpoint results for this entrant in this race
+                    // Exclude the finish line (assume finish is the reader with highest checkpoint_order or no checkpoint_order)
+                    $checkpointResults = Result::with('reader')
+                        ->where('entrant_id', $result->entrant_id)
+                        ->where('race_id', $result->race_id)
+                        ->where('status', 'V')
+                        ->whereHas('reader', function($q) {
+                            $q->whereNotNull('checkpoint_order');
+                        })
+                        ->get()
+                        ->sortBy('reader.checkpoint_order');
+
+                    foreach ($checkpointResults as $checkpoint) {
+                        if ($checkpoint->reader && $checkpoint->reader->checkpoint_order !== null) {
+                            // Skip the current result's checkpoint to avoid duplication
+                            if ($checkpoint->id === $result->id) {
+                                continue;
+                            }
+
+                            $intermediates[] = [
+                                'checkpoint' => $checkpoint->reader->location ?? 'KM' . $checkpoint->reader->distance_from_start,
+                                'distance' => $checkpoint->reader->distance_from_start,
+                                'time' => $checkpoint->formatted_time,
+                                'order' => $checkpoint->reader->checkpoint_order,
+                            ];
+                        }
+                    }
+                }
+
+                // Sort by order
+                usort($intermediates, function($a, $b) {
+                    return $a['order'] <=> $b['order'];
+                });
+
+                $result->intermediates = $intermediates;
+                return $result;
+            });
+
             return response()->json($results);
         } catch (\Exception $e) {
             return response()->json([

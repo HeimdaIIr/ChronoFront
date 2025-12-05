@@ -418,7 +418,8 @@
                             race_name: r.race?.name || '',
                             club: r.entrant?.club || '',
                             calculated_time_formatted: this.formatSeconds(r.calculated_time),
-                            intermediates: this.getIntermediateTimes(r),
+                            // Use intermediates from API (already formatted)
+                            intermediates: r.intermediates || [],
                             is_new: r.id > this.lastResultId
                         }));
 
@@ -441,12 +442,6 @@
                     } finally {
                         this.loading = false;
                     }
-                },
-
-                getIntermediateTimes(result) {
-                    // TODO: Implement intermediate times logic based on configured readers
-                    // For now, return empty array
-                    return [];
                 },
 
                 formatSeconds(seconds) {
