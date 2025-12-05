@@ -100,8 +100,7 @@
 
         .results-table tbody {
             display: block;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
         .results-table tbody tr {
@@ -123,7 +122,6 @@
         .results-table tbody tr {
             background: #0a0a0a;
             transition: all 0.2s;
-            border-bottom: 1px solid #222;
         }
 
         .results-table tbody tr:hover {
@@ -140,64 +138,73 @@
         }
 
         /* Dynamic sizing based on line count */
+        /* 5 LIGNES (XL) */
         .size-large .results-table thead th {
-            padding: 1.5vh 1rem;
-            font-size: calc(100vh / 30);
+            padding: 1rem;
+            font-size: 2.5rem;
+            line-height: 1.2;
         }
 
         .size-large .results-table tbody {
-            height: calc(100vh - 90px - 8vh);
+            height: calc(100vh - 90px - 4rem);
         }
 
         .size-large .results-table tbody tr {
-            height: calc((100vh - 90px - 8vh) / 5);
+            height: calc((100vh - 90px - 4rem) / 5);
         }
 
         .size-large .results-table tbody td {
-            padding: 1.5vh 1rem;
-            font-size: calc(100vh / 25);
+            padding: 1rem;
+            font-size: 2rem;
             font-weight: 500;
             vertical-align: middle;
+            line-height: 1.2;
         }
 
+        /* 10 LIGNES (M) */
         .size-medium .results-table thead th {
-            padding: 1vh 1rem;
-            font-size: calc(100vh / 40);
+            padding: 0.8rem;
+            font-size: 1.8rem;
+            line-height: 1.2;
         }
 
         .size-medium .results-table tbody {
-            height: calc(100vh - 90px - 5vh);
+            height: calc(100vh - 90px - 3rem);
         }
 
         .size-medium .results-table tbody tr {
-            height: calc((100vh - 90px - 5vh) / 10);
+            height: calc((100vh - 90px - 3rem) / 10);
         }
 
         .size-medium .results-table tbody td {
-            padding: 1vh 1rem;
-            font-size: calc(100vh / 35);
+            padding: 0.8rem;
+            font-size: 1.4rem;
             font-weight: 500;
             vertical-align: middle;
+            line-height: 1.2;
         }
 
+        /* 20 LIGNES (S) */
         .size-small .results-table thead th {
-            padding: 0.5vh 1rem;
-            font-size: calc(100vh / 50);
+            padding: 0.5rem;
+            font-size: 1.2rem;
+            line-height: 1.2;
         }
 
         .size-small .results-table tbody {
-            height: calc(100vh - 90px - 3vh);
+            height: calc(100vh - 90px - 2rem);
         }
 
         .size-small .results-table tbody tr {
-            height: calc((100vh - 90px - 3vh) / 20);
+            height: calc((100vh - 90px - 2rem) / 20);
         }
 
         .size-small .results-table tbody td {
-            padding: 0.5vh 1rem;
-            font-size: calc(100vh / 50);
+            padding: 0.5rem;
+            font-size: 1rem;
             font-weight: 500;
             vertical-align: middle;
+            line-height: 1.2;
         }
 
         /* Column specific styles */
