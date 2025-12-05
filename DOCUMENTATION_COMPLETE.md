@@ -240,6 +240,7 @@
 ### Results (Résultats)
 - **`GET /api/results` - Tous les résultats (derniers 100)**
 - `GET /api/results/race/{raceId}` - Résultats par épreuve
+- **`GET /api/results/live-feed` - Flux live pour écran speaker (derniers 50 + intermédiaires)** ⭐ V2.0
 - **`POST /api/results/time` - Ajouter temps manuel**
 - `PUT /api/results/{id}` - Modifier résultat
 - `DELETE /api/results/{id}` - Supprimer résultat
@@ -283,6 +284,8 @@ Body: [
 - **`GET /timing` - Interface chronométrage temps réel (chronofront.timing)**
 - `GET /results` - Résultats et classements (chronofront.results)
 - `GET /categories` - Gestion catégories FFA (chronofront.categories)
+- `GET /events/{id}/readers` - Configuration lecteurs RFID par événement (chronofront.readers)
+- **`GET /screens/speaker` - Écran speaker/animateur live (chronofront.speaker)** ⭐ V2.0
 
 ---
 
@@ -467,6 +470,59 @@ speed (km/h) = distance / (calculated_time / 3600)
 6. Groupe par category_id
 7. Assigne category_position par catégorie
 8. Transaction atomique
+
+### 8. ÉCRAN SPEAKER/ANIMATEUR LIVE ⭐ V2.0
+**Route:** `GET /screens/speaker`
+**API:** `GET /api/results/live-feed`
+
+**Caractéristiques:**
+- **Affichage plein écran** ultra-rapide pour speaker/animateur
+- **Rafraîchissement automatique** toutes les 2 secondes
+- **Design professionnel** noir/doré style timing4you
+- **Police Bebas Neue** pour look sport et lisibilité maximale
+- **Tailles configurables:** 5, 10 ou 20 lignes visibles
+- **Responsive viewport-based:** s'adapte automatiquement à toute résolution d'écran
+
+**Colonnes affichées:**
+1. Dossard (gros, doré)
+2. Position scratch (vert)
+3. Position catégorie (bleu)
+4. Nom et Prénom (blanc)
+5. Catégorie (violet)
+6. Sexe (orange)
+7. Parcours (cyan)
+8. Club (gris italique)
+9. **Intermédiaires** (gris, affiché uniquement si checkpoints configurés)
+10. Temps final (gros, doré)
+
+**Temps intermédiaires automatiques:**
+- Backend détecte automatiquement les checkpoints configurés (`reader.checkpoint_order`)
+- Récupère tous les résultats du coureur sur différents lecteurs
+- Tri automatique par `checkpoint_order` (distance)
+- Format: "KM5: 00:23:45" avec location et temps
+- Affichage conditionnel: colonne visible uniquement si données présentes
+
+**Animations:**
+- Nouvelle ligne = surbrillance jaune 1 seconde
+- Plus récent toujours en haut
+- Auto-scroll fluide
+
+**Logique API `/api/results/live-feed`:**
+```php
+1. GET last 50 validated results (status='V')
+2. Order by created_at DESC (plus récents d'abord)
+3. Load relations: entrant.category, race, reader
+4. Pour chaque result:
+   - Chercher tous results même entrant + même race
+   - Filter par whereHas('reader', checkpoint_order not null)
+   - Sort by reader.checkpoint_order
+   - Format [{checkpoint: 'KM5', distance: 5.0, time: '00:23:45', order: 1}]
+5. Append intermediates array to each result
+6. Return JSON
+```
+
+**Usage:**
+Ouvrir `/screens/speaker` sur écran déporté (TV, projecteur) pour affichage live pendant événement.
 
 ---
 
