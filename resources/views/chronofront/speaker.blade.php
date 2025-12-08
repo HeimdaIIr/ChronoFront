@@ -80,43 +80,25 @@
         /* Results table */
         .results-container {
             flex: 1;
-            overflow: hidden;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .results-table {
             width: 100%;
             border-collapse: collapse;
-            height: 100%;
-        }
-
-        .results-table thead {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-
-        .results-table tbody {
-            display: block;
-            overflow: hidden;
-        }
-
-        .results-table tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
         }
 
         .results-table thead th {
             background: #1a1a1a;
             color: #FFD700;
-            text-align: left;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
             border-bottom: 2px solid #FFD700;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .results-table tbody tr {
@@ -145,19 +127,10 @@
             line-height: 1.2;
         }
 
-        .size-large .results-table tbody {
-            height: calc(100vh - 90px - 4rem);
-        }
-
-        .size-large .results-table tbody tr {
-            height: calc((100vh - 90px - 4rem) / 5);
-        }
-
         .size-large .results-table tbody td {
             padding: 1rem;
             font-size: 2rem;
             font-weight: 500;
-            vertical-align: middle;
             line-height: 1.2;
         }
 
@@ -168,19 +141,10 @@
             line-height: 1.2;
         }
 
-        .size-medium .results-table tbody {
-            height: calc(100vh - 90px - 3rem);
-        }
-
-        .size-medium .results-table tbody tr {
-            height: calc((100vh - 90px - 3rem) / 10);
-        }
-
         .size-medium .results-table tbody td {
             padding: 0.8rem;
             font-size: 1.4rem;
             font-weight: 500;
-            vertical-align: middle;
             line-height: 1.2;
         }
 
@@ -191,19 +155,10 @@
             line-height: 1.2;
         }
 
-        .size-small .results-table tbody {
-            height: calc(100vh - 90px - 2rem);
-        }
-
-        .size-small .results-table tbody tr {
-            height: calc((100vh - 90px - 2rem) / 20);
-        }
-
         .size-small .results-table tbody td {
             padding: 0.5rem;
             font-size: 1rem;
             font-weight: 500;
-            vertical-align: middle;
             line-height: 1.2;
         }
 
@@ -345,23 +300,23 @@
                     <tbody>
                         <template x-for="(result, index) in displayedResults" :key="result.id">
                             <tr :class="{ 'new-entry': result.is_new }">
-                                <td class="col-bib" style="width: 5%" x-text="result.bib_number"></td>
-                                <td class="col-position" style="width: 4%" x-text="result.position || '-'"></td>
-                                <td class="col-category-pos" style="width: 4%" x-text="result.category_position || '-'"></td>
-                                <td class="col-name" style="width: 20%" x-text="result.firstname + ' ' + result.lastname"></td>
-                                <td class="col-category" style="width: 6%" x-text="result.category_name || '-'"></td>
-                                <td class="col-gender" style="width: 3%" x-text="result.gender || '-'"></td>
-                                <td class="col-race" style="width: 10%" x-text="result.race_name || '-'"></td>
-                                <td class="col-club" style="width: 15%" x-text="result.club || '-'"></td>
-                                <td class="col-speed" style="width: 8%" x-text="result.speed ? result.speed.toFixed(2) + ' km/h' : '-'"></td>
-                                <td x-show="hasIntermediates" class="col-intermediate" style="width: 15%">
+                                <td class="col-bib" x-text="result.bib_number"></td>
+                                <td class="col-position" x-text="result.position || '-'"></td>
+                                <td class="col-category-pos" x-text="result.category_position || '-'"></td>
+                                <td class="col-name" x-text="result.firstname + ' ' + result.lastname"></td>
+                                <td class="col-category" x-text="result.category_name || '-'"></td>
+                                <td class="col-gender" x-text="result.gender || '-'"></td>
+                                <td class="col-race" x-text="result.race_name || '-'"></td>
+                                <td class="col-club" x-text="result.club || '-'"></td>
+                                <td class="col-speed" x-text="result.speed ? result.speed + ' km/h' : '-'"></td>
+                                <td x-show="hasIntermediates" class="col-intermediate">
                                     <template x-for="inter in result.intermediates" :key="inter.checkpoint">
                                         <span style="margin-right: 1rem;">
                                             <span x-text="inter.checkpoint"></span>: <span x-text="inter.time"></span>
                                         </span>
                                     </template>
                                 </td>
-                                <td class="col-time" style="width: 10%" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
+                                <td class="col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
                             </tr>
                         </template>
                     </tbody>
