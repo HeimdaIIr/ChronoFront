@@ -255,11 +255,19 @@
             font-style: italic;
         }
 
+        .col-speed {
+            color: #00D9FF;
+            font-weight: 600;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
         .col-time {
             color: #FFD700;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
             font-size: 1.3em;
+            text-align: center;
         }
 
         .col-intermediate {
@@ -321,14 +329,15 @@
                 <table class="results-table">
                     <thead>
                         <tr>
-                            <th style="width: 7%">Dossard</th>
-                            <th style="width: 5%">Pos</th>
-                            <th style="width: 6%">Pos/Cat</th>
+                            <th style="width: 5%">Dossard</th>
+                            <th style="width: 4%">Pos</th>
+                            <th style="width: 4%">Pos/Cat</th>
                             <th style="width: 20%">Nom et Prénom</th>
-                            <th style="width: 7%">Cat.</th>
-                            <th style="width: 5%">Sexe</th>
+                            <th style="width: 6%">Cat.</th>
+                            <th style="width: 3%">Sexe</th>
                             <th style="width: 10%">Parcours</th>
                             <th style="width: 15%">Club</th>
+                            <th style="width: 8%">Vitesse</th>
                             <th x-show="hasIntermediates" style="width: 15%">Intermédiaires</th>
                             <th style="width: 10%">Temps</th>
                         </tr>
@@ -336,22 +345,23 @@
                     <tbody>
                         <template x-for="(result, index) in displayedResults" :key="result.id">
                             <tr :class="{ 'new-entry': result.is_new }">
-                                <td class="col-bib" x-text="result.bib_number"></td>
-                                <td class="col-position" x-text="result.position || '-'"></td>
-                                <td class="col-category-pos" x-text="result.category_position || '-'"></td>
-                                <td class="col-name" x-text="result.firstname + ' ' + result.lastname"></td>
-                                <td class="col-category" x-text="result.category_name || '-'"></td>
-                                <td class="col-gender" x-text="result.gender || '-'"></td>
-                                <td class="col-race" x-text="result.race_name || '-'"></td>
-                                <td class="col-club" x-text="result.club || '-'"></td>
-                                <td x-show="hasIntermediates" class="col-intermediate">
+                                <td class="col-bib" style="width: 5%" x-text="result.bib_number"></td>
+                                <td class="col-position" style="width: 4%" x-text="result.position || '-'"></td>
+                                <td class="col-category-pos" style="width: 4%" x-text="result.category_position || '-'"></td>
+                                <td class="col-name" style="width: 20%" x-text="result.firstname + ' ' + result.lastname"></td>
+                                <td class="col-category" style="width: 6%" x-text="result.category_name || '-'"></td>
+                                <td class="col-gender" style="width: 3%" x-text="result.gender || '-'"></td>
+                                <td class="col-race" style="width: 10%" x-text="result.race_name || '-'"></td>
+                                <td class="col-club" style="width: 15%" x-text="result.club || '-'"></td>
+                                <td class="col-speed" style="width: 8%" x-text="result.speed ? result.speed.toFixed(2) + ' km/h' : '-'"></td>
+                                <td x-show="hasIntermediates" class="col-intermediate" style="width: 15%">
                                     <template x-for="inter in result.intermediates" :key="inter.checkpoint">
                                         <span style="margin-right: 1rem;">
                                             <span x-text="inter.checkpoint"></span>: <span x-text="inter.time"></span>
                                         </span>
                                     </template>
                                 </td>
-                                <td class="col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
+                                <td class="col-time" style="width: 10%" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></td>
                             </tr>
                         </template>
                     </tbody>
@@ -398,13 +408,22 @@
                 async loadEventInfo() {
                     try {
                         const response = await axios.get('/api/events');
-                        if (response.data && response.data.length > 0) {
-                            // Get first active event or just first event
-                            const activeEvent = response.data.find(e => e.is_active) || response.data[0];
-                            this.eventName = activeEvent.name;
+                        console.log('Events response:', response.data);
+
+                        if (response.data) {
+                            // Handle both array and paginated response
+                            const events = Array.isArray(response.data) ? response.data : (response.data.data || []);
+
+                            if (events.length > 0) {
+                                // Get first active event or just first event
+                                const activeEvent = events.find(e => e.is_active === true || e.is_active === 1) || events[0];
+                                this.eventName = activeEvent.name || 'ChronoFront Live';
+                                console.log('Event name loaded:', this.eventName);
+                            }
                         }
                     } catch (error) {
                         console.error('Error loading event:', error);
+                        this.eventName = 'ChronoFront Live';
                     }
                 },
 
