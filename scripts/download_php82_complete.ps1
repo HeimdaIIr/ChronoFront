@@ -14,6 +14,7 @@ New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
 # URLs de base
 $suryBase = "https://packages.sury.org/php/pool/main"
 $debianBase = "http://ftp.debian.org/debian/pool/main"
+$raspbianBase = "http://archive.raspbian.org/raspbian/pool/main"
 
 # Fonction de telechargement
 function Download-Package {
@@ -56,10 +57,10 @@ foreach ($pkg in $phpPackages) {
 Write-Host ""
 Write-Host "2/5 Dependances systeme critiques..." -ForegroundColor Yellow
 $systemPackages = @(
-    @{url="$debianBase/g/glibc/libc6_2.31-13+rpi1+deb11u11_armhf.deb"; name="libc6_2.31-13+rpi1+deb11u11_armhf.deb"},
-    @{url="$debianBase/l/libffi/libffi7_3.3-6_armhf.deb"; name="libffi7_3.3-6_armhf.deb"},
-    @{url="$debianBase/libo/libonig/libonig5_6.9.6-1.1_armhf.deb"; name="libonig5_6.9.6-1.1_armhf.deb"},
-    @{url="$debianBase/g/glibc/libc-bin_2.31-13+rpi1+deb11u11_armhf.deb"; name="libc-bin_2.31-13+rpi1+deb11u11_armhf.deb"}
+    @{url="$raspbianBase/g/glibc/libc6_2.31-13+deb11u10_armhf.deb"; name="libc6_2.31-13+deb11u10_armhf.deb"},
+    @{url="$raspbianBase/l/libffi/libffi7_3.3-6_armhf.deb"; name="libffi7_3.3-6_armhf.deb"},
+    @{url="$raspbianBase/libo/libonig/libonig5_6.9.6-1.1_armhf.deb"; name="libonig5_6.9.6-1.1_armhf.deb"},
+    @{url="$raspbianBase/g/glibc/libc-bin_2.31-13+deb11u10_armhf.deb"; name="libc-bin_2.31-13+deb11u10_armhf.deb"}
 )
 
 foreach ($pkg in $systemPackages) {
@@ -70,9 +71,9 @@ foreach ($pkg in $systemPackages) {
 Write-Host ""
 Write-Host "3/5 Bibliotheques SSL et crypto..." -ForegroundColor Yellow
 $sslPackages = @(
-    @{url="$debianBase/o/openssl/libssl1.1_1.1.1w-0+deb11u1_armhf.deb"; name="libssl1.1_1.1.1w-0+deb11u1_armhf.deb"},
-    @{url="$debianBase/libx/libxml2/libxml2_2.9.10+dfsg-6.7+deb11u4_armhf.deb"; name="libxml2_2.9.10+dfsg-6.7+deb11u4_armhf.deb"},
-    @{url="$debianBase/c/curl/libcurl4_7.74.0-1.3+deb11u14_armhf.deb"; name="libcurl4_7.74.0-1.3+deb11u14_armhf.deb"}
+    @{url="$raspbianBase/o/openssl/libssl1.1_1.1.1w-0+deb11u1_armhf.deb"; name="libssl1.1_1.1.1w-0+deb11u1_armhf.deb"},
+    @{url="$raspbianBase/libx/libxml2/libxml2_2.9.10+dfsg-6.7+deb11u4_armhf.deb"; name="libxml2_2.9.10+dfsg-6.7+deb11u4_armhf.deb"},
+    @{url="$raspbianBase/c/curl/libcurl4_7.74.0-1.3+deb11u13_armhf.deb"; name="libcurl4_7.74.0-1.3+deb11u13_armhf.deb"}
 )
 
 foreach ($pkg in $sslPackages) {
@@ -82,23 +83,15 @@ foreach ($pkg in $sslPackages) {
 # 4. Dependances Apache PHP
 Write-Host ""
 Write-Host "4/5 Modules Apache pour PHP..." -ForegroundColor Yellow
-$apachePackages = @(
-    "l/libapache2-mod-php8.2/libapache2-mod-php8.2_${phpVersion}_armhf.deb"
-)
-
-foreach ($pkg in $apachePackages) {
-    $url = "$suryBase/$pkg"
-    $filename = Split-Path $pkg -Leaf
-    Download-Package $url $filename
-}
+Write-Host "  Module Apache integre dans php8.2-fpm, pas de paquet separe necessaire" -ForegroundColor Green
 
 # 5. Dependances additionnelles
 Write-Host ""
 Write-Host "5/5 Dependances additionnelles..." -ForegroundColor Yellow
 $additionalPackages = @(
-    @{url="$debianBase/libs/libsodium/libsodium23_1.0.18-1_armhf.deb"; name="libsodium23_1.0.18-1_armhf.deb"},
-    @{url="$debianBase/z/zlib/zlib1g_1.2.11.dfsg-2+deb11u2_armhf.deb"; name="zlib1g_1.2.11.dfsg-2+deb11u2_armhf.deb"},
-    @{url="$debianBase/libz/libzip/libzip4_1.7.3-1+deb11u1_armhf.deb"; name="libzip4_1.7.3-1+deb11u1_armhf.deb"}
+    @{url="$raspbianBase/libs/libsodium/libsodium23_1.0.18-1_armhf.deb"; name="libsodium23_1.0.18-1_armhf.deb"},
+    @{url="$raspbianBase/z/zlib/zlib1g_1.2.11.dfsg-2+deb11u2_armhf.deb"; name="zlib1g_1.2.11.dfsg-2+deb11u2_armhf.deb"},
+    @{url="$raspbianBase/libz/libzip/libzip4_1.7.3-1_armhf.deb"; name="libzip4_1.7.3-1_armhf.deb"}
 )
 
 foreach ($pkg in $additionalPackages) {
@@ -126,7 +119,6 @@ Write-Host "   sudo dpkg -i libsodium23_*.deb zlib1g_*.deb libzip4_*.deb" -Foreg
 Write-Host "   # Puis PHP 8.2" -ForegroundColor Cyan
 Write-Host "   sudo dpkg -i php8.2-common_*.deb" -ForegroundColor Cyan
 Write-Host "   sudo dpkg -i php8.2-*.deb" -ForegroundColor Cyan
-Write-Host "   sudo dpkg -i libapache2-mod-php8.2_*.deb" -ForegroundColor Cyan
 Write-Host "   # Resoudre les dependances restantes" -ForegroundColor Cyan
 Write-Host "   sudo apt-get install -f" -ForegroundColor Cyan
 Write-Host ""
