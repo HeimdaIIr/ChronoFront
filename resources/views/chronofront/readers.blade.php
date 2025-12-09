@@ -83,10 +83,10 @@
                                         'bg-primary': reader.network_type === 'local',
                                         'bg-success': reader.network_type === 'vpn',
                                         'bg-warning': reader.network_type === 'custom'
-                                    }" x-text="getNetworkTypeLabel(reader.network_type)"></span>
+                                    }" x-text="getNetworkTypeLabel(reader.network_type || 'local')"></span>
                                 </td>
                                 <td>
-                                    <code x-text="calculateIP(reader)"></code>
+                                    <code x-text="reader.calculated_ip || calculateIP(reader)"></code>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span>

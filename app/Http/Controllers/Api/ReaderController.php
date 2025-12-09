@@ -55,6 +55,8 @@ class ReaderController extends Controller
         $validated = $request->validate([
             'serial' => 'required|string|max:50',
             'name' => 'nullable|string|max:200',
+            'network_type' => 'nullable|in:local,vpn,custom',
+            'custom_ip' => 'nullable|string|max:50|ip',
             'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'required|string|max:100',
@@ -94,6 +96,8 @@ class ReaderController extends Controller
         $validated = $request->validate([
             'serial' => 'sometimes|string|max:50',
             'name' => 'nullable|string|max:200',
+            'network_type' => 'sometimes|in:local,vpn,custom',
+            'custom_ip' => 'nullable|string|max:50|ip',
             'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'sometimes|string|max:100',

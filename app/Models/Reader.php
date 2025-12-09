@@ -41,6 +41,15 @@ class Reader extends Model
     ];
 
     /**
+     * Attributes to append to model's array/JSON form
+     */
+    protected $appends = [
+        'calculated_ip',
+        'web_config_url',
+        'chronofront_url',
+    ];
+
+    /**
      * Get the event this reader belongs to
      */
     public function event(): BelongsTo
