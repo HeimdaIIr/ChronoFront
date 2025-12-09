@@ -13,6 +13,10 @@ class Reader extends Model
     protected $fillable = [
         'serial',
         'name',
+        'network_type',
+        'custom_ip',
+        'http_username',
+        'http_password',
         'event_id',
         'race_id',
         'location',
@@ -36,6 +40,15 @@ class Reader extends Model
         'anti_rebounce_seconds' => 'integer',
         'distance_from_start' => 'decimal:2',
         'checkpoint_order' => 'integer',
+        'http_password' => 'encrypted',
+    ];
+
+    protected $hidden = [
+        'http_password',
+    ];
+
+    protected $appends = [
+        'calculated_ip',
     ];
 
     /**
@@ -52,6 +65,24 @@ class Reader extends Model
     public function race(): BelongsTo
     {
         return $this->belongsTo(Race::class);
+    }
+
+    /**
+     * Calculate IP address based on network type and serial
+     */
+    public function getCalculatedIpAttribute(): string
+    {
+        switch ($this->network_type ?? 'local') {
+            case 'vpn':
+                return "10.8.0.{$this->serial}";
+            case 'custom':
+                return $this->custom_ip ?? '0.0.0.0';
+            case 'local':
+            default:
+                $lastTwoDigits = substr((string)$this->serial, -2);
+                $ipSuffix = 150 + (int)$lastTwoDigits;
+                return "192.168.10.{$ipSuffix}";
+        }
     }
 
     /**
