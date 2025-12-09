@@ -88,16 +88,16 @@ if (Test-Path "storage/logs") {
 # Vérifier si tar est disponible (Windows 10 1803+)
 if (Get-Command tar -ErrorAction SilentlyContinue) {
     # Créer l'archive avec tar natif
-    $includeArgs = $includes -join " "
-    tar -czf $ARCHIVE_NAME $includes
+    $tarArgs = @('-czf', $ARCHIVE_NAME) + $includes
+    & tar $tarArgs
     Write-Host "✅ Archive créée avec tar natif Windows" -ForegroundColor Green
-}
-elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
+} elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
     # Créer l'archive avec 7-Zip
     $tempTar = "temp_${TIMESTAMP}.tar"
 
     # Créer tar
-    & 7z a -ttar $tempTar $includes
+    $tarArgs = @('a', '-ttar', $tempTar) + $includes
+    & 7z $tarArgs
 
     # Compresser en gzip
     & 7z a -tgzip $ARCHIVE_NAME $tempTar
@@ -106,8 +106,7 @@ elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
     Remove-Item $tempTar -Force
 
     Write-Host "✅ Archive créée avec 7-Zip" -ForegroundColor Green
-}
-else {
+} else {
     Write-Host "❌ Erreur: Ni tar ni 7-Zip trouvés" -ForegroundColor Red
     Write-Host "Installez 7-Zip depuis https://www.7-zip.org/" -ForegroundColor Yellow
     exit 1
@@ -135,5 +134,5 @@ Write-Host "   ssh pi@192.168.10.157" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "3. Installer :" -ForegroundColor White
 Write-Host "   chmod +x deploy_install_full.sh" -ForegroundColor Yellow
-Write-Host "   sudo bash deploy_install_full.sh $ARCHIVE_NAME" -ForegroundColor Yellow
+Write-Host "   sudo bash deploy_install_full.sh chronofront-v2_full_*.tar.gz" -ForegroundColor Yellow
 Write-Host ""
