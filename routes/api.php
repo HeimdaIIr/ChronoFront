@@ -79,10 +79,24 @@ Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-
 
 // Health check
 Route::get('health', function () {
+    try {
+        // Test database connection
+        DB::connection()->getPdo();
+        $dbStatus = 'connected';
+        $dbError = null;
+    } catch (\Exception $e) {
+        $dbStatus = 'error';
+        $dbError = $e->getMessage();
+    }
+
     return response()->json([
-        'status' => 'ok',
+        'status' => $dbStatus === 'connected' ? 'ok' : 'degraded',
         'timestamp' => now(),
-        'app' => 'ChronoFront Laravel'
+        'app' => 'ChronoFront V2 Laravel',
+        'version' => '2.0.0',
+        'database' => $dbStatus,
+        'database_error' => $dbError,
+        'php_version' => PHP_VERSION,
     ]);
 });
 
