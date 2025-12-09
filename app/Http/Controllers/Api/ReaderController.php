@@ -173,10 +173,8 @@ class ReaderController extends Controller
         $results = [];
 
         foreach ($readers as $reader) {
-            // Calculate IP from serial
-            $lastTwoDigits = substr((string)$reader->serial, -2);
-            $ipSuffix = 150 + (int)$lastTwoDigits;
-            $readerIp = "192.168.10.{$ipSuffix}";
+            // Get IP from reader model (supports local/vpn/custom)
+            $readerIp = $reader->calculated_ip;
 
             // Try to ping
             $timeout = 1; // 1 second timeout for bulk ping
@@ -195,9 +193,21 @@ class ReaderController extends Controller
                     'test_terrain' => true,
                     'date_test' => now(),
                 ]);
-                $results[] = ['reader_id' => $reader->id, 'status' => 'online'];
+                $results[] = [
+                    'reader_id' => $reader->id,
+                    'serial' => $reader->serial,
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
+                    'status' => 'online'
+                ];
             } else {
-                $results[] = ['reader_id' => $reader->id, 'status' => 'offline'];
+                $results[] = [
+                    'reader_id' => $reader->id,
+                    'serial' => $reader->serial,
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
+                    'status' => 'offline'
+                ];
             }
         }
 
@@ -212,10 +222,8 @@ class ReaderController extends Controller
      */
     public function ping(Reader $reader): JsonResponse
     {
-        // Calculate IP from serial (192.168.10.1XX where XX = last 2 digits of serial)
-        $lastTwoDigits = substr((string)$reader->serial, -2);
-        $ipSuffix = 150 + (int)$lastTwoDigits;
-        $readerIp = "192.168.10.{$ipSuffix}";
+        // Get IP from reader model (supports local/vpn/custom)
+        $readerIp = $reader->calculated_ip;
 
         // Try to ping the reader (HTTP request to check if it's alive)
         try {
@@ -242,20 +250,23 @@ class ReaderController extends Controller
                     'success' => true,
                     'message' => 'Reader is online',
                     'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
                     'reader' => $reader
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
                     'message' => 'Reader is offline or unreachable',
-                    'ip' => $readerIp
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type
                 ], 503);
             }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error pinging reader: ' . $e->getMessage(),
-                'ip' => $readerIp
+                'ip' => $readerIp,
+                'network_type' => $reader->network_type
             ], 500);
         }
     }
