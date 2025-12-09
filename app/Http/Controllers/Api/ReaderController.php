@@ -358,6 +358,87 @@ class ReaderController extends Controller
     }
 
     /**
+     * Generate configuration instructions for secondary readers
+     */
+    public function generateConfigInstructions(int $eventId): JsonResponse
+    {
+        // Get primary reader for this event
+        $primaryReader = Reader::where('event_id', $eventId)
+                               ->where('is_primary', true)
+                               ->first();
+
+        if (!$primaryReader) {
+            return response()->json([
+                'error' => 'No primary reader configured for this event',
+                'help' => 'Please select a primary reader (ARRIVÉE) first'
+            ], 404);
+        }
+
+        // Get all secondary readers
+        $secondaryReaders = Reader::where('event_id', $eventId)
+                                  ->where('is_primary', false)
+                                  ->orderBy('distance_from_start')
+                                  ->get();
+
+        if ($secondaryReaders->isEmpty()) {
+            return response()->json([
+                'error' => 'No secondary readers configured',
+                'help' => 'Add secondary readers (DÉPART, KM5, etc.) to the event'
+            ], 404);
+        }
+
+        // Build target URL for secondary readers
+        $targetUrl = "http://{$primaryReader->serial}.course.ats-sport.com/api/raspberry";
+
+        // Generate instructions for each secondary reader
+        $instructions = [];
+        foreach ($secondaryReaders as $reader) {
+            $instructions[] = [
+                'reader' => [
+                    'serial' => $reader->serial,
+                    'name' => $reader->name,
+                    'location' => $reader->location,
+                    'distance_km' => $reader->distance_from_start,
+                ],
+                'web_interface' => "http://{$reader->serial}.course.ats-sport.com/",
+                'configuration' => [
+                    'step' => 'Activate Upload 2 module',
+                    'enable' => true,
+                    'url' => $targetUrl,
+                    'method' => 'PUT',
+                ],
+                'http_auth' => [
+                    'required' => !empty($primaryReader->http_username),
+                    'username' => $primaryReader->http_username,
+                    'password' => '••••••••', // Masqué pour sécurité
+                ],
+                'instructions_fr' => [
+                    "1. Accéder à http://{$reader->serial}.course.ats-sport.com/",
+                    "2. Activer Upload 2 module (cocher la case)",
+                    "3. URL: {$targetUrl}",
+                    "4. Method: PUT",
+                    "5. Sauvegarder la configuration",
+                    "6. Le lecteur enverra automatiquement au lecteur principal ({$primaryReader->serial})"
+                ]
+            ];
+        }
+
+        return response()->json([
+            'event_id' => $eventId,
+            'primary_reader' => [
+                'serial' => $primaryReader->serial,
+                'name' => $primaryReader->name,
+                'location' => $primaryReader->location,
+                'url' => "http://{$primaryReader->serial}.course.ats-sport.com/",
+                'receives_from' => $secondaryReaders->pluck('serial')->toArray(),
+            ],
+            'target_url' => $targetUrl,
+            'secondary_readers_count' => $secondaryReaders->count(),
+            'instructions' => $instructions,
+        ]);
+    }
+
+    /**
      * Calculate checkpoint order based on distance from start
      * Readers are ordered by distance (ascending)
      */

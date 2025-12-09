@@ -67,6 +67,7 @@ Route::delete('results/{result}', [ResultController::class, 'destroy']);
 
 // Readers Routes
 Route::get('readers/event/{eventId}', [ReaderController::class, 'byEvent']);
+Route::get('readers/event/{eventId}/config-instructions', [ReaderController::class, 'generateConfigInstructions']);
 Route::post('readers/event/{eventId}/ping-all', [ReaderController::class, 'pingAll']);
 Route::post('readers/{reader}/ping', [ReaderController::class, 'ping']);
 Route::apiResource('readers', ReaderController::class);
