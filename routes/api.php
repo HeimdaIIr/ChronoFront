@@ -74,6 +74,7 @@ Route::apiResource('readers', ReaderController::class);
 // RFID Raspberry Reader Routes
 Route::put('raspberry', [RaspberryController::class, 'store']);
 Route::post('raspberry', [RaspberryController::class, 'store']);
+Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-config endpoint
 
 // Health check
 Route::get('health', function () {

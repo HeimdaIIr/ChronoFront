@@ -313,6 +313,51 @@ class ReaderController extends Controller
     }
 
     /**
+     * Get configuration for a reader (auto-configuration endpoint)
+     * Used by Raspberry Pi to auto-configure on boot
+     */
+    public function getConfig(Request $request): JsonResponse
+    {
+        $serial = $request->header('Serial');
+
+        if (!$serial) {
+            return response()->json([
+                'error' => 'Serial header required',
+                'usage' => 'Send request with header "Serial: 120"'
+            ], 400);
+        }
+
+        // Find active reader for this serial
+        $reader = Reader::where('serial', $serial)
+                        ->where('is_active', true)
+                        ->with('event')
+                        ->first();
+
+        if (!$reader) {
+            return response()->json([
+                'error' => 'No active configuration found for this reader',
+                'serial' => $serial,
+                'help' => 'Create a reader with this serial in ChronoFront and activate it'
+            ], 404);
+        }
+
+        // Return configuration for the Raspberry Pi
+        return response()->json([
+            'target_url' => url('/api/raspberry'),
+            'target_method' => 'PUT',
+            'serial' => $reader->serial,
+            'event_id' => $reader->event_id,
+            'event_name' => $reader->event?->name,
+            'race_id' => $reader->race_id,
+            'location' => $reader->location,
+            'anti_rebounce_seconds' => $reader->anti_rebounce_seconds ?? 5,
+            'date_min' => $reader->date_min?->toIso8601String(),
+            'date_max' => $reader->date_max?->toIso8601String(),
+            'configured_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Calculate checkpoint order based on distance from start
      * Readers are ordered by distance (ascending)
      */
