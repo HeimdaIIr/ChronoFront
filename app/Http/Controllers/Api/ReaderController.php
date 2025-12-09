@@ -57,6 +57,8 @@ class ReaderController extends Controller
             'name' => 'nullable|string|max:200',
             'network_type' => 'nullable|in:local,vpn,custom',
             'custom_ip' => 'nullable|string|max:50|ip',
+            'http_username' => 'nullable|string|max:100',
+            'http_password' => 'nullable|string|max:255',
             'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'required|string|max:100',
@@ -98,6 +100,8 @@ class ReaderController extends Controller
             'name' => 'nullable|string|max:200',
             'network_type' => 'sometimes|in:local,vpn,custom',
             'custom_ip' => 'nullable|string|max:50|ip',
+            'http_username' => 'nullable|string|max:100',
+            'http_password' => 'nullable|string|max:255',
             'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'sometimes|string|max:100',
@@ -184,13 +188,21 @@ class ReaderController extends Controller
             $url = "http://{$readerIp}";
             $ch = curl_init($url);
 
-            curl_setopt_array($ch, [
+            $curlOptions = [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 1,  // 1 second timeout for bulk ping
                 CURLOPT_CONNECTTIMEOUT => 1,
                 CURLOPT_NOBODY => true,  // HEAD request, plus rapide
                 CURLOPT_FAILONERROR => false,
-            ]);
+            ];
+
+            // Ajouter l'authentification HTTP Basic si les credentials existent
+            if ($reader->http_username && $reader->http_password) {
+                $curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+                $curlOptions[CURLOPT_USERPWD] = "{$reader->http_username}:{$reader->http_password}";
+            }
+
+            curl_setopt_array($ch, $curlOptions);
 
             curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -240,13 +252,21 @@ class ReaderController extends Controller
             $url = "http://{$readerIp}";
             $ch = curl_init($url);
 
-            curl_setopt_array($ch, [
+            $curlOptions = [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 2,
                 CURLOPT_CONNECTTIMEOUT => 2,
                 CURLOPT_NOBODY => true,  // HEAD request, plus rapide
                 CURLOPT_FAILONERROR => false,  // Ne pas échouer sur 4xx/5xx
-            ]);
+            ];
+
+            // Ajouter l'authentification HTTP Basic si les credentials existent
+            if ($reader->http_username && $reader->http_password) {
+                $curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+                $curlOptions[CURLOPT_USERPWD] = "{$reader->http_username}:{$reader->http_password}";
+            }
+
+            curl_setopt_array($ch, $curlOptions);
 
             curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -254,15 +274,19 @@ class ReaderController extends Controller
             curl_close($ch);
 
             // Si on reçoit un code HTTP (même 403, 404, etc.), le lecteur est joignable
+            // 401 = non authentifié, mais le lecteur répond donc il est en ligne
             if ($httpCode > 0) {
                 $reader->update([
                     'test_terrain' => true,
                     'date_test' => now(),
                 ]);
 
+                $authStatus = ($httpCode === 401) ? ' (Auth required)' : '';
+                $authStatus = ($httpCode === 200) ? ' (Authenticated ✓)' : $authStatus;
+
                 return response()->json([
                     'success' => true,
-                    'message' => "Reader is online (HTTP {$httpCode})",
+                    'message' => "Reader is online (HTTP {$httpCode}){$authStatus}",
                     'ip' => $readerIp,
                     'network_type' => $reader->network_type,
                     'http_code' => $httpCode,

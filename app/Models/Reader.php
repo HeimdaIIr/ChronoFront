@@ -15,6 +15,8 @@ class Reader extends Model
         'name',
         'network_type',
         'custom_ip',
+        'http_username',
+        'http_password',
         'event_id',
         'race_id',
         'location',
@@ -38,6 +40,14 @@ class Reader extends Model
         'anti_rebounce_seconds' => 'integer',
         'distance_from_start' => 'decimal:2',
         'checkpoint_order' => 'integer',
+        'http_password' => 'encrypted',  // Chiffre automatiquement le mot de passe
+    ];
+
+    /**
+     * Attributes hidden from JSON serialization (security)
+     */
+    protected $hidden = [
+        'http_password',  // Ne jamais exposer le mot de passe dans les API responses
     ];
 
     /**
