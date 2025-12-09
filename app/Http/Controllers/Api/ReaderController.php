@@ -180,19 +180,24 @@ class ReaderController extends Controller
             // Get IP from reader model (supports local/vpn/custom)
             $readerIp = $reader->calculated_ip;
 
-            // Try to ping
-            $timeout = 1; // 1 second timeout for bulk ping
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => $timeout,
-                    'ignore_errors' => true
-                ]
+            // Try to ping with curl (more reliable)
+            $url = "http://{$readerIp}";
+            $ch = curl_init($url);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 1,  // 1 second timeout for bulk ping
+                CURLOPT_CONNECTTIMEOUT => 1,
+                CURLOPT_NOBODY => true,  // HEAD request, plus rapide
+                CURLOPT_FAILONERROR => false,
             ]);
 
-            $url = "http://{$readerIp}";
-            $response = @file_get_contents($url, false, $context);
+            curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-            if ($response !== false || isset($http_response_header)) {
+            // Si on reçoit un code HTTP (même 403, 404, etc.), le lecteur est joignable
+            if ($httpCode > 0) {
                 $reader->update([
                     'test_terrain' => true,
                     'date_test' => now(),
@@ -202,6 +207,7 @@ class ReaderController extends Controller
                     'serial' => $reader->serial,
                     'ip' => $readerIp,
                     'network_type' => $reader->network_type,
+                    'http_code' => $httpCode,
                     'status' => 'online'
                 ];
             } else {
@@ -231,20 +237,24 @@ class ReaderController extends Controller
 
         // Try to ping the reader (HTTP request to check if it's alive)
         try {
-            $timeout = 2; // 2 seconds timeout
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => $timeout,
-                    'ignore_errors' => true
-                ]
+            $url = "http://{$readerIp}";
+            $ch = curl_init($url);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 2,
+                CURLOPT_CONNECTTIMEOUT => 2,
+                CURLOPT_NOBODY => true,  // HEAD request, plus rapide
+                CURLOPT_FAILONERROR => false,  // Ne pas échouer sur 4xx/5xx
             ]);
 
-            // Try to reach the reader (you can adjust the endpoint)
-            $url = "http://{$readerIp}";
-            $response = @file_get_contents($url, false, $context);
+            curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
 
-            // If we got any response, consider it online
-            if ($response !== false || isset($http_response_header)) {
+            // Si on reçoit un code HTTP (même 403, 404, etc.), le lecteur est joignable
+            if ($httpCode > 0) {
                 $reader->update([
                     'test_terrain' => true,
                     'date_test' => now(),
@@ -252,15 +262,16 @@ class ReaderController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reader is online',
+                    'message' => "Reader is online (HTTP {$httpCode})",
                     'ip' => $readerIp,
                     'network_type' => $reader->network_type,
+                    'http_code' => $httpCode,
                     'reader' => $reader
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Reader is offline or unreachable',
+                    'message' => 'Reader is offline or unreachable: ' . ($curlError ?: 'No response'),
                     'ip' => $readerIp,
                     'network_type' => $reader->network_type
                 ], 503);
