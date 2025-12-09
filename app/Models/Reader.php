@@ -26,6 +26,8 @@ class Reader extends Model
         'date_min',
         'date_max',
         'is_active',
+        'is_primary',
+        'primary_reader_id',
         'clone_reader_id',
         'test_terrain',
         'date_test',
@@ -36,6 +38,7 @@ class Reader extends Model
         'date_max' => 'datetime',
         'date_test' => 'datetime',
         'is_active' => 'boolean',
+        'is_primary' => 'boolean',
         'test_terrain' => 'boolean',
         'anti_rebounce_seconds' => 'integer',
         'distance_from_start' => 'decimal:2',
@@ -73,6 +76,22 @@ class Reader extends Model
     public function race(): BelongsTo
     {
         return $this->belongsTo(Race::class);
+    }
+
+    /**
+     * Get the primary reader (for secondary readers)
+     */
+    public function primaryReader(): BelongsTo
+    {
+        return $this->belongsTo(Reader::class, 'primary_reader_id');
+    }
+
+    /**
+     * Get all secondary readers (for primary reader)
+     */
+    public function secondaryReaders()
+    {
+        return $this->hasMany(Reader::class, 'primary_reader_id');
     }
 
     /**
