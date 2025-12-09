@@ -107,7 +107,83 @@ Dernière mise à jour : 4 décembre 2025
 - ✅ Format : location + temps (ex: "KM5: 00:23:45")
 - ✅ Tri automatique par ordre de checkpoints
 
+### Système Multi-Lecteurs RFID (readers.blade.php)
+
+#### Gestion des Lecteurs
+- ✅ Interface complète à `/events/{id}/readers`
+- ✅ CRUD complet : création, modification, suppression de lecteurs
+- ✅ Configuration par lecteur :
+  - Numéro de série (détermine l'IP automatiquement)
+  - Localisation (DEPART, KM5, ARRIVEE, etc.)
+  - Distance depuis le départ (calcule l'ordre automatiquement)
+  - Anti-rebond (secondes entre 2 lectures du même dossard)
+  - Association à un parcours spécifique (optionnel)
+  - Statut actif/inactif
+
+#### Calcul Automatique de l'IP
+- ✅ Formule : `192.168.10.{150 + XX}` où XX = 2 derniers chiffres du serial
+- ✅ Exemples :
+  - Serial 107 → IP 192.168.10.157
+  - Serial 112 → IP 192.168.10.162
+- ✅ Affichage en temps réel dans l'interface
+
+#### Statut de Connexion
+- ✅ **Jamais connecté** (badge gris) : Aucune donnée reçue (`date_test` = NULL)
+- ✅ **En ligne** (badge vert) : Dernière connexion < 20 secondes
+- ✅ **Hors ligne** (badge rouge) : Dernière connexion > 20 secondes
+- ✅ Affichage du dernier passage (ex: "il y a 2 minutes")
+
+#### Fonction Ping
+- ✅ Ping individuel via bouton sur chaque lecteur
+- ✅ Ping groupé pour tous les lecteurs d'un événement
+- ✅ Test de connexion HTTP vers l'IP calculée
+- ✅ **Compatible connexion distante** (4G + VPN)
+- ✅ Mise à jour automatique du statut après ping
+- ✅ Timeout configurable (2s individuel, 1s groupé)
+
+#### Réception RFID Automatique
+- ✅ Endpoint : `POST/PUT /api/raspberry`
+- ✅ Header requis : `Serial: XXX` (identifie le lecteur)
+- ✅ Format JSON compatible Impinj Speedway :
+  ```json
+  [
+    {"serial": "2000003", "timestamp": 743084027.091},
+    {"serial": "2000125", "timestamp": 743084028.234}
+  ]
+  ```
+- ✅ Traitement automatique :
+  - Conversion serial → dossard (enlève préfixe "200")
+  - Vérification anti-rebounce
+  - Création résultat avec calcul temps + vitesse
+  - Mise à jour `date_test` du lecteur (tracking connexion)
+  - Gestion des passages multiples (lap_number)
+
+#### Compatibilité Connectivité Distante
+- ✅ **Aucune restriction IP locale** : fonctionne avec n'importe quelle IP accessible
+- ✅ **Compatible 4G** : lecteurs avec dongles 4G
+- ✅ **Compatible VPN** : accès via vpn.ats-sport.com
+- ✅ **Ping distant** : test de connexion fonctionne sur VPN
+- ✅ **Réception RFID distante** : endpoint accessible depuis internet
+- ✅ **Multi-site** : plusieurs lecteurs à différents endroits (intermédiaires)
+
 ### API Backend
+
+#### Endpoints Lecteurs RFID
+- ✅ `GET /readers` - Liste tous les lecteurs
+- ✅ `GET /readers/event/{eventId}` - Lecteurs d'un événement spécifique
+- ✅ `POST /readers` - Créer un nouveau lecteur
+- ✅ `PUT /readers/{reader}` - Modifier un lecteur
+- ✅ `DELETE /readers/{reader}` - Supprimer un lecteur
+- ✅ `POST /readers/{reader}/ping` - Tester connexion d'un lecteur
+- ✅ `POST /readers/event/{eventId}/ping-all` - Tester tous les lecteurs d'un événement
+
+#### Endpoints RFID (Raspberry Pi)
+- ✅ `POST /raspberry` - Réception des détections RFID
+- ✅ `PUT /raspberry` - Réception des détections RFID (alias)
+  - Header requis : `Serial: XXX`
+  - Format : Array de `{serial, timestamp}`
+  - Traitement automatique avec anti-rebounce
+  - Mise à jour `date_test` pour tracking connexion
 
 #### Endpoints ABD
 - ✅ `POST /results/mark-abd` - Marquer des coureurs en abandon
@@ -135,7 +211,13 @@ Dernière mise à jour : 4 décembre 2025
 
 ## 🔧 Correctifs Appliqués
 
-### Session actuelle (5 décembre 2025)
+### Session actuelle (9 décembre 2025)
+1. **Documentation multi-lecteurs complétée** - Système RFID multi-sites documenté
+2. **Compatibilité distante validée** - Support 4G + VPN confirmé
+3. **Colonne Vitesse ajoutée** - Affichage vitesse sur écran speaker
+4. **Chargement nom événement corrigé** - Support réponses paginées et arrays
+
+### Session précédente (5 décembre 2025)
 1. **Écran speaker créé** - Interface live pour animateur avec design professionnel
 2. **Font Bebas Neue** - Typographie sport professionnelle style timing4you
 3. **Sizing adaptatif** - Viewport-based responsive design (5/10/20 lignes exactes)
