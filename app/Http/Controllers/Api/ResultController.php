@@ -143,9 +143,11 @@ class ResultController extends Controller
     {
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
+            'reader_id' => 'nullable|exists:readers,id',
             'times' => 'required|array',
             'times.*.timestamp' => 'required|date',
             'times.*.bib_number' => 'required|string',
+            'times.*.reader_id' => 'nullable|exists:readers,id',
         ]);
 
         DB::beginTransaction();
@@ -153,6 +155,14 @@ class ResultController extends Controller
         try {
             $created = [];
             $errors = [];
+
+            // Get reader info if provided at batch level
+            $defaultReader = null;
+            $defaultLocation = 'ARRIVEE';
+            if (isset($validated['reader_id'])) {
+                $defaultReader = \App\Models\Reader::find($validated['reader_id']);
+                $defaultLocation = $defaultReader ? $defaultReader->location : 'ARRIVEE';
+            }
 
             foreach ($validated['times'] as $index => $timeData) {
                 // Find entrant by bib number
@@ -177,18 +187,33 @@ class ResultController extends Controller
                     ->where('entrant_id', $entrant->id)
                     ->max('lap_number') ?? 0;
 
+                // Get reader info for this specific time entry (overrides batch level)
+                $readerId = $timeData['reader_id'] ?? $validated['reader_id'] ?? null;
+                $readerLocation = $defaultLocation;
+
+                if (isset($timeData['reader_id']) && $timeData['reader_id'] !== ($validated['reader_id'] ?? null)) {
+                    $reader = \App\Models\Reader::find($timeData['reader_id']);
+                    $readerLocation = $reader ? $reader->location : 'UNKNOWN';
+                }
+
                 // Create result
-                $result = Result::create([
+                $resultData = [
                     'race_id' => $entrant->race_id,
                     'entrant_id' => $entrant->id,
                     'wave_id' => $entrant->wave_id,
                     'rfid_tag' => $entrant->rfid_tag,
-                    'reader_location' => 'ARRIVEE',
+                    'reader_location' => $readerLocation,
                     'raw_time' => $timeData['timestamp'],
                     'lap_number' => $lapNumber + 1,
                     'is_manual' => true,
                     'status' => 'V',
-                ]);
+                ];
+
+                if ($readerId) {
+                    $resultData['reader_id'] = $readerId;
+                }
+
+                $result = Result::create($resultData);
 
                 // Calculate time and speed
                 $this->calculateResult($result);
@@ -652,6 +677,330 @@ class ResultController extends Controller
         } catch (\Exception $e) {
             // Log error but don't fail the main operation
             \Log::error("Error recalculating positions for race {$raceId}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Add a single manual entry (time or status like DNS/DNF)
+     *
+     * Expected payload:
+     * {
+     *   "event_id": 1,
+     *   "bib_number": "234",
+     *   "reader_id": 3,
+     *   "status": "normal|dns|dnf",
+     *   "raw_time": "2025-12-01 14:30:00" (optional, only for normal status)
+     * }
+     */
+    public function storeManualSingle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'bib_number' => 'required|string',
+            'reader_id' => 'required|exists:readers,id',
+            'status' => 'required|in:normal,dns,dnf',
+            'raw_time' => 'nullable|date',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Find entrant by bib number
+            $entrant = Entrant::where('bib_number', $validated['bib_number'])
+                ->whereHas('race', function($q) use ($validated) {
+                    $q->where('event_id', $validated['event_id']);
+                })
+                ->with('race')
+                ->first();
+
+            if (!$entrant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dossard ' . $validated['bib_number'] . ' non trouvé dans cet événement'
+                ], 404);
+            }
+
+            // Get reader location
+            $reader = \App\Models\Reader::find($validated['reader_id']);
+            $readerLocation = $reader ? $reader->location : 'UNKNOWN';
+
+            // Determine lap number
+            $lapNumber = Result::where('race_id', $entrant->race_id)
+                ->where('entrant_id', $entrant->id)
+                ->max('lap_number') ?? 0;
+
+            // Map frontend status to database status
+            $statusMap = [
+                'normal' => 'V',    // Validated
+                'dns' => 'DNS',     // Did Not Start
+                'dnf' => 'DNF',     // Did Not Finish
+            ];
+
+            $dbStatus = $statusMap[$validated['status']] ?? 'V';
+
+            // Create result
+            $resultData = [
+                'race_id' => $entrant->race_id,
+                'entrant_id' => $entrant->id,
+                'wave_id' => $entrant->wave_id,
+                'rfid_tag' => $entrant->rfid_tag,
+                'reader_id' => $validated['reader_id'],
+                'reader_location' => $readerLocation,
+                'lap_number' => $lapNumber + 1,
+                'is_manual' => true,
+                'status' => $dbStatus,
+            ];
+
+            // Only add raw_time if status is normal and time is provided
+            if ($validated['status'] === 'normal' && isset($validated['raw_time'])) {
+                $resultData['raw_time'] = $validated['raw_time'];
+            }
+
+            $result = Result::create($resultData);
+
+            // Calculate time and speed only for normal status with time
+            if ($validated['status'] === 'normal' && isset($validated['raw_time'])) {
+                $this->calculateResult($result);
+            }
+
+            // Recalculate positions
+            $this->recalculateRacePositions($entrant->race_id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Coureur ajouté avec succès',
+                'result' => $result->load(['entrant.category', 'wave', 'race'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'ajout du coureur',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the status of an existing result
+     *
+     * Expected payload:
+     * {
+     *   "status": "active|dns|dnf"
+     * }
+     */
+    public function updateStatus(Result $result, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:active,dns,dnf',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Map frontend status to database status
+            $statusMap = [
+                'active' => 'V',    // Validated
+                'dns' => 'DNS',     // Did Not Start
+                'dnf' => 'DNF',     // Did Not Finish
+            ];
+
+            $dbStatus = $statusMap[$validated['status']] ?? 'V';
+
+            $result->update(['status' => $dbStatus]);
+
+            // Recalculate positions for the race
+            $this->recalculateRacePositions($result->race_id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Statut mis à jour avec succès',
+                'result' => $result->load(['entrant.category', 'wave', 'race'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour du statut',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark runners as ABD (DNF) by bib numbers
+     */
+    public function markAsABD(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'bib_numbers' => 'required|array',
+            'bib_numbers.*' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $updated = 0;
+            $created = 0;
+            $notFound = [];
+            $errors = [];
+            $racesAffected = [];
+
+            foreach ($validated['bib_numbers'] as $bibNumber) {
+                try {
+                    // Trim and clean bib number
+                    $cleanBib = trim($bibNumber);
+
+                    // Find entrant by bib number in this event
+                    $entrant = Entrant::where('event_id', $validated['event_id'])
+                        ->where('bib_number', $cleanBib)
+                        ->first();
+
+                    if (!$entrant) {
+                        $notFound[] = $cleanBib;
+                        continue;
+                    }
+
+                    // Use the entrant's race_id (each entrant is registered for a specific race)
+                    if (!$entrant->race_id) {
+                        $errors[] = $cleanBib;
+                        \Log::warning("ABD - Entrant sans race assignée: {$cleanBib}");
+                        continue;
+                    }
+
+                    // Track affected races for position recalculation
+                    if (!in_array($entrant->race_id, $racesAffected)) {
+                        $racesAffected[] = $entrant->race_id;
+                    }
+
+                    // Check if result already exists for this entrant in their race
+                    $result = Result::where('race_id', $entrant->race_id)
+                        ->where('entrant_id', $entrant->id)
+                        ->first();
+
+                    if ($result) {
+                        // Update existing result to DNF
+                        $result->update(['status' => 'DNF']);
+                        $updated++;
+                    } else {
+                        // Create new result with DNF status
+                        Result::create([
+                            'race_id' => $entrant->race_id,
+                            'entrant_id' => $entrant->id,
+                            'rfid_tag' => $entrant->rfid_tag ?? 'ABD',
+                            'raw_time' => now(),
+                            'status' => 'DNF',
+                            'position' => null,
+                            'wave_id' => $entrant->wave_id,
+                            'is_manual' => true,
+                        ]);
+                        $created++;
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = $cleanBib;
+                    \Log::error("Erreur ABD pour dossard {$cleanBib}: " . $e->getMessage());
+                }
+            }
+
+            // Recalculate positions for all affected races
+            foreach ($racesAffected as $raceId) {
+                $this->recalculateRacePositions($raceId);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ABD enregistrés avec succès',
+                'updated' => $updated,
+                'created' => $created,
+                'not_found' => $notFound,
+                'errors' => $errors,
+                'not_found_count' => count($notFound),
+                'error_count' => count($errors),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du traitement des ABD',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Live feed pour écran speaker - retourne les derniers résultats
+     */
+    public function liveFeed(): JsonResponse
+    {
+        try {
+            $results = Result::with(['entrant.category', 'race', 'reader'])
+                ->where('status', 'V') // Only validated results
+                ->orderBy('created_at', 'desc')
+                ->limit(50) // Last 50 results
+                ->get();
+
+            // Add intermediate times for each result
+            $results = $results->map(function($result) {
+                $intermediates = [];
+
+                if ($result->entrant_id && $result->race_id) {
+                    // Get all checkpoint results for this entrant in this race
+                    // Exclude the finish line (assume finish is the reader with highest checkpoint_order or no checkpoint_order)
+                    $checkpointResults = Result::with('reader')
+                        ->where('entrant_id', $result->entrant_id)
+                        ->where('race_id', $result->race_id)
+                        ->where('status', 'V')
+                        ->whereHas('reader', function($q) {
+                            $q->whereNotNull('checkpoint_order');
+                        })
+                        ->get()
+                        ->sortBy('reader.checkpoint_order');
+
+                    foreach ($checkpointResults as $checkpoint) {
+                        if ($checkpoint->reader && $checkpoint->reader->checkpoint_order !== null) {
+                            // Skip the current result's checkpoint to avoid duplication
+                            if ($checkpoint->id === $result->id) {
+                                continue;
+                            }
+
+                            $intermediates[] = [
+                                'checkpoint' => $checkpoint->reader->location ?? 'KM' . $checkpoint->reader->distance_from_start,
+                                'distance' => $checkpoint->reader->distance_from_start,
+                                'time' => $checkpoint->formatted_time,
+                                'order' => $checkpoint->reader->checkpoint_order,
+                            ];
+                        }
+                    }
+                }
+
+                // Sort by order
+                usort($intermediates, function($a, $b) {
+                    return $a['order'] <=> $b['order'];
+                });
+
+                $result->intermediates = $intermediates;
+                return $result;
+            });
+
+            return response()->json($results);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors du chargement du flux live',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

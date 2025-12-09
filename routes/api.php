@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\RaceController;
 use App\Http\Controllers\Api\WaveController;
@@ -45,13 +46,18 @@ Route::apiResource('categories', CategoryController::class);
 // Entrants Routes
 Route::get('entrants/search', [EntrantController::class, 'search']);
 Route::post('entrants/import', [EntrantController::class, 'import']);
+Route::delete('entrants/delete-all', [EntrantController::class, 'deleteAll']);
 Route::apiResource('entrants', EntrantController::class);
 
 // Results/Timing Routes
 Route::get('results', [ResultController::class, 'index']);
+Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
 Route::get('results/race/{raceId}', [ResultController::class, 'byRace']);
 Route::post('results/time', [ResultController::class, 'addTime']);
 Route::post('results/manual-batch', [ResultController::class, 'storeManualBatch']);
+Route::post('results/manual-single', [ResultController::class, 'storeManualSingle']);
+Route::post('results/{result}/status', [ResultController::class, 'updateStatus']);
+Route::post('results/mark-abd', [ResultController::class, 'markAsABD']);
 Route::post('results/rfid-batch', [ResultController::class, 'importRfidBatch']);
 Route::post('results/recalculate-all', [ResultController::class, 'recalculateAllPositions']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);
@@ -76,4 +82,43 @@ Route::get('health', function () {
         'timestamp' => now(),
         'app' => 'ChronoFront Laravel'
     ]);
+});
+
+// Debug logs (temporary)
+Route::get('debug/logs', function () {
+    $logFile = storage_path('logs/laravel.log');
+    if (!file_exists($logFile)) {
+        return response()->json(['error' => 'Log file not found']);
+    }
+    $lines = file($logFile);
+    $lastLines = array_slice($lines, -100); // Last 100 lines
+    return response()->json([
+        'logs' => implode('', $lastLines)
+    ]);
+});
+
+// Fix existing entrants without event_id (temporary)
+Route::post('debug/fix-event-ids', function () {
+    try {
+        $updated = 0;
+        $entrants = \App\Models\Entrant::whereNull('event_id')->whereNotNull('race_id')->get();
+
+        foreach ($entrants as $entrant) {
+            $race = \App\Models\Race::find($entrant->race_id);
+            if ($race && $race->event_id) {
+                $entrant->event_id = $race->event_id;
+                $entrant->save();
+                $updated++;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Event IDs fixed',
+            'updated' => $updated
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });

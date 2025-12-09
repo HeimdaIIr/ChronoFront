@@ -13,6 +13,9 @@
             <a href="{{ route('entrants.import') }}" class="btn btn-success me-2">
                 <i class="bi bi-upload"></i> Import CSV
             </a>
+            <button class="btn btn-danger me-2" @click="deleteAllEntrants" :disabled="entrants.length === 0">
+                <i class="bi bi-trash"></i> Supprimer Tous
+            </button>
             <button class="btn btn-primary" @click="openCreateModal">
                 <i class="bi bi-plus-circle"></i> Nouveau Participant
             </button>
@@ -551,6 +554,22 @@ function entrantsManager() {
                 this.loadEntrants();
             } catch (error) {
                 alert('Erreur lors de la suppression : ' + (error.response?.data?.message || error.message));
+            }
+        },
+
+        async deleteAllEntrants() {
+            if (!confirm(`⚠️ ATTENTION : Voulez-vous vraiment supprimer TOUS les ${this.entrants.length} participants ?\n\nCette action est irréversible !`)) return;
+            if (!confirm('Confirmez une dernière fois la suppression de TOUS les participants ?')) return;
+
+            try {
+                this.loading = true;
+                await axios.delete('/entrants/delete-all');
+                this.successMessage = 'Tous les participants ont été supprimés';
+                this.loadEntrants();
+            } catch (error) {
+                alert('Erreur lors de la suppression : ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.loading = false;
             }
         }
     }

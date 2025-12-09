@@ -22,10 +22,12 @@
     <!-- Info Box -->
     <div class="alert alert-info mb-4">
         <i class="bi bi-info-circle"></i>
-        <strong>Calcul automatique IP :</strong> L'adresse IP est calculée selon la formule
-        <code>192.168.10.1(50+XX)</code> où XX = les 2 derniers chiffres du numéro de série.
-        <br>
-        <small>Exemple : Serial 107 → IP 192.168.10.157 | Serial 112 → IP 192.168.10.162</small>
+        <strong>Calcul automatique IP :</strong> ChronoFront supporte 3 types de réseaux :
+        <ul class="mb-0 mt-2">
+            <li><strong>Local</strong> (192.168.10.X) : <code>192.168.10.{150+XX}</code> où XX = 2 derniers chiffres du serial</li>
+            <li><strong>VPN ATS Sport</strong> (10.8.0.X) : <code>10.8.0.{serial}</code> - Exemple: Serial 120 → 10.8.0.120</li>
+            <li><strong>Custom</strong> : IP personnalisée saisie manuellement</li>
+        </ul>
     </div>
 
     <!-- Readers List -->
@@ -60,6 +62,7 @@
                     <thead>
                         <tr>
                             <th>Numéro Série</th>
+                            <th>Type Réseau</th>
                             <th>IP Calculée</th>
                             <th>Localisation</th>
                             <th>Distance (km)</th>
@@ -76,7 +79,14 @@
                                     <strong x-text="reader.serial"></strong>
                                 </td>
                                 <td>
-                                    <code x-text="calculateIP(reader.serial)"></code>
+                                    <span class="badge" :class="{
+                                        'bg-primary': reader.network_type === 'local',
+                                        'bg-success': reader.network_type === 'vpn',
+                                        'bg-warning': reader.network_type === 'custom'
+                                    }" x-text="getNetworkTypeLabel(reader.network_type || 'local')"></span>
+                                </td>
+                                <td>
+                                    <code x-text="reader.calculated_ip || calculateIP(reader)"></code>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span>
@@ -139,16 +149,60 @@
                 <div class="modal-body">
                     <form @submit.prevent="saveReader">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">Numéro de série *</label>
                                 <input type="text" class="form-control" x-model="currentReader.serial"
                                        @input="updateCalculatedIP()" required
-                                       placeholder="Ex: 107, 112">
-                                <small class="text-muted">Les 2 derniers chiffres déterminent l'IP</small>
+                                       placeholder="Ex: 107, 112, 120">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Type de réseau *</label>
+                                <select class="form-select" x-model="currentReader.network_type"
+                                        @change="updateCalculatedIP()" required>
+                                    <option value="local">Local (192.168.10.X)</option>
+                                    <option value="vpn">VPN ATS Sport (10.8.0.X)</option>
+                                    <option value="custom">IP Personnalisée</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">IP Calculée</label>
+                                <input type="text" class="form-control" :value="calculatedIP" readonly
+                                       :class="{'text-muted': currentReader.network_type !== 'custom'}">
+                            </div>
+                        </div>
+
+                        <!-- Custom IP field (shown only if network_type is custom) -->
+                        <div class="row" x-show="currentReader.network_type === 'custom'">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">IP Personnalisée *</label>
+                                <input type="text" class="form-control" x-model="currentReader.custom_ip"
+                                       @input="updateCalculatedIP()"
+                                       :required="currentReader.network_type === 'custom'"
+                                       placeholder="Ex: 10.8.0.120, 192.168.1.50">
+                                <small class="text-muted">Saisissez l'adresse IP complète du lecteur</small>
+                            </div>
+                        </div>
+
+                        <!-- HTTP Authentication (for VPN or custom readers) -->
+                        <div class="row" x-show="currentReader.network_type === 'vpn' || currentReader.network_type === 'custom'">
+                            <div class="col-12 mb-2">
+                                <div class="border-top pt-3">
+                                    <h6 class="text-muted">
+                                        <i class="bi bi-shield-lock"></i> Authentification HTTP (optionnel)
+                                    </h6>
+                                    <small class="text-muted">Si le lecteur nécessite une authentification pour accéder à son interface web</small>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">IP Calculée (auto)</label>
-                                <input type="text" class="form-control" :value="calculatedIP" readonly disabled>
+                                <label class="form-label">Nom d'utilisateur HTTP</label>
+                                <input type="text" class="form-control" x-model="currentReader.http_username"
+                                       placeholder="Ex: admin, pi, atssport">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Mot de passe HTTP</label>
+                                <input type="password" class="form-control" x-model="currentReader.http_password"
+                                       placeholder="••••••••">
+                                <small class="text-muted">Le mot de passe sera chiffré en base de données</small>
                             </div>
                         </div>
 
@@ -254,18 +308,56 @@ function readersManager(eventId) {
             });
         },
 
-        calculateIP(serial) {
+        calculateIP(reader) {
+            // Support pour objet reader ou juste serial (legacy)
+            if (typeof reader === 'string' || typeof reader === 'number') {
+                // Legacy: juste le serial, on utilise local
+                const serial = reader;
+                if (!serial) return 'N/A';
+                const lastTwoDigits = String(serial).slice(-2);
+                const ipSuffix = 150 + parseInt(lastTwoDigits);
+                return `192.168.10.${ipSuffix}`;
+            }
+
+            // Nouveau: objet reader complet
+            const networkType = reader.network_type || 'local';
+            const serial = reader.serial;
+
             if (!serial) return 'N/A';
-            // Extract last 2 digits
-            const lastTwoDigits = String(serial).slice(-2);
-            const ipSuffix = 150 + parseInt(lastTwoDigits);
-            return `192.168.10.${ipSuffix}`;
+
+            switch (networkType) {
+                case 'vpn':
+                    // VPN ATS Sport: 10.8.0.{serial}
+                    return `10.8.0.${serial}`;
+
+                case 'custom':
+                    // IP personnalisée
+                    return reader.custom_ip || 'Non définie';
+
+                case 'local':
+                default:
+                    // Mode local legacy: 192.168.10.{150 + last2digits}
+                    const lastTwoDigits = String(serial).slice(-2);
+                    const ipSuffix = 150 + parseInt(lastTwoDigits);
+                    return `192.168.10.${ipSuffix}`;
+            }
+        },
+
+        getNetworkTypeLabel(type) {
+            const labels = {
+                'local': 'Local',
+                'vpn': 'VPN',
+                'custom': 'Custom'
+            };
+            return labels[type] || type;
         },
 
         openCreateModal() {
             this.editMode = false;
             this.currentReader = {
                 serial: '',
+                network_type: 'local', // Default to local
+                custom_ip: '',
                 location: '',
                 distance_from_start: 0,
                 anti_rebounce_seconds: 3,
@@ -291,7 +383,7 @@ function readersManager(eventId) {
         },
 
         updateCalculatedIP() {
-            this.calculatedIP = this.calculateIP(this.currentReader.serial);
+            this.calculatedIP = this.calculateIP(this.currentReader);
         },
 
         updateCheckpointOrder() {
@@ -334,21 +426,23 @@ function readersManager(eventId) {
         async pingReader(reader) {
             this.pinging = reader.id;
             try {
-                const ip = this.calculateIP(reader.serial);
                 const response = await axios.post(`/readers/${reader.id}/ping`);
+                const ip = response.data.ip || this.calculateIP(reader);
+                const networkType = response.data.network_type || reader.network_type;
 
                 if (response.data.success) {
-                    alert(`✓ Lecteur ${reader.location} (${ip}) est EN LIGNE !`);
+                    alert(`✓ Lecteur ${reader.location}\nIP: ${ip} (${networkType})\nStatut: EN LIGNE`);
                 } else {
-                    alert(`✗ Lecteur ${reader.location} (${ip}) est HORS LIGNE\n${response.data.message}`);
+                    alert(`✗ Lecteur ${reader.location}\nIP: ${ip} (${networkType})\nStatut: HORS LIGNE\n${response.data.message}`);
                 }
 
                 // Reload readers to update status
                 await this.loadReaders();
             } catch (error) {
                 console.error('Error pinging reader:', error);
-                const ip = this.calculateIP(reader.serial);
-                alert(`✗ Erreur lors du test de connexion vers ${ip}\n${error.response?.data?.message || error.message}`);
+                const ip = error.response?.data?.ip || this.calculateIP(reader);
+                const networkType = error.response?.data?.network_type || reader.network_type;
+                alert(`✗ Erreur lors du test de connexion\nIP: ${ip} (${networkType})\n${error.response?.data?.message || error.message}`);
             } finally {
                 this.pinging = null;
             }

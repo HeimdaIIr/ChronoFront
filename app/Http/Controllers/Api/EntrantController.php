@@ -279,7 +279,7 @@ class EntrantController extends Controller
                 // Clean gender
                 $gender = in_array($gender, ['M', 'F']) ? $gender : 'M';
 
-                // Create entrant
+                // Prepare entrant data
                 $entrantData = [
                     'firstname' => trim($firstname),
                     'lastname' => trim($lastname),
@@ -288,11 +288,26 @@ class EntrantController extends Controller
                     'bib_number' => $bibNumber,
                     'rfid_tag' => $rfidTag,
                     'club' => $club,
+                    'event_id' => $eventId,
                     'race_id' => $race->id,
                     'wave_id' => $waveId,
                 ];
 
-                $entrant = Entrant::create($entrantData);
+                // Check if entrant already exists (by bib_number + event_id)
+                $entrant = null;
+                if (!empty($bibNumber)) {
+                    $entrant = Entrant::where('event_id', $eventId)
+                        ->where('bib_number', $bibNumber)
+                        ->first();
+                }
+
+                if ($entrant) {
+                    // Update existing entrant
+                    $entrant->update($entrantData);
+                } else {
+                    // Create new entrant
+                    $entrant = Entrant::create($entrantData);
+                }
 
                 // Handle category
                 if (!empty($cat)) {
@@ -357,5 +372,26 @@ class EntrantController extends Controller
             ->get();
 
         return response()->json($entrants);
+    }
+
+    /**
+     * Delete all entrants
+     */
+    public function deleteAll(): JsonResponse
+    {
+        try {
+            $count = Entrant::count();
+            Entrant::truncate();
+
+            return response()->json([
+                'message' => 'Tous les participants ont été supprimés',
+                'count' => $count
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -181,31 +181,55 @@ class ReaderController extends Controller
         $results = [];
 
         foreach ($readers as $reader) {
-            // Calculate IP from serial
-            $lastTwoDigits = substr((string)$reader->serial, -2);
-            $ipSuffix = 150 + (int)$lastTwoDigits;
-            $readerIp = "192.168.10.{$ipSuffix}";
+            // Get IP from reader model (supports local/vpn/custom)
+            $readerIp = $reader->calculated_ip;
 
-            // Try to ping
-            $timeout = 1; // 1 second timeout for bulk ping
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => $timeout,
-                    'ignore_errors' => true
-                ]
-            ]);
-
+            // Try to ping with curl (more reliable)
             $url = "http://{$readerIp}";
-            $response = @file_get_contents($url, false, $context);
+            $ch = curl_init($url);
 
-            if ($response !== false || isset($http_response_header)) {
+            $curlOptions = [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 1,  // 1 second timeout for bulk ping
+                CURLOPT_CONNECTTIMEOUT => 1,
+                CURLOPT_NOBODY => true,  // HEAD request, plus rapide
+                CURLOPT_FAILONERROR => false,
+            ];
+
+            // Ajouter l'authentification HTTP Basic si les credentials existent
+            if ($reader->http_username && $reader->http_password) {
+                $curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
+                $curlOptions[CURLOPT_USERPWD] = "{$reader->http_username}:{$reader->http_password}";
+            }
+
+            curl_setopt_array($ch, $curlOptions);
+
+            curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            // Si on reçoit un code HTTP (même 403, 404, etc.), le lecteur est joignable
+            if ($httpCode > 0) {
                 $reader->update([
                     'test_terrain' => true,
                     'date_test' => now(),
                 ]);
-                $results[] = ['reader_id' => $reader->id, 'status' => 'online'];
+                $results[] = [
+                    'reader_id' => $reader->id,
+                    'serial' => $reader->serial,
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
+                    'http_code' => $httpCode,
+                    'status' => 'online'
+                ];
             } else {
-                $results[] = ['reader_id' => $reader->id, 'status' => 'offline'];
+                $results[] = [
+                    'reader_id' => $reader->id,
+                    'serial' => $reader->serial,
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
+                    'status' => 'offline'
+                ];
             }
         }
 
@@ -220,6 +244,7 @@ class ReaderController extends Controller
      */
     public function ping(Reader $reader): JsonResponse
     {
+        // Get IP from reader model (supports local/vpn/custom)
         $readerIp = $reader->calculated_ip;
 
         try {
@@ -235,6 +260,7 @@ class ReaderController extends Controller
                 CURLOPT_FAILONERROR => false,
             ];
 
+            // Ajouter l'authentification HTTP Basic si les credentials existent
             if ($reader->http_username && $reader->http_password) {
                 $curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
                 $curlOptions[CURLOPT_USERPWD] = "{$reader->http_username}:{$reader->http_password}";
@@ -246,6 +272,7 @@ class ReaderController extends Controller
             $curlError = curl_error($ch);
             curl_close($ch);
 
+            // Si on reçoit un code HTTP (même 403, 404, etc.), le lecteur est joignable
             if ($httpCode > 0) {
                 $reader->update([
                     'test_terrain' => true,
@@ -270,7 +297,7 @@ class ReaderController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Reader is offline: ' . ($curlError ?: 'No response'),
+                    'message' => 'Reader is offline or unreachable: ' . ($curlError ?: 'No response'),
                     'ip' => $readerIp,
                     'network_type' => $reader->network_type
                 ], 503);
@@ -278,8 +305,9 @@ class ReaderController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
-                'ip' => $readerIp
+                'message' => 'Error pinging reader: ' . $e->getMessage(),
+                'ip' => $readerIp,
+                'network_type' => $reader->network_type
             ], 500);
         }
     }

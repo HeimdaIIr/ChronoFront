@@ -996,7 +996,7 @@ body {
                                     <td x-text="result.race?.name || '-'"></td>
                                     <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
-                                    <td><strong x-text="result.formatted_time || '-'"></strong></td>
+                                    <td><strong x-text="getDisplayTime(result)"></strong></td>
                                     <td x-text="result.speed ? result.speed + ' km/h' : '-'"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
                                 </tr>
@@ -1061,6 +1061,22 @@ body {
                         <div class="row mb-2">
                             <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Catégorie:</div>
                             <div class="col-6" style="text-align: right;" x-text="selectedResult?.entrant?.category?.name || '-'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Runner Status -->
+                    <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
+                        <div class="row mb-2">
+                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Statut:</div>
+                            <div class="col-6" style="text-align: right;">
+                                <select :value="getRunnerStatusValue(selectedResult)"
+                                        @change="updateRunnerStatus(selectedResult, $event.target.value)"
+                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                    <option value="active">Actif</option>
+                                    <option value="dns">Non partant</option>
+                                    <option value="dnf">ABD</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -1255,28 +1271,55 @@ body {
 
     <!-- Manual Times Import Modal -->
     <div x-show="showManualTimesModal" class="modal-overlay" @click.self="showManualTimesModal = false">
-        <div class="modal-content" style="max-width: 600px;">
-            <h3>Attribution des temps manuels</h3>
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 1.1rem;">Attribution des temps manuels</h3>
 
-            <div style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="margin: 0; color: #dc2626;">
-                        <i class="bi bi-clock-history"></i>
-                        <span x-text="manualTimestamps.length"></span> temps enregistrés
-                    </h4>
-                    <button @click="clearManualTimestamps()" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                        <i class="bi bi-trash"></i> Tout supprimer
-                    </button>
-                </div>
+            <!-- Content (no scroll here) -->
+            <div style="margin-bottom: 0.5rem;">
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="margin: 0; color: #dc2626; font-size: 0.9rem;">
+                            <i class="bi bi-clock-history"></i>
+                            <span x-text="manualTimestamps.length"></span> temps
+                        </h4>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button @click="addManualTimestamp()" style="padding: 0.35rem 0.65rem; background: #22c55e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem;">
+                                <i class="bi bi-plus-circle-fill"></i> Ajouter
+                            </button>
+                            <button @click="clearManualTimestamps()" style="padding: 0.35rem 0.65rem; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                <div style="max-height: 200px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 1rem;">
+                    <!-- Scrollable list of timestamps (max 3 lines visible) -->
+                    <div style="max-height: 120px; overflow-y: auto; background: #f9fafb; border-radius: 4px; padding: 0.5rem;">
                     <template x-for="(ts, index) in manualTimestamps" :key="index">
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
-                            <div>
-                                <span style="font-weight: 600; margin-right: 1rem;" x-text="`#${index + 1}`"></span>
-                                <span x-text="ts.time"></span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem; background: white; border-radius: 4px; margin-bottom: 0.35rem; font-size: 0.85rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                                <span style="font-weight: 600; color: #6b7280; font-size: 0.8rem;" x-text="`#${index + 1}`"></span>
+
+                                <!-- Editable timestamp -->
+                                <div style="flex: 1;">
+                                    <span x-show="editingTimestampIndex !== index"
+                                          @click="startEditingTimestamp(index)"
+                                          style="cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 3px; transition: background 0.2s; font-size: 0.85rem;"
+                                          onmouseover="this.style.background='#f3f4f6'"
+                                          onmouseout="this.style.background='transparent'"
+                                          x-text="ts.time"></span>
+
+                                    <input x-show="editingTimestampIndex === index"
+                                           type="time"
+                                           step="1"
+                                           x-model="editingTimestampValue"
+                                           @blur="saveEditedTimestamp(index)"
+                                           @keydown.enter="saveEditedTimestamp(index)"
+                                           @keydown.escape="cancelEditingTimestamp()"
+                                           x-init="if (editingTimestampIndex === index) $el.focus()"
+                                           style="padding: 0.2rem 0.4rem; border: 1px solid #3b82f6; border-radius: 3px; font-family: monospace; font-size: 0.85rem;">
+                                </div>
                             </div>
-                            <button @click="removeManualTimestamp(index)" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer;">
+                            <button @click="removeManualTimestamp(index)" style="padding: 0.2rem 0.4rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -1284,53 +1327,82 @@ body {
                 </div>
             </div>
 
-            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">
-                    <i class="bi bi-info-circle-fill"></i> Format CSV
-                </h4>
-                <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem;">
-                    Le fichier CSV doit contenir <strong x-text="manualTimestamps.length"></strong> dossards (un par ligne), dans l'ordre des temps enregistrés.
-                </p>
-                <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.85rem; font-family: monospace;">
-                    Exemple:<br>
-                    422<br>
-                    156<br>
-                    89
-                </p>
+            <!-- Checkpoint Selection -->
+            <div style="margin-bottom: 0.5rem;">
+                <label style="display: block; margin-bottom: 0.35rem; font-weight: 600; color: #374151; font-size: 0.85rem;">
+                    <i class="bi bi-geo-alt-fill"></i> Point de passage
+                </label>
+                <select x-model="manualCheckpointId"
+                        @change="saveManualCheckpointToStorage()"
+                        style="width: 100%; padding: 0.5rem; border: 2px solid #3b82f6; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">
+                    <option value="">Sélectionner le checkpoint</option>
+                    <option value="ABD" style="background: #fef3c7; color: #92400e; font-weight: 600;">🚫 ABD</option>
+                    <template x-for="reader in readers" :key="reader.id">
+                        <option :value="reader.id" x-text="reader.location"></option>
+                    </template>
+                </select>
             </div>
 
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                    <i class="bi bi-file-earmark-arrow-up"></i> Sélectionner le fichier CSV
-                </label>
-                <input
-                    type="file"
-                    accept=".csv,.txt"
-                    @change="csvFile = $event.target.files[0]"
-                    style="width: 100%; padding: 0.75rem; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer;"
-                >
-                <div x-show="csvFile" style="margin-top: 0.5rem; color: #059669;">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span x-text="csvFile?.name"></span>
+            <!-- Quick Bib Entry with scroll -->
+            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 4px; padding: 0.5rem; margin-bottom: 0.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #15803d; font-size: 0.85rem;">
+                    <i class="bi bi-pencil-fill"></i> Dossards (ordre des temps)
+                </h4>
+                <!-- Scrollable list of bib inputs (max 3 lines visible) -->
+                <div style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem;">
+                    <template x-for="(ts, index) in manualTimestamps" :key="index">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="flex-shrink: 0; width: 40px; font-weight: 600; color: #15803d; font-size: 0.8rem;">
+                                <span x-text="`#${index + 1}`"></span>
+                                <span style="font-size: 0.7rem; margin-left: 0.15rem;" x-text="ts.time"></span>
+                            </div>
+                            <input type="text"
+                                   x-model="manualBibs[index]"
+                                   :placeholder="`Dossard ${index + 1}`"
+                                   @keydown.enter.prevent="if (index < manualTimestamps.length - 1) $event.target.parentElement.nextElementSibling?.querySelector('input')?.focus(); else importManualTimesQuick()"
+                                   style="flex: 1; padding: 0.5rem; border: 2px solid #86efac; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
+                        </div>
+                    </template>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <!-- OR CSV Import -->
+                <details style="margin-bottom: 0.5rem;">
+                    <summary style="cursor: pointer; padding: 0.35rem; background: #f3f4f6; border-radius: 4px; font-weight: 500; color: #6b7280; font-size: 0.85rem;">
+                        <i class="bi bi-file-earmark-arrow-up"></i> OU importer depuis CSV
+                    </summary>
+                    <div style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px; margin-top: 0.35rem;">
+                        <input
+                            type="file"
+                            accept=".csv,.txt"
+                            @change="csvFile = $event.target.files[0]"
+                            style="width: 100%; padding: 0.35rem; border: 2px dashed #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.8rem;"
+                        >
+                        <div x-show="csvFile" style="margin-top: 0.35rem; color: #059669; font-size: 0.8rem;">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span x-text="csvFile?.name"></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Fixed footer with action buttons -->
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end; background: white;">
                 <button
                     @click="showManualTimesModal = false"
-                    style="padding: 0.75rem 1.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;"
+                    style="padding: 0.5rem 1rem; background: #e5e7eb; color: #374151; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 0.9rem;"
                 >
                     Annuler
                 </button>
                 <button
-                    @click="importManualTimesFromCSV()"
-                    :disabled="!csvFile || importingManualTimes"
-                    style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"
-                    :style="!csvFile || importingManualTimes ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                    @click="csvFile ? importManualTimesFromCSV() : importManualTimesQuick()"
+                    :disabled="(!manualCheckpointId || importingManualTimes) || (!csvFile && manualBibs.filter(b => b).length !== manualTimestamps.length)"
+                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem;"
+                    :style="((!manualCheckpointId || importingManualTimes) || (!csvFile && manualBibs.filter(b => b).length !== manualTimestamps.length)) ? 'opacity: 0.5; cursor: not-allowed;' : ''"
                 >
                     <i class="bi bi-check-circle-fill"></i>
-                    <span x-show="!importingManualTimes">Importer</span>
-                    <span x-show="importingManualTimes">Import en cours...</span>
+                    <span x-show="!importingManualTimes">Attribuer</span>
+                    <span x-show="importingManualTimes">Attribution...</span>
                 </button>
             </div>
         </div>
@@ -1449,8 +1521,19 @@ function chronoApp() {
         showManualTimesModal: false,
         manualBib: '',
         manualTimestamps: [],
+        manualBibs: [],
+        manualCheckpointId: '',
+        editingTimestampIndex: null,
+        editingTimestampValue: '',
         csvFile: null,
         importingManualTimes: false,
+        singleEntry: {
+            bibNumber: '',
+            checkpointId: '',
+            status: 'normal',
+            time: ''
+        },
+        addingSingleEntry: false,
         intermediateReaderId: '',
         intermediateDate: '',
         intermediateTime: '',
@@ -1472,9 +1555,9 @@ function chronoApp() {
             this.loadEvent().then(() => {
                 this.loadAlertThreshold();
                 this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
+                // Checkpoint is now loaded in loadEvent() after readers are loaded
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
-            this.loadReaders();
             this.loadAllResults().then(() => {
                 this.loadAlertsFromStorage(); // Restore alerts after loading results
             });
@@ -1538,8 +1621,9 @@ function chronoApp() {
                     this.currentEvent = activeEvent;
                     this.eventName = activeEvent.name;
                     this.currentEventId = activeEvent.id;
-                    // Reload readers when event is loaded
-                    this.loadReaders();
+                    // Reload readers when event is loaded, then load checkpoint
+                    await this.loadReaders();
+                    this.loadManualCheckpointFromStorage();
                 }
             } catch (error) {
                 console.error('Erreur chargement événement', error);
@@ -2525,31 +2609,125 @@ function chronoApp() {
             this.saveManualTimestampsToStorage();
         },
 
-        async importManualTimesFromCSV() {
-            if (!this.csvFile) {
-                alert('Veuillez sélectionner un fichier CSV');
+        startEditingTimestamp(index) {
+            this.editingTimestampIndex = index;
+            // Extract time from display format (HH:MM:SS)
+            const timestamp = this.manualTimestamps[index];
+            this.editingTimestampValue = timestamp.time;
+        },
+
+        saveEditedTimestamp(index) {
+            if (this.editingTimestampValue) {
+                // Convert edited time back to full timestamp
+                const timestamp = this.manualTimestamps[index];
+                const date = new Date(timestamp.timestamp);
+
+                // Parse the edited time (format: HH:MM:SS)
+                const timeParts = this.editingTimestampValue.split(':');
+                if (timeParts.length >= 2) {
+                    date.setHours(parseInt(timeParts[0]));
+                    date.setMinutes(parseInt(timeParts[1]));
+                    date.setSeconds(timeParts[2] ? parseInt(timeParts[2]) : 0);
+
+                    // Update timestamp
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+                    this.manualTimestamps[index].timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    this.manualTimestamps[index].time = `${hours}:${minutes}:${seconds}`;
+
+                    this.saveManualTimestampsToStorage();
+                    this.showToast('Temps modifié', 'success');
+                }
+            }
+            this.editingTimestampIndex = null;
+            this.editingTimestampValue = '';
+        },
+
+        cancelEditingTimestamp() {
+            this.editingTimestampIndex = null;
+            this.editingTimestampValue = '';
+        },
+
+        saveManualCheckpointToStorage() {
+            if (this.manualCheckpointId && this.currentEventId) {
+                localStorage.setItem(`chronofront_manual_checkpoint_${this.currentEventId}`, this.manualCheckpointId);
+            }
+        },
+
+        loadManualCheckpointFromStorage() {
+            if (!this.currentEventId) {
+                return;
+            }
+
+            const key = `chronofront_manual_checkpoint_${this.currentEventId}`;
+            const stored = localStorage.getItem(key);
+
+            if (stored) {
+                this.manualCheckpointId = stored;
+            }
+        },
+
+        async importManualTimesQuick() {
+            if (!this.manualCheckpointId) {
+                alert('Veuillez sélectionner un point de passage');
+                return;
+            }
+
+            const validBibs = this.manualBibs.filter(b => b && b.trim());
+            if (validBibs.length !== this.manualTimestamps.length) {
+                alert(`Veuillez saisir les ${this.manualTimestamps.length} dossards`);
                 return;
             }
 
             this.importingManualTimes = true;
 
             try {
-                const text = await this.csvFile.text();
-                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+                // Special case: ABD (Abandon)
+                if (this.manualCheckpointId === 'ABD') {
+                    const response = await axios.post('/results/mark-abd', {
+                        event_id: this.currentEventId,
+                        bib_numbers: validBibs
+                    });
 
-                if (lines.length !== this.manualTimestamps.length) {
-                    alert(`Erreur : ${lines.length} dossards dans le CSV mais ${this.manualTimestamps.length} temps enregistrés`);
-                    this.importingManualTimes = false;
+                    let message = `${response.data.updated + response.data.created} coureur(s) marqué(s) comme ABD`;
+                    if (response.data.created > 0) {
+                        message += `\n(${response.data.created} nouveaux résultats créés)`;
+                    }
+                    if (response.data.not_found_count > 0) {
+                        message += `\n${response.data.not_found_count} dossard(s) non trouvé(s): ${response.data.not_found.join(', ')}`;
+                    }
+                    if (response.data.error_count > 0) {
+                        message += `\n${response.data.error_count} erreur(s): ${response.data.errors.join(', ')}`;
+                    }
+
+                    alert(message);
+                    this.showToast(`${response.data.updated + response.data.created} ABD enregistré(s)`, 'success');
+
+                    // Reset
+                    this.manualTimestamps = [];
+                    this.manualBibs = [];
+                    this.csvFile = null;
+                    this.saveManualTimestampsToStorage();
+                    this.showManualTimesModal = false;
+                    await this.loadAllResults();
                     return;
                 }
 
+                // Normal case: add times
                 const times = this.manualTimestamps.map((t, index) => ({
                     timestamp: t.timestamp,
-                    bib_number: lines[index]
+                    bib_number: this.manualBibs[index].trim(),
+                    reader_id: this.manualCheckpointId
                 }));
 
                 const response = await axios.post('/results/manual-batch', {
                     event_id: this.currentEventId,
+                    reader_id: this.manualCheckpointId,
                     times: times
                 });
 
@@ -2560,7 +2738,9 @@ function chronoApp() {
                     alert(`Attention: ${response.data.errors} dossards non trouvés`);
                 }
 
+                // Reset
                 this.manualTimestamps = [];
+                this.manualBibs = [];
                 this.csvFile = null;
                 this.saveManualTimestampsToStorage();
                 this.showManualTimesModal = false;
@@ -2572,6 +2752,201 @@ function chronoApp() {
             } finally {
                 this.importingManualTimes = false;
             }
+        },
+
+        async importManualTimesFromCSV() {
+            if (!this.csvFile) {
+                alert('Veuillez sélectionner un fichier CSV');
+                return;
+            }
+
+            if (!this.manualCheckpointId) {
+                alert('Veuillez sélectionner un point de passage');
+                return;
+            }
+
+            this.importingManualTimes = true;
+
+            try {
+                const text = await this.csvFile.text();
+                const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+
+                // Special case: ABD (Abandon)
+                if (this.manualCheckpointId === 'ABD') {
+                    const response = await axios.post('/results/mark-abd', {
+                        event_id: this.currentEventId,
+                        bib_numbers: lines
+                    });
+
+                    let message = `${response.data.updated + response.data.created} coureur(s) marqué(s) comme ABD`;
+                    if (response.data.created > 0) {
+                        message += `\n(${response.data.created} nouveaux résultats créés)`;
+                    }
+                    if (response.data.not_found_count > 0) {
+                        message += `\n${response.data.not_found_count} dossard(s) non trouvé(s): ${response.data.not_found.join(', ')}`;
+                    }
+                    if (response.data.error_count > 0) {
+                        message += `\n${response.data.error_count} erreur(s): ${response.data.errors.join(', ')}`;
+                    }
+
+                    alert(message);
+                    this.showToast(`${response.data.updated + response.data.created} ABD enregistré(s)`, 'success');
+
+                    // Reset
+                    this.manualTimestamps = [];
+                    this.manualBibs = [];
+                    this.csvFile = null;
+                    this.saveManualTimestampsToStorage();
+                    this.showManualTimesModal = false;
+                    await this.loadAllResults();
+                    return;
+                }
+
+                // Normal case: match bibs with times
+                if (lines.length !== this.manualTimestamps.length) {
+                    alert(`Erreur : ${lines.length} dossards dans le CSV mais ${this.manualTimestamps.length} temps enregistrés`);
+                    this.importingManualTimes = false;
+                    return;
+                }
+
+                const times = this.manualTimestamps.map((t, index) => ({
+                    timestamp: t.timestamp,
+                    bib_number: lines[index],
+                    reader_id: this.manualCheckpointId
+                }));
+
+                const response = await axios.post('/results/manual-batch', {
+                    event_id: this.currentEventId,
+                    reader_id: this.manualCheckpointId,
+                    times: times
+                });
+
+                this.showToast(`${response.data.created} temps ajoutés avec succès`, 'success');
+
+                if (response.data.errors > 0) {
+                    console.warn('Erreurs:', response.data.error_details);
+                    alert(`Attention: ${response.data.errors} dossards non trouvés`);
+                }
+
+                // Reset
+                this.manualTimestamps = [];
+                this.manualBibs = [];
+                this.csvFile = null;
+                this.saveManualTimestampsToStorage();
+                this.showManualTimesModal = false;
+                await this.loadAllResults();
+
+            } catch (error) {
+                console.error('Erreur import:', error);
+                alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.importingManualTimes = false;
+            }
+        },
+
+        // Single manual entry functions
+        setSingleEntryTimeNow() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            this.singleEntry.time = `${hours}:${minutes}:${seconds}`;
+        },
+
+        async addSingleManualEntry() {
+            if (!this.singleEntry.bibNumber || !this.singleEntry.checkpointId) {
+                return;
+            }
+
+            this.addingSingleEntry = true;
+
+            try {
+                const payload = {
+                    event_id: this.currentEventId,
+                    bib_number: this.singleEntry.bibNumber,
+                    reader_id: this.singleEntry.checkpointId,
+                    status: this.singleEntry.status
+                };
+
+                // Only add timestamp if status is normal and time is provided
+                if (this.singleEntry.status === 'normal' && this.singleEntry.time) {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    payload.raw_time = `${year}-${month}-${day} ${this.singleEntry.time}`;
+                }
+
+                const response = await axios.post('/results/manual-single', payload);
+
+                if (response.data.success) {
+                    const statusLabel = this.singleEntry.status === 'dns' ? 'Non partant' :
+                                      this.singleEntry.status === 'dnf' ? 'ABD' : 'Temps ajouté';
+                    this.showToast(`Dossard ${this.singleEntry.bibNumber}: ${statusLabel}`, 'success');
+
+                    // Reset form
+                    this.singleEntry = {
+                        bibNumber: '',
+                        checkpointId: '',
+                        status: 'normal',
+                        time: ''
+                    };
+
+                    await this.loadAllResults();
+                    this.showManualTimesModal = false;
+                } else {
+                    alert(response.data.message || 'Erreur lors de l\'ajout');
+                }
+
+            } catch (error) {
+                console.error('Erreur ajout:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.addingSingleEntry = false;
+            }
+        },
+
+        // Runner status management
+        async updateRunnerStatus(result, status) {
+            if (!result || !result.id) return;
+
+            try {
+                const response = await axios.post(`/results/${result.id}/status`, {
+                    status: status
+                });
+
+                if (response.data.success) {
+                    const statusLabel = status === 'dns' ? 'Non partant' :
+                                      status === 'dnf' ? 'ABD' : 'Actif';
+                    this.showToast(`Statut mis à jour: ${statusLabel}`, 'success');
+                    await this.loadAllResults();
+                } else {
+                    alert(response.data.message || 'Erreur lors de la mise à jour');
+                }
+
+            } catch (error) {
+                console.error('Erreur mise à jour statut:', error);
+                alert('Erreur: ' + (error.response?.data?.message || error.message));
+            }
+        },
+
+        getRunnerStatusValue(result) {
+            if (!result || !result.status) return 'active';
+            // Map DB status to frontend values
+            const statusMap = {
+                'V': 'active',
+                'DNS': 'dns',
+                'DNF': 'dnf'
+            };
+            return statusMap[result.status] || 'active';
+        },
+
+        getDisplayTime(result) {
+            if (!result) return '-';
+            // Show status text instead of time for DNS/DNF
+            if (result.status === 'DNS') return 'Non partant';
+            if (result.status === 'DNF') return 'ABD';
+            return result.formatted_time || '-';
         },
 
         // Intermediate time management functions
