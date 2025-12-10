@@ -228,7 +228,7 @@ function racesManager() {
         form: {
             event_id: '',
             name: '',
-            type: '1 passage',
+            type: '1_passage',
             distance: null,
             laps: null,
             description: ''
@@ -281,7 +281,7 @@ function racesManager() {
             this.form = {
                 event_id: this.selectedEventFilter || '',
                 name: '',
-                type: '1 passage',
+                type: '1_passage',
                 distance: null,
                 laps: null,
                 description: ''
