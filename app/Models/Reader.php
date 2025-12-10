@@ -168,33 +168,6 @@ class Reader extends Model
     }
 
     /**
-     * Calculate IP address based on network type and serial
-     *
-     * - local: 192.168.10.{150 + last2digits} (legacy mode)
-     * - vpn: 10.8.0.{serial} (VPN ATS Sport)
-     * - custom: uses custom_ip field
-     */
-    public function getCalculatedIpAttribute(): string
-    {
-        switch ($this->network_type) {
-            case 'vpn':
-                // VPN ATS Sport: 10.8.0.{serial}
-                return "10.8.0.{$this->serial}";
-
-            case 'custom':
-                // IP personnalisée
-                return $this->custom_ip ?? '0.0.0.0';
-
-            case 'local':
-            default:
-                // Mode local legacy: 192.168.10.{150 + last2digits}
-                $lastTwoDigits = substr((string)$this->serial, -2);
-                $ipSuffix = 150 + (int)$lastTwoDigits;
-                return "192.168.10.{$ipSuffix}";
-        }
-    }
-
-    /**
      * Get the web config URL (for VPN ATS Sport)
      */
     public function getWebConfigUrlAttribute(): ?string
