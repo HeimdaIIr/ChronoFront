@@ -412,7 +412,7 @@ function resultsManager() {
             try {
                 // Charger les résultats pour chaque épreuve de l'événement
                 for (const race of this.filteredRaces) {
-                    const response = await axios.get(`/api/results/race/${race.id}`);
+                    const response = await axios.get(`/results/race/${race.id}`);
                     if (response.data && response.data.length > 0) {
                         // Filtrer et trier
                         let results = response.data;
@@ -439,7 +439,7 @@ function resultsManager() {
 
             this.loading = true;
             try {
-                const response = await axios.get(`/api/results/race/${this.selectedRace}`);
+                const response = await axios.get(`/results/race/${this.selectedRace}`);
                 this.results = response.data;
                 this.filterResults();
                 this.calculateStats();
