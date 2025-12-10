@@ -358,7 +358,7 @@ function resultsManager() {
 
         async loadEvents() {
             try {
-                const response = await axios.get('/api/events');
+                const response = await axios.get('/events');
                 this.events = response.data;
             } catch (error) {
                 console.error('Erreur lors du chargement des événements', error);
@@ -367,7 +367,7 @@ function resultsManager() {
 
         async loadRaces() {
             try {
-                const response = await axios.get('/api/races');
+                const response = await axios.get('/races');
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur lors du chargement des épreuves', error);
