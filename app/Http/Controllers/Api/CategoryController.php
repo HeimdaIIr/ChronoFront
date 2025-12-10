@@ -25,7 +25,10 @@ class CategoryController extends Controller
      */
     public function initFFA(): JsonResponse
     {
-        Artisan::call('db:seed', ['--class' => 'CategorySeeder']);
+        Artisan::call('db:seed', [
+            '--class' => 'CategorySeeder',
+            '--force' => true
+        ]);
 
         return response()->json([
             'message' => '36 catégories FFA officielles 2025 initialisées avec succès',

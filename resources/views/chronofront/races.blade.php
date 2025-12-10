@@ -174,7 +174,7 @@
                             <div class="col-md-4">
                                 <label class="form-label">Type <span class="text-danger">*</span></label>
                                 <select class="form-select" x-model="form.type" required>
-                                    <option value="1 passage">1 passage</option>
+                                    <option value="1_passage">1 passage</option>
                                     <option value="n_laps">N tours</option>
                                     <option value="infinite_loop">Boucle infinie</option>
                                 </select>
