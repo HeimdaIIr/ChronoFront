@@ -116,17 +116,87 @@
     <!-- Results Table -->
     <div class="card shadow-sm">
         <div class="card-body">
-            <div x-show="!selectedRace" class="text-center py-5 text-muted">
+            <!-- Message si aucun événement sélectionné -->
+            <div x-show="!selectedEvent && !selectedRace" class="text-center py-5 text-muted">
                 <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
-                <p class="mt-3">Veuillez sélectionner une épreuve</p>
+                <p class="mt-3">Veuillez sélectionner un événement</p>
             </div>
 
-            <div x-show="selectedRace && loading" class="text-center py-5">
+            <!-- Loading -->
+            <div x-show="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Chargement...</span>
                 </div>
             </div>
 
+            <!-- Résultats groupés par parcours (quand seul l'événement est sélectionné) -->
+            <div x-show="selectedEvent && !selectedRace && !loading && Object.keys(resultsByRace).length > 0">
+                <template x-for="(raceData, raceId) in resultsByRace" :key="raceId">
+                    <div class="mb-5">
+                        <h4 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-flag-fill text-primary"></i>
+                            <span x-text="raceData.race.name"></span>
+                            <span class="badge bg-secondary ms-2" x-text="raceData.results.length + ' participants'"></span>
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Pos.</th>
+                                        <th>Dossard</th>
+                                        <th>Nom</th>
+                                        <th>Prénom</th>
+                                        <th>Sexe</th>
+                                        <th>Catégorie</th>
+                                        <th>Club</th>
+                                        <th>Temps</th>
+                                        <th>Vitesse</th>
+                                        <th>Pos. Cat.</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="result in raceData.results" :key="result.id">
+                                        <tr>
+                                            <td><strong x-text="result.position || '-'"></strong></td>
+                                            <td><span class="badge bg-primary" x-text="result.entrant?.bib_number"></span></td>
+                                            <td x-text="result.entrant?.lastname"></td>
+                                            <td x-text="result.entrant?.firstname"></td>
+                                            <td x-text="result.entrant?.gender"></td>
+                                            <td><span class="badge bg-info" x-text="result.entrant?.category?.name || 'N/A'"></span></td>
+                                            <td x-text="result.entrant?.club || '-'"></td>
+                                            <td><strong x-text="formatDuration(result.calculated_time)"></strong></td>
+                                            <td x-text="result.speed ? result.speed + ' km/h' : 'N/A'"></td>
+                                            <td x-text="result.category_position || '-'"></td>
+                                            <td>
+                                                <span
+                                                    class="badge"
+                                                    :class="{
+                                                        'badge-status-v': result.status === 'V',
+                                                        'badge-status-dns': result.status === 'DNS',
+                                                        'badge-status-dnf': result.status === 'DNF',
+                                                        'badge-status-dsq': result.status === 'DSQ',
+                                                        'badge-status-ns': result.status === 'NS'
+                                                    }"
+                                                    x-text="result.status"
+                                                ></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Message si aucun résultat dans l'événement -->
+            <div x-show="selectedEvent && !selectedRace && !loading && Object.keys(resultsByRace).length === 0" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                <p class="mt-3">Aucun résultat disponible pour cet événement</p>
+            </div>
+
+            <!-- Message si aucun résultat pour le parcours sélectionné -->
             <div x-show="selectedRace && !loading && filteredResults.length === 0" class="text-center py-5 text-muted">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                 <p class="mt-3">Aucun résultat disponible</p>
@@ -267,6 +337,7 @@ function resultsManager() {
         results: [],
         filteredResults: [],
         resultsByCategory: {},
+        resultsByRace: {}, // Résultats groupés par parcours
         selectedEvent: '',
         selectedRace: '',
         displayMode: 'general',
@@ -287,7 +358,7 @@ function resultsManager() {
 
         async loadEvents() {
             try {
-                const response = await axios.get('/events');
+                const response = await axios.get('/api/events');
                 this.events = response.data;
             } catch (error) {
                 console.error('Erreur lors du chargement des événements', error);
@@ -296,18 +367,21 @@ function resultsManager() {
 
         async loadRaces() {
             try {
-                const response = await axios.get('/races');
+                const response = await axios.get('/api/races');
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur lors du chargement des épreuves', error);
             }
         },
 
-        onEventChange() {
+        async onEventChange() {
             if (this.selectedEvent) {
                 this.filteredRaces = this.races.filter(race => race.event_id == this.selectedEvent);
+                // Charger les résultats de toutes les épreuves de l'événement
+                await this.loadEventResults();
             } else {
                 this.filteredRaces = this.races;
+                this.resultsByRace = {};
             }
             this.selectedRace = '';
             this.results = [];
@@ -316,9 +390,47 @@ function resultsManager() {
         async onRaceChange() {
             if (this.selectedRace) {
                 await this.loadResults();
+                this.resultsByRace = {}; // Clear event results when selecting a specific race
+            } else if (this.selectedEvent) {
+                // Si on désélectionne le parcours mais qu'un événement est sélectionné
+                // recharger les résultats de l'événement
+                await this.loadEventResults();
             } else {
                 this.results = [];
                 this.filteredResults = [];
+                this.resultsByRace = {};
+            }
+        },
+
+        // Charger les résultats de toutes les épreuves d'un événement
+        async loadEventResults() {
+            if (!this.selectedEvent) return;
+
+            this.loading = true;
+            this.resultsByRace = {};
+
+            try {
+                // Charger les résultats pour chaque épreuve de l'événement
+                for (const race of this.filteredRaces) {
+                    const response = await axios.get(`/api/results/race/${race.id}`);
+                    if (response.data && response.data.length > 0) {
+                        // Filtrer et trier
+                        let results = response.data;
+                        if (this.statusFilter === 'V') {
+                            results = results.filter(r => r.status === 'V');
+                        }
+                        results = results.sort((a, b) => (a.position || 9999) - (b.position || 9999));
+
+                        this.resultsByRace[race.id] = {
+                            race: race,
+                            results: results
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des résultats', error);
+            } finally {
+                this.loading = false;
             }
         },
 
@@ -327,7 +439,7 @@ function resultsManager() {
 
             this.loading = true;
             try {
-                const response = await axios.get(`/results/race/${this.selectedRace}`);
+                const response = await axios.get(`/api/results/race/${this.selectedRace}`);
                 this.results = response.data;
                 this.filterResults();
                 this.calculateStats();
