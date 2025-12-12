@@ -174,7 +174,7 @@
                             <div class="col-md-4">
                                 <label class="form-label">Type <span class="text-danger">*</span></label>
                                 <select class="form-select" x-model="form.type" required>
-                                    <option value="1 passage">1 passage</option>
+                                    <option value="1_passage">1 passage</option>
                                     <option value="n_laps">N tours</option>
                                     <option value="infinite_loop">Boucle infinie</option>
                                 </select>
@@ -228,7 +228,7 @@ function racesManager() {
         form: {
             event_id: '',
             name: '',
-            type: '1 passage',
+            type: '1_passage',
             distance: null,
             laps: null,
             description: ''
@@ -281,7 +281,7 @@ function racesManager() {
             this.form = {
                 event_id: this.selectedEventFilter || '',
                 name: '',
-                type: '1 passage',
+                type: '1_passage',
                 distance: null,
                 laps: null,
                 description: ''
