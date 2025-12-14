@@ -151,7 +151,18 @@ class EntrantController extends Controller
         $file = $request->file('file');
         $eventId = $request->input('event_id');
 
-        $csvData = array_map('str_getcsv', file($file->getRealPath()));
+        // Lire le fichier et détecter le délimiteur (CSV ou TSV)
+        $lines = file($file->getRealPath());
+        $firstLine = $lines[0] ?? '';
+
+        // Détecter si c'est séparé par tabulations (TSV) ou virgules (CSV)
+        $delimiter = (strpos($firstLine, "\t") !== false) ? "\t" : ',';
+
+        // Parser les lignes avec le bon délimiteur
+        $csvData = array_map(function($line) use ($delimiter) {
+            return str_getcsv($line, $delimiter);
+        }, $lines);
+
         $headers = array_map('strtolower', array_shift($csvData));
 
         $imported = 0;
