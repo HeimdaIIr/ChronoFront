@@ -191,7 +191,13 @@ class EntrantController extends Controller
 
                 // Skip if missing required fields
                 if (empty($firstname) || empty($lastname) || empty($parcours)) {
-                    $errors[] = "Ligne " . ($index + 2) . ": Données manquantes (nom, prénom ou parcours)";
+                    // Debug: afficher les colonnes disponibles pour la première erreur
+                    if ($index === 0) {
+                        $errors[] = "Ligne " . ($index + 2) . ": Colonnes détectées: " . implode(', ', array_keys($data));
+                        $errors[] = "Ligne " . ($index + 2) . ": PRENOM='{$firstname}', NOM='{$lastname}', PARCOURS='{$parcours}'";
+                    } else {
+                        $errors[] = "Ligne " . ($index + 2) . ": Données manquantes (nom, prénom ou parcours)";
+                    }
                     continue;
                 }
 
