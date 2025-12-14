@@ -139,34 +139,47 @@ class Result extends Model
     }
 
     /**
-     * Calculate time from wave start or race start (TOP DÉPART)
+     * Calculate time from individual start, wave start or race start (TOP DÉPART)
+     * Priorité : entrant.start_time > wave.start_time > race.start_time
      */
     public function calculateTime(): void
     {
-        // Try wave start time first, then fallback to race start time (TOP DÉPART)
-        $startTime = null;
+        // PRIORITÉ 1 : Heure de départ individuelle (contre-la-montre)
+        if ($this->entrant && $this->entrant->start_time) {
+            $rawTime = \Carbon\Carbon::parse($this->raw_time);
 
+            // Gérer à la fois les formats TIME (HH:MM:SS) et DATETIME (Y-m-d H:i:s)
+            $startTimeStr = (string) $this->entrant->start_time;
+
+            // Si start_time contient déjà une date (format Y-m-d), utiliser directement
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $startTimeStr)) {
+                $startDateTime = \Carbon\Carbon::parse($startTimeStr);
+            } else {
+                // Sinon c'est juste un TIME, combiner avec la date du passage
+                $startDateTime = \Carbon\Carbon::parse($rawTime->format('Y-m-d') . ' ' . $startTimeStr);
+            }
+
+            $this->calculated_time = $rawTime->diffInSeconds($startDateTime);
+            return;
+        }
+
+        // PRIORITÉ 2 : Heure de départ de la vague
         if ($this->wave && $this->wave->start_time) {
-            $startTime = $this->wave->start_time;
-        } elseif ($this->race && $this->race->start_time) {
-            // Use race TOP DÉPART if no wave start time
-            $startTime = $this->race->start_time;
+            $start = \Carbon\Carbon::parse($this->wave->start_time);
+            $end = \Carbon\Carbon::parse($this->raw_time);
+
+            $this->calculated_time = abs($end->diffInSeconds($start));
+            return;
         }
 
-        if (!$startTime) {
-            return; // No start time available
+        // PRIORITÉ 3 : TOP DÉPART de la course (fallback)
+        if ($this->race && $this->race->start_time) {
+            $start = \Carbon\Carbon::parse($this->race->start_time);
+            $end = \Carbon\Carbon::parse($this->raw_time);
+
+            $this->calculated_time = abs($end->diffInSeconds($start));
+            return;
         }
-
-        // Laravel handles timezone conversion automatically (UTC in DB, app timezone for display)
-        $start = \Carbon\Carbon::parse($startTime);
-        $end = \Carbon\Carbon::parse($this->raw_time);
-
-        // Calculate difference in seconds (should always be positive if detection is after start)
-        $diff = $end->diffInSeconds($start, false);
-
-        // If negative, it means detection time is before start time (clock issue)
-        // Use absolute value to avoid breaking the app
-        $this->calculated_time = abs($diff);
     }
 
     /**

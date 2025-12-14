@@ -26,10 +26,12 @@ class Entrant extends Model
         'wave_id',
         'club',
         'team',
+        'start_time', // Heure de départ individuelle (colonne TOP du CSV)
     ];
 
     protected $casts = [
         'birth_date' => 'date',
+        'start_time' => 'datetime:H:i:s', // Cast vers Time pour contre-la-montre
     ];
 
     /**

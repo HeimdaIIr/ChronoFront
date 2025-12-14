@@ -245,8 +245,8 @@ class RaspberryController extends Controller
     {
         $result->load(['wave', 'race', 'entrant']);
 
-        // Calculate time from wave start or race start (TOP DÉPART)
-        // The calculateTime() method handles the fallback logic
+        // Calculate time from individual start, wave start or race start (TOP DÉPART)
+        // The calculateTime() method handles the 3-level priority internally
         $result->calculateTime();
 
         // Calculate speed
