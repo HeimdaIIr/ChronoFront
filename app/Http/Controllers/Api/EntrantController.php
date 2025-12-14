@@ -167,8 +167,14 @@ class EntrantController extends Controller
 
         $firstLine = $lines[0] ?? '';
 
-        // Détecter si c'est séparé par tabulations (TSV) ou virgules (CSV)
-        $delimiter = (strpos($firstLine, "\t") !== false) ? "\t" : ',';
+        // Détecter le délimiteur : tabulation (TSV), point-virgule (CSV européen), ou virgule (CSV)
+        if (strpos($firstLine, "\t") !== false) {
+            $delimiter = "\t";
+        } elseif (strpos($firstLine, ";") !== false) {
+            $delimiter = ";";
+        } else {
+            $delimiter = ",";
+        }
 
         // Parser les lignes avec le bon délimiteur
         $csvData = array_map(function($line) use ($delimiter) {
