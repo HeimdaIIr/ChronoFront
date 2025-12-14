@@ -179,6 +179,7 @@ class EntrantController extends Controller
                 $cat = $data['cat'] ?? $data['category'] ?? null;
                 $club = $data['club'] ?? null;
                 $bibNumber = $data['dossard'] ?? $data['bib'] ?? null;
+                $startTime = $data['top'] ?? null; // Heure de départ individuelle (contre-la-montre)
 
                 // Skip if missing required fields
                 if (empty($firstname) || empty($lastname) || empty($parcours)) {
@@ -270,6 +271,22 @@ class EntrantController extends Controller
                     }
                 }
 
+                // Parse start time (format HH:MM:SS ou HH:MM) pour contre-la-montre
+                $parsedStartTime = null;
+                if ($startTime) {
+                    try {
+                        // Accepter les formats HH:MM:SS ou HH:MM
+                        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($startTime), $matches)) {
+                            $hour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                            $minute = $matches[2];
+                            $second = $matches[3] ?? '00';
+                            $parsedStartTime = "{$hour}:{$minute}:{$second}";
+                        }
+                    } catch (\Exception $e) {
+                        $parsedStartTime = null;
+                    }
+                }
+
                 // Generate RFID tag from bib number (2000 + dossard sur 4 chiffres)
                 $rfidTag = null;
                 if ($bibNumber) {
@@ -291,6 +308,7 @@ class EntrantController extends Controller
                     'event_id' => $eventId,
                     'race_id' => $race->id,
                     'wave_id' => $waveId,
+                    'start_time' => $parsedStartTime, // Heure de départ individuelle
                 ];
 
                 // Check if entrant already exists (by bib_number + event_id)
