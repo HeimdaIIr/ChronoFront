@@ -163,8 +163,16 @@ class EntrantController extends Controller
 
         try {
             foreach ($csvData as $index => $row) {
-                if (count($row) !== count($headers)) {
-                    continue; // Skip malformed rows
+                // Ajuster la ligne pour qu'elle ait le même nombre de colonnes que les headers
+                $rowCount = count($row);
+                $headerCount = count($headers);
+
+                if ($rowCount < $headerCount) {
+                    // Ajouter des colonnes vides si nécessaire
+                    $row = array_pad($row, $headerCount, '');
+                } elseif ($rowCount > $headerCount) {
+                    // Tronquer les colonnes en trop
+                    $row = array_slice($row, 0, $headerCount);
                 }
 
                 $data = array_combine($headers, $row);
