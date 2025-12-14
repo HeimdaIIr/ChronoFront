@@ -151,8 +151,20 @@ class EntrantController extends Controller
         $file = $request->file('file');
         $eventId = $request->input('event_id');
 
-        // Lire le fichier et détecter le délimiteur (CSV ou TSV)
-        $lines = file($file->getRealPath());
+        // Lire le contenu brut du fichier
+        $content = file_get_contents($file->getRealPath());
+
+        // Détecter et convertir l'encodage en UTF-8
+        $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ASCII'], true);
+        if ($encoding && $encoding !== 'UTF-8') {
+            $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        }
+
+        // Séparer en lignes
+        $lines = explode("\n", $content);
+        $lines = array_map('trim', $lines);
+        $lines = array_filter($lines); // Supprimer les lignes vides
+
         $firstLine = $lines[0] ?? '';
 
         // Détecter si c'est séparé par tabulations (TSV) ou virgules (CSV)
