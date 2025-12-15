@@ -209,7 +209,7 @@ class EntrantController extends Controller
                 // Map CSV columns
                 $firstname = $data['prenom'] ?? $data['firstname'] ?? '';
                 $lastname = $data['nom'] ?? $data['lastname'] ?? '';
-                $gender = strtoupper($data['sexe'] ?? $data['gender'] ?? 'M');
+                $gender = strtoupper($data['sexe'] ?? $data['gender'] ?? '');
                 $birthDate = $data['naissance'] ?? $data['birth_date'] ?? null;
                 $parcours = $data['parcours'] ?? $data['race'] ?? null;
                 $vague = $data['vague'] ?? $data['wave'] ?? null;
