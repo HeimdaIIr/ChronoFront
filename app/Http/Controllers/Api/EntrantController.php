@@ -379,8 +379,8 @@ class EntrantController extends Controller
                         [
                             'description' => "Catégorie importée: {$catName}",
                             'gender' => 'A', // All genders
-                            'min_age' => 0,
-                            'max_age' => 999
+                            'age_min' => 0,
+                            'age_max' => 999
                         ]
                     );
                     $entrant->category_id = $category->id;
