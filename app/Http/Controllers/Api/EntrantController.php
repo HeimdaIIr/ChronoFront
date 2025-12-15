@@ -336,8 +336,8 @@ class EntrantController extends Controller
                     $rfidTag = '2000' . str_pad($bibNumber, 4, '0', STR_PAD_LEFT);
                 }
 
-                // Clean gender (null si absent du CSV)
-                $gender = in_array(strtoupper($gender), ['M', 'F']) ? strtoupper($gender) : null;
+                // Clean gender (N pour neutre/non spécifié si absent du CSV)
+                $gender = in_array(strtoupper($gender), ['M', 'F']) ? strtoupper($gender) : 'N';
 
                 // Prepare entrant data
                 $entrantData = [
