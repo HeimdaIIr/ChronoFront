@@ -370,21 +370,18 @@ class EntrantController extends Controller
                     $entrant = Entrant::create($entrantData);
                 }
 
-                // Handle category
+                // Handle category - PRIORITÉ CSV sur FFA
                 if (!empty($cat)) {
-                    // Try to find category by name (e.g., SE-M, M0-F, etc.)
-                    $category = Category::where('name', strtoupper(trim($cat)))->first();
-                    if ($category) {
-                        $entrant->category_id = $category->id;
-                        $entrant->save();
-                    } else {
-                        // If category name not found, auto-assign based on age and gender
-                        if ($entrant->birth_date && $entrant->gender) {
-                            $entrant->assignCategory();
-                        }
-                    }
+                    $catName = strtoupper(trim($cat));
+                    // Chercher ou créer la catégorie
+                    $category = Category::firstOrCreate(
+                        ['name' => $catName],
+                        ['description' => "Catégorie importée: {$catName}"]
+                    );
+                    $entrant->category_id = $category->id;
+                    $entrant->save();
                 } else {
-                    // Auto-assign category based on age and gender
+                    // Auto-assign FFA uniquement si pas de CAT dans CSV
                     if ($entrant->birth_date && $entrant->gender) {
                         $entrant->assignCategory();
                     }

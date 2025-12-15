@@ -159,7 +159,7 @@ class Result extends Model
                 $startDateTime = \Carbon\Carbon::parse($rawTime->format('Y-m-d') . ' ' . $startTimeStr);
             }
 
-            $this->calculated_time = $rawTime->diffInSeconds($startDateTime);
+            $this->calculated_time = abs($rawTime->diffInSeconds($startDateTime));
             return;
         }
 
