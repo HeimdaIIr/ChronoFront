@@ -376,7 +376,12 @@ class EntrantController extends Controller
                     // Chercher ou créer la catégorie
                     $category = Category::firstOrCreate(
                         ['name' => $catName],
-                        ['description' => "Catégorie importée: {$catName}"]
+                        [
+                            'description' => "Catégorie importée: {$catName}",
+                            'gender' => 'A', // All genders
+                            'min_age' => 0,
+                            'max_age' => 999
+                        ]
                     );
                     $entrant->category_id = $category->id;
                     $entrant->save();
