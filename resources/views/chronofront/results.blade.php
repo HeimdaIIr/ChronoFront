@@ -16,7 +16,7 @@
                 :disabled="recalculating"
             >
                 <span x-show="!recalculating">
-                    <i class="bi bi-calculator"></i> Recalculer TOUTES les positions
+                    <i class="bi bi-calculator"></i> Recalculer
                 </span>
                 <span x-show="recalculating">
                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -563,8 +563,9 @@ function resultsManager() {
         printResults() {
             if (!this.selectedRace) return;
 
-            // Créer une fenêtre d'impression avec le contenu actuel
-            window.print();
+            // Ouvrir le PDF dans un nouvel onglet pour impression
+            let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}`;
+            window.open(url, '_blank');
         },
 
         formatDuration(seconds) {

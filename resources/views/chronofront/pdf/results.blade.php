@@ -5,73 +5,74 @@
     <title>Résultats {{ $race->name }}</title>
     <style>
         @page {
-            margin: 2cm 1.5cm;
+            margin: 1.5cm 1cm;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 9pt;
+            font-size: 8pt;
             color: #000;
-            line-height: 1.3;
+            line-height: 1.2;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #1e3a8a;
-            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 10px;
         }
 
         .header h1 {
-            font-size: 20pt;
+            font-size: 18pt;
             color: #1e3a8a;
-            margin: 0 0 5px 0;
+            margin: 0 0 3px 0;
             font-weight: bold;
         }
 
         .header h2 {
-            font-size: 16pt;
+            font-size: 14pt;
             color: #3B82F6;
-            margin: 0 0 8px 0;
+            margin: 0 0 5px 0;
             font-weight: normal;
         }
 
         .header-info {
-            font-size: 9pt;
+            font-size: 8pt;
             color: #666;
-            margin: 5px 0;
+            margin: 3px 0;
         }
 
         .category-title {
-            font-size: 12pt;
+            font-size: 11pt;
             font-weight: bold;
             color: #1e3a8a;
-            margin: 25px 0 10px 0;
-            padding: 5px 10px;
+            margin: 20px 0 8px 0;
+            padding: 4px 8px;
             background-color: #f0f4ff;
-            border-left: 4px solid #3B82F6;
+            border-left: 3px solid #3B82F6;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         th {
             background-color: #1e3a8a;
             color: white;
-            padding: 8px 5px;
+            padding: 5px 3px;
             text-align: left;
-            font-size: 8pt;
+            font-size: 7pt;
             font-weight: bold;
             border: 1px solid #1e3a8a;
         }
 
         td {
-            padding: 6px 5px;
+            padding: 3px 3px;
             border: 1px solid #ddd;
-            font-size: 8pt;
+            font-size: 7pt;
+            line-height: 1.1;
         }
 
         tr:nth-child(even) {
@@ -82,15 +83,13 @@
             font-weight: bold;
             color: #1e3a8a;
             text-align: center;
-            width: 40px;
+            width: 30px;
         }
 
         .bib {
             font-weight: bold;
             text-align: center;
-            width: 50px;
-            background-color: #3B82F6;
-            color: white;
+            width: 35px;
         }
 
         .name {
@@ -100,27 +99,24 @@
         .time {
             font-weight: bold;
             text-align: center;
-            width: 70px;
+            width: 55px;
         }
 
         .speed {
             text-align: center;
-            width: 65px;
+            width: 50px;
         }
 
         .category {
             text-align: center;
-            width: 80px;
+            width: 60px;
             font-size: 7pt;
-            background-color: #10B981;
-            color: white;
-            font-weight: bold;
         }
 
         .status {
             text-align: center;
-            width: 45px;
-            font-size: 7pt;
+            width: 35px;
+            font-size: 6pt;
             font-weight: bold;
         }
 
@@ -145,9 +141,9 @@
             left: 0;
             right: 0;
             text-align: center;
-            font-size: 7pt;
+            font-size: 6pt;
             color: #999;
-            padding-top: 10px;
+            padding-top: 5px;
             border-top: 1px solid #ddd;
         }
 
@@ -157,9 +153,9 @@
 
         .total-participants {
             text-align: right;
-            font-size: 8pt;
+            font-size: 7pt;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             font-style: italic;
         }
     </style>
@@ -187,7 +183,7 @@
                     <th class="bib">Dos.</th>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th style="width: 30px; text-align: center;">Sexe</th>
+                    <th style="width: 25px; text-align: center;">Sexe</th>
                     <th class="category">Catégorie</th>
                     <th>Club</th>
                     <th class="time">Temps</th>
@@ -207,7 +203,7 @@
                         <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                         <td>{{ $result->entrant->club ?? '-' }}</td>
                         <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                        <td class="speed">{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : '-' }}</td>
+                        <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
                         <td class="pos">{{ $result->category_position ?? '-' }}</td>
                         <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                     </tr>
@@ -245,7 +241,7 @@
                             <td>{{ $result->entrant->firstname ?? '' }}</td>
                             <td>{{ $result->entrant->club ?? '-' }}</td>
                             <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                            <td class="speed">{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : '-' }}</td>
+                            <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
                             <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                         </tr>
                     @endforeach

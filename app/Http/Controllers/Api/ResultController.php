@@ -459,6 +459,17 @@ class ResultController extends Controller
             $totalResults = 0;
 
             foreach ($races as $race) {
+                // Recalculate speeds for ALL results if distance is defined
+                if ($race->distance > 0) {
+                    $allResults = Result::where('race_id', $race->id)->get();
+                    foreach ($allResults as $result) {
+                        if ($result->calculated_time > 0) {
+                            $result->calculateSpeed($race->distance);
+                            $result->save();
+                        }
+                    }
+                }
+
                 // Get all results for this race, grouped by entrant
                 $results = Result::where('race_id', $race->id)
                     ->where('status', 'V')
@@ -501,7 +512,7 @@ class ResultController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Positions recalculées pour toutes les courses',
+                'message' => 'Positions et vitesses recalculées pour toutes les courses',
                 'total_races' => $races->count(),
                 'total_results' => $totalResults
             ]);
@@ -528,11 +539,13 @@ class ResultController extends Controller
             ->orderBy('position')
             ->get();
 
-        $csv = "Position,Dossard,Nom,Prénom,Sexe,Catégorie,Club,Temps,Vitesse,Position Catégorie,Statut\n";
+        // UTF-8 BOM pour Excel
+        $csv = "\xEF\xBB\xBF";
+        $csv .= "Position;Dossard;Nom;Prénom;Sexe;Catégorie;Club;Temps;Vitesse;Position Catégorie;Statut\n";
 
         foreach ($results as $result) {
             $csv .= sprintf(
-                "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",
                 $result->position ?? 'N/A',
                 $result->entrant->bib_number ?? '',
                 $result->entrant->lastname ?? '',
@@ -555,7 +568,7 @@ class ResultController extends Controller
         );
 
         return response($csv, 200)
-            ->header('Content-Type', 'text/csv')
+            ->header('Content-Type', 'text/csv; charset=UTF-8')
             ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
     }
 
