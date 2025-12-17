@@ -20,7 +20,7 @@ class ResultController extends Controller
     {
         $results = Result::with(['entrant.category', 'wave', 'race'])
             ->orderBy('raw_time', 'desc')
-            ->limit(100) // Limit to last 100 results for performance
+            ->limit(500) // Limit to last 500 results for performance
             ->get();
 
         return response()->json($results);
