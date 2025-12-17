@@ -207,7 +207,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($results as $result)
+                @foreach($results as $index => $result)
                     <tr>
                         <td class="pos">{{ $result->position ?? '-' }}</td>
                         <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
@@ -221,6 +221,28 @@
                         <td class="pos">{{ $result->category_position ?? '-' }}</td>
                         <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                     </tr>
+                    @if(($index + 1) % 50 === 0 && !$loop->last)
+                        </tbody>
+                        </table>
+                        <div class="page-break"></div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="pos">Pos.</th>
+                                    <th class="bib">Dos.</th>
+                                    <th>Nom</th>
+                                    <th>Prénom</th>
+                                    <th style="width: 22px; text-align: center;">Sexe</th>
+                                    <th class="category">Catégorie</th>
+                                    <th>Club</th>
+                                    <th class="time">Temps</th>
+                                    <th class="speed">Vitesse</th>
+                                    <th class="pos">Pos. Cat.</th>
+                                    <th class="status">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    @endif
                 @endforeach
             </tbody>
         </table>

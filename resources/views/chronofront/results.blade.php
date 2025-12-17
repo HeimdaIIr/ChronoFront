@@ -38,12 +38,96 @@
                 <i class="bi bi-file-pdf"></i> Télécharger PDF
             </button>
             <button
-                class="btn btn-secondary"
+                class="btn btn-secondary me-2"
                 @click="printResults"
                 :disabled="!selectedRace || filteredResults.length === 0"
             >
                 <i class="bi bi-printer"></i> Imprimer
             </button>
+            <button
+                class="btn btn-warning"
+                @click="showAwardsModal = true"
+                :disabled="!selectedRace || filteredResults.length === 0"
+            >
+                <i class="bi bi-trophy"></i> PDF Récompenses
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Configuration Récompenses -->
+    <div x-show="showAwardsModal" class="modal" style="display: none;" :style="showAwardsModal && 'display: block; background: rgba(0,0,0,0.5);'">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-trophy text-warning"></i> Configuration des Récompenses</h5>
+                    <button type="button" class="btn-close" @click="showAwardsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Scratch général -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Scratch Général</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Top</span>
+                                <input type="number" class="form-control" x-model="awards.topScratch" min="0" max="50">
+                                <span class="input-group-text">premiers</span>
+                            </div>
+                            <small class="text-muted">0 = désactivé</small>
+                        </div>
+
+                        <!-- Par genre -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Par Genre (F/H)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Top</span>
+                                <input type="number" class="form-control" x-model="awards.topGender" min="0" max="50">
+                                <span class="input-group-text">par genre</span>
+                            </div>
+                            <small class="text-muted">Ex: Top 3 F + Top 3 H</small>
+                        </div>
+
+                        <!-- Par catégorie -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Par Catégorie</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Top</span>
+                                <input type="number" class="form-control" x-model="awards.topCategory" min="0" max="50">
+                                <span class="input-group-text">par catégorie</span>
+                            </div>
+                            <small class="text-muted">Ex: 1er de chaque catégorie</small>
+                        </div>
+
+                        <!-- Par genre ET catégorie -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Par Genre ET Catégorie</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Top</span>
+                                <input type="number" class="form-control" x-model="awards.topGenderCategory" min="0" max="50">
+                                <span class="input-group-text">F/H par cat.</span>
+                            </div>
+                            <small class="text-muted">Ex: 1er F + 1er H par catégorie</small>
+                        </div>
+                    </div>
+
+                    <!-- Exemples -->
+                    <div class="alert alert-info mt-3">
+                        <strong>Exemples :</strong>
+                        <ul class="mb-0">
+                            <li><strong>Exemple 1 :</strong> Top 3 scratch + 1er par catégorie → Top Scratch: 3, Top Catégorie: 1</li>
+                            <li><strong>Exemple 2 :</strong> Top 3 F + Top 3 H + 1er F/H par catégorie → Top Genre: 3, Top Genre ET Catégorie: 1</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="showAwardsModal = false">Annuler</button>
+                    <button type="button" class="btn btn-success" @click="downloadAwardsPDF">
+                        <i class="bi bi-file-pdf"></i> Télécharger PDF
+                    </button>
+                    <button type="button" class="btn btn-primary" @click="printAwardsPDF">
+                        <i class="bi bi-printer"></i> Imprimer
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -358,6 +442,13 @@ function resultsManager() {
         statusFilter: 'all',
         loading: false,
         recalculating: false,
+        showAwardsModal: false,
+        awards: {
+            topScratch: 3,
+            topGender: 0,
+            topCategory: 1,
+            topGenderCategory: 0
+        },
         stats: {
             total: 0,
             finished: 0,
@@ -566,6 +657,37 @@ function resultsManager() {
             // Ouvrir le PDF dans un nouvel onglet avec auto-print
             let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}&print=true`;
             window.open(url, '_blank');
+        },
+
+        downloadAwardsPDF() {
+            if (!this.selectedRace) return;
+
+            // Construire l'URL avec les paramètres de récompenses
+            const params = new URLSearchParams({
+                topScratch: this.awards.topScratch,
+                topGender: this.awards.topGender,
+                topCategory: this.awards.topCategory,
+                topGenderCategory: this.awards.topGenderCategory
+            });
+
+            window.location.href = `/api/results/race/${this.selectedRace}/awards-pdf?${params.toString()}`;
+            this.showAwardsModal = false;
+        },
+
+        printAwardsPDF() {
+            if (!this.selectedRace) return;
+
+            // Construire l'URL avec les paramètres de récompenses + print=true
+            const params = new URLSearchParams({
+                topScratch: this.awards.topScratch,
+                topGender: this.awards.topGender,
+                topCategory: this.awards.topCategory,
+                topGenderCategory: this.awards.topGenderCategory,
+                print: 'true'
+            });
+
+            window.open(`/api/results/race/${this.selectedRace}/awards-pdf?${params.toString()}`, '_blank');
+            this.showAwardsModal = false;
         },
 
         formatDuration(seconds) {

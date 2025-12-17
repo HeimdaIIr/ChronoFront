@@ -64,6 +64,7 @@ Route::post('results/recalculate-all', [ResultController::class, 'recalculateAll
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);
 Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);
 Route::get('results/race/{raceId}/pdf', [ResultController::class, 'exportPdf']);
+Route::get('results/race/{raceId}/awards-pdf', [ResultController::class, 'exportAwardsPdf']);
 Route::put('results/{result}', [ResultController::class, 'update']);
 Route::delete('results/{result}', [ResultController::class, 'destroy']);
 

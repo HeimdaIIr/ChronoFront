@@ -684,6 +684,126 @@ class ResultController extends Controller
     }
 
     /**
+     * Export awards (récompenses) to PDF
+     */
+    public function exportAwardsPdf(int $raceId, Request $request)
+    {
+        $race = Race::with('event')->findOrFail($raceId);
+
+        // Get award configuration from request
+        $topScratch = (int) $request->query('topScratch', 0);
+        $topGender = (int) $request->query('topGender', 0);
+        $topCategory = (int) $request->query('topCategory', 0);
+        $topGenderCategory = (int) $request->query('topGenderCategory', 0);
+        $autoPrint = $request->query('print', false);
+
+        // Get all valid results sorted by position
+        $allResults = Result::where('race_id', $raceId)
+            ->where('status', 'V')
+            ->with(['entrant.category'])
+            ->orderBy('position')
+            ->get();
+
+        $awardedResults = collect();
+
+        // Top Scratch général
+        if ($topScratch > 0) {
+            $scratchResults = $allResults->take($topScratch)->map(function($r) {
+                $r->award_reason = "Top {$r->position} Scratch";
+                return $r;
+            });
+            $awardedResults = $awardedResults->merge($scratchResults);
+        }
+
+        // Top par Genre (F/H)
+        if ($topGender > 0) {
+            foreach (['F', 'H'] as $gender) {
+                $genderResults = $allResults
+                    ->where('entrant.gender', $gender)
+                    ->take($topGender);
+
+                $position = 1;
+                foreach ($genderResults as $result) {
+                    $result->award_reason = "Top {$position} " . ($gender === 'F' ? 'Femmes' : 'Hommes');
+                    $awardedResults->push($result);
+                    $position++;
+                }
+            }
+        }
+
+        // Top par Catégorie
+        if ($topCategory > 0) {
+            $byCategory = $allResults->groupBy('entrant.category.name');
+            foreach ($byCategory as $categoryName => $categoryResults) {
+                $topCatResults = $categoryResults->take($topCategory);
+                $position = 1;
+                foreach ($topCatResults as $result) {
+                    $result->award_reason = "Top {$position} {$categoryName}";
+                    $awardedResults->push($result);
+                    $position++;
+                }
+            }
+        }
+
+        // Top par Genre ET Catégorie
+        if ($topGenderCategory > 0) {
+            $byCategory = $allResults->groupBy('entrant.category.name');
+            foreach ($byCategory as $categoryName => $categoryResults) {
+                foreach (['F', 'H'] as $gender) {
+                    $genderCatResults = $categoryResults
+                        ->where('entrant.gender', $gender)
+                        ->take($topGenderCategory);
+
+                    $position = 1;
+                    foreach ($genderCatResults as $result) {
+                        $genderLabel = $gender === 'F' ? 'Femmes' : 'Hommes';
+                        $result->award_reason = "Top {$position} {$genderLabel} {$categoryName}";
+                        $awardedResults->push($result);
+                        $position++;
+                    }
+                }
+            }
+        }
+
+        // Remove duplicates based on result ID
+        $awardedResults = $awardedResults->unique('id')->values();
+
+        // Sort by position
+        $awardedResults = $awardedResults->sortBy('position')->values();
+
+        // Prepare data for PDF
+        $data = [
+            'race' => $race,
+            'results' => $awardedResults,
+            'autoPrint' => $autoPrint,
+            'config' => [
+                'topScratch' => $topScratch,
+                'topGender' => $topGender,
+                'topCategory' => $topCategory,
+                'topGenderCategory' => $topGenderCategory,
+            ]
+        ];
+
+        // Generate PDF
+        $pdf = Pdf::loadView('chronofront.pdf.awards', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'recompenses_%s_%s_%s.pdf',
+            $race->event->name ?? 'event',
+            $race->name,
+            now()->format('Y-m-d')
+        );
+
+        // Si print=true, afficher en ligne au lieu de télécharger
+        if ($autoPrint) {
+            return $pdf->stream($filename);
+        }
+
+        return $pdf->download($filename);
+    }
+
+    /**
      * Update a result
      */
     public function update(Request $request, Result $result): JsonResponse
