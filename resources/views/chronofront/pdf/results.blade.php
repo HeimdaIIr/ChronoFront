@@ -1,44 +1,55 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Résultats - {{ $race->name }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Résultats {{ $race->name }}</title>
     <style>
+        @page {
+            margin: 2cm 1.5cm;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            font-size: 10pt;
-            margin: 20px;
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 9pt;
+            color: #000;
+            line-height: 1.3;
         }
 
-        h1 {
+        .header {
             text-align: center;
-            color: #1e3a8a;
-            font-size: 18pt;
-            margin-bottom: 5px;
-        }
-
-        h2 {
-            text-align: center;
-            color: #3B82F6;
-            font-size: 14pt;
-            margin-top: 0;
             margin-bottom: 20px;
+            border-bottom: 3px solid #1e3a8a;
+            padding-bottom: 15px;
         }
 
-        h3 {
+        .header h1 {
+            font-size: 20pt;
             color: #1e3a8a;
-            font-size: 12pt;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #3B82F6;
-            padding-bottom: 5px;
+            margin: 0 0 5px 0;
+            font-weight: bold;
+        }
+
+        .header h2 {
+            font-size: 16pt;
+            color: #3B82F6;
+            margin: 0 0 8px 0;
+            font-weight: normal;
         }
 
         .header-info {
-            text-align: center;
-            margin-bottom: 20px;
+            font-size: 9pt;
             color: #666;
+            margin: 5px 0;
+        }
+
+        .category-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin: 25px 0 10px 0;
+            padding: 5px 10px;
+            background-color: #f0f4ff;
+            border-left: 4px solid #3B82F6;
         }
 
         table {
@@ -50,90 +61,92 @@
         th {
             background-color: #1e3a8a;
             color: white;
-            padding: 8px;
+            padding: 8px 5px;
             text-align: left;
-            font-size: 9pt;
+            font-size: 8pt;
             font-weight: bold;
+            border: 1px solid #1e3a8a;
         }
 
         td {
-            padding: 6px;
-            border-bottom: 1px solid #ddd;
-            font-size: 9pt;
+            padding: 6px 5px;
+            border: 1px solid #ddd;
+            font-size: 8pt;
         }
 
         tr:nth-child(even) {
             background-color: #f8f9fa;
         }
 
-        .position {
+        .pos {
             font-weight: bold;
             color: #1e3a8a;
+            text-align: center;
+            width: 40px;
         }
 
-        .bib-number {
+        .bib {
+            font-weight: bold;
+            text-align: center;
+            width: 50px;
             background-color: #3B82F6;
             color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
+        }
+
+        .name {
+            font-weight: 600;
+        }
+
+        .time {
+            font-weight: bold;
+            text-align: center;
+            width: 70px;
+        }
+
+        .speed {
+            text-align: center;
+            width: 65px;
+        }
+
+        .category {
+            text-align: center;
+            width: 80px;
+            font-size: 7pt;
+            background-color: #10B981;
+            color: white;
             font-weight: bold;
         }
 
-        .category-badge {
-            background-color: #10B981;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
+        .status {
+            text-align: center;
+            width: 45px;
+            font-size: 7pt;
+            font-weight: bold;
         }
 
-        .status-V {
+        .status-v {
             background-color: #10B981;
             color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
         }
 
-        .status-DNS {
+        .status-dns {
             background-color: #F59E0B;
             color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
         }
 
-        .status-DNF {
+        .status-dnf {
             background-color: #EF4444;
             color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
-        }
-
-        .status-DSQ {
-            background-color: #DC2626;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
-        }
-
-        .status-NS {
-            background-color: #6B7280;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
         }
 
         .footer {
             position: fixed;
             bottom: 0;
-            width: 100%;
+            left: 0;
+            right: 0;
             text-align: center;
-            font-size: 8pt;
-            color: #666;
+            font-size: 7pt;
+            color: #999;
             padding-top: 10px;
             border-top: 1px solid #ddd;
         }
@@ -141,51 +154,62 @@
         .page-break {
             page-break-after: always;
         }
+
+        .total-participants {
+            text-align: right;
+            font-size: 8pt;
+            color: #666;
+            margin-bottom: 5px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <h1>{{ $race->event->name ?? 'Événement' }}</h1>
-    <h2>{{ $race->name }}</h2>
-
-    <div class="header-info">
-        <p><strong>Date:</strong> {{ now()->format('d/m/Y H:i') }}</p>
-        @if($race->distance)
-            <p><strong>Distance:</strong> {{ $race->distance }} km</p>
-        @endif
+    <div class="header">
+        <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+        <h2>{{ $race->name }}</h2>
+        <div class="header-info">
+            <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+            @if($race->distance)
+                | <strong>Distance :</strong> {{ $race->distance }} km
+            @endif
+        </div>
     </div>
 
     @if($displayMode === 'general')
         <!-- Classement Général -->
+        <div class="total-participants">{{ $results->count() }} participant(s)</div>
+
         <table>
             <thead>
                 <tr>
-                    <th>Pos.</th>
-                    <th>Dossard</th>
+                    <th class="pos">Pos.</th>
+                    <th class="bib">Dos.</th>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th>Sexe</th>
-                    <th>Catégorie</th>
+                    <th style="width: 30px; text-align: center;">Sexe</th>
+                    <th class="category">Catégorie</th>
                     <th>Club</th>
-                    <th>Temps</th>
-                    <th>Vitesse</th>
-                    <th>Pos. Cat.</th>
-                    <th>Statut</th>
+                    <th class="time">Temps</th>
+                    <th class="speed">Vitesse</th>
+                    <th class="pos">Pos. Cat.</th>
+                    <th class="status">Statut</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($results as $result)
                     <tr>
-                        <td class="position">{{ $result->position ?? '-' }}</td>
-                        <td><span class="bib-number">{{ $result->entrant->bib_number ?? '' }}</span></td>
-                        <td>{{ $result->entrant->lastname ?? '' }}</td>
+                        <td class="pos">{{ $result->position ?? '-' }}</td>
+                        <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                        <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
                         <td>{{ $result->entrant->firstname ?? '' }}</td>
-                        <td>{{ $result->entrant->gender ?? '' }}</td>
-                        <td><span class="category-badge">{{ $result->entrant->category->name ?? 'N/A' }}</span></td>
+                        <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                        <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                         <td>{{ $result->entrant->club ?? '-' }}</td>
-                        <td><strong>{{ $result->formatted_time ?? 'N/A' }}</strong></td>
-                        <td>{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : 'N/A' }}</td>
-                        <td>{{ $result->category_position ?? '-' }}</td>
-                        <td><span class="status-{{ $result->status }}">{{ $result->status }}</span></td>
+                        <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                        <td class="speed">{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : '-' }}</td>
+                        <td class="pos">{{ $result->category_position ?? '-' }}</td>
+                        <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -193,34 +217,36 @@
     @else
         <!-- Classement par Catégorie -->
         @foreach($resultsByCategory as $categoryName => $categoryResults)
-            <h3>{{ $categoryName }} ({{ $categoryResults->count() }} participants)</h3>
+            <div class="category-title">
+                {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
+            </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>Pos. Cat.</th>
-                        <th>Pos. Général</th>
-                        <th>Dossard</th>
+                        <th class="pos">Pos. Cat.</th>
+                        <th class="pos">Pos. Gén.</th>
+                        <th class="bib">Dos.</th>
                         <th>Nom</th>
                         <th>Prénom</th>
                         <th>Club</th>
-                        <th>Temps</th>
-                        <th>Vitesse</th>
-                        <th>Statut</th>
+                        <th class="time">Temps</th>
+                        <th class="speed">Vitesse</th>
+                        <th class="status">Statut</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($categoryResults as $result)
                         <tr>
-                            <td class="position">{{ $result->category_position ?? '-' }}</td>
-                            <td>{{ $result->position ?? '-' }}</td>
-                            <td><span class="bib-number">{{ $result->entrant->bib_number ?? '' }}</span></td>
-                            <td>{{ $result->entrant->lastname ?? '' }}</td>
+                            <td class="pos">{{ $result->category_position ?? '-' }}</td>
+                            <td class="pos">{{ $result->position ?? '-' }}</td>
+                            <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                            <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
                             <td>{{ $result->entrant->firstname ?? '' }}</td>
                             <td>{{ $result->entrant->club ?? '-' }}</td>
-                            <td><strong>{{ $result->formatted_time ?? 'N/A' }}</strong></td>
-                            <td>{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : 'N/A' }}</td>
-                            <td><span class="status-{{ $result->status }}">{{ $result->status }}</span></td>
+                            <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                            <td class="speed">{{ $result->speed ? number_format($result->speed, 2) . ' km/h' : '-' }}</td>
+                            <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -233,7 +259,7 @@
     @endif
 
     <div class="footer">
-        <p>Document généré par ChronoFront - ATS Sport | {{ now()->format('d/m/Y à H:i') }}</p>
+        ChronoFront - ATS Sport | Document généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
 </body>
 </html>
