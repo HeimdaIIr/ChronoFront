@@ -155,6 +155,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('chronofront.entrants*') ? 'active' : '' }}"
+                               href="{{ route('entrants') }}">
+                                <i class="bi bi-people"></i> Participants
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('chronofront.races') ? 'active' : '' }}"
                                href="{{ route('races') }}">
                                 <i class="bi bi-trophy"></i> Épreuves
@@ -164,12 +170,6 @@
                             <a class="nav-link {{ request()->routeIs('chronofront.waves') ? 'active' : '' }}"
                                href="{{ route('waves') }}">
                                 <i class="bi bi-flag"></i> Vagues
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('chronofront.entrants*') ? 'active' : '' }}"
-                               href="{{ route('entrants') }}">
-                                <i class="bi bi-people"></i> Participants
                             </a>
                         </li>
                         <li class="nav-item">
@@ -188,12 +188,6 @@
                             <a class="nav-link {{ request()->routeIs('chronofront.results') ? 'active' : '' }}"
                                href="{{ route('results') }}">
                                 <i class="bi bi-bar-chart"></i> Résultats
-                            </a>
-                        </li>
-
-                        <li class="nav-item mt-4 pt-4 border-top border-secondary">
-                            <a class="nav-link" href="/">
-                                <i class="bi bi-arrow-left"></i> Retour au site
                             </a>
                         </li>
                     </ul>

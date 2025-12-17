@@ -24,11 +24,25 @@
                 </span>
             </button>
             <button
-                class="btn btn-success"
+                class="btn btn-success me-2"
                 @click="exportResults"
                 :disabled="!selectedRace || results.length === 0"
             >
                 <i class="bi bi-download"></i> Exporter CSV
+            </button>
+            <button
+                class="btn btn-danger me-2"
+                @click="downloadPDF"
+                :disabled="!selectedRace || filteredResults.length === 0"
+            >
+                <i class="bi bi-file-pdf"></i> Télécharger PDF
+            </button>
+            <button
+                class="btn btn-secondary"
+                @click="printResults"
+                :disabled="!selectedRace || filteredResults.length === 0"
+            >
+                <i class="bi bi-printer"></i> Imprimer
             </button>
         </div>
     </div>
@@ -537,6 +551,22 @@ function resultsManager() {
             window.location.href = `/api/results/race/${this.selectedRace}/export`;
         },
 
+        downloadPDF() {
+            if (!this.selectedRace) return;
+
+            // Construire l'URL avec les filtres actuels
+            let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}`;
+
+            window.location.href = url;
+        },
+
+        printResults() {
+            if (!this.selectedRace) return;
+
+            // Créer une fenêtre d'impression avec le contenu actuel
+            window.print();
+        },
+
         formatDuration(seconds) {
             if (!seconds) return 'N/A';
             const hours = Math.floor(seconds / 3600);
@@ -554,5 +584,46 @@ function resultsManager() {
 .badge-status-dnf { background-color: #EF4444; }
 .badge-status-dsq { background-color: #DC2626; }
 .badge-status-ns { background-color: #6B7280; }
+
+@media print {
+    /* Masquer les éléments non nécessaires à l'impression */
+    .sidebar,
+    button,
+    .alert,
+    .card-body > div:first-child,
+    .col-auto {
+        display: none !important;
+    }
+
+    /* Ajuster la mise en page */
+    .main-content {
+        padding: 0 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+
+    /* Assurer que les tableaux soient bien imprimés */
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Améliorer la lisibilité des badges */
+    .badge {
+        border: 1px solid #333;
+    }
+
+    /* Titre de la page */
+    h1, h4, h5 {
+        color: #000 !important;
+    }
+}
 </style>
 @endsection

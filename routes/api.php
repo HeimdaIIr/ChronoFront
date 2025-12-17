@@ -63,6 +63,7 @@ Route::post('results/rfid-batch', [ResultController::class, 'importRfidBatch']);
 Route::post('results/recalculate-all', [ResultController::class, 'recalculateAllPositions']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);
 Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);
+Route::get('results/race/{raceId}/pdf', [ResultController::class, 'exportPdf']);
 Route::put('results/{result}', [ResultController::class, 'update']);
 Route::delete('results/{result}', [ResultController::class, 'destroy']);
 

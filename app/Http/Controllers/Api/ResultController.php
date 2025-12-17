@@ -9,6 +9,7 @@ use App\Models\Race;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ResultController extends Controller
 {
@@ -556,6 +557,61 @@ class ResultController extends Controller
         return response($csv, 200)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+    }
+
+    /**
+     * Export results to PDF
+     */
+    public function exportPdf(int $raceId, Request $request)
+    {
+        $race = Race::with('event')->findOrFail($raceId);
+
+        // Get filters from request
+        $displayMode = $request->query('display_mode', 'general');
+        $statusFilter = $request->query('status_filter', 'all');
+
+        // Build query
+        $query = Result::where('race_id', $raceId)
+            ->with(['entrant.category'])
+            ->orderBy('position');
+
+        // Apply status filter
+        if ($statusFilter === 'V') {
+            $query->where('status', 'V');
+        }
+
+        $results = $query->get();
+
+        // Group by category if needed
+        $resultsByCategory = [];
+        if ($displayMode === 'category') {
+            $resultsByCategory = $results->groupBy(function ($result) {
+                return $result->entrant->category->name ?? 'Sans catégorie';
+            })->map(function ($categoryResults) {
+                return $categoryResults->sortBy('category_position');
+            });
+        }
+
+        // Prepare data for PDF
+        $data = [
+            'race' => $race,
+            'results' => $results,
+            'displayMode' => $displayMode,
+            'resultsByCategory' => $resultsByCategory,
+        ];
+
+        // Generate PDF
+        $pdf = Pdf::loadView('chronofront.pdf.results', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'resultats_%s_%s_%s.pdf',
+            $race->event->name ?? 'event',
+            $race->name,
+            now()->format('Y-m-d')
+        );
+
+        return $pdf->download($filename);
     }
 
     /**
