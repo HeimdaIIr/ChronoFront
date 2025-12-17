@@ -5,49 +5,49 @@
     <title>Résultats {{ $race->name }}</title>
     <style>
         @page {
-            margin: 1.5cm 1cm;
+            margin: 1cm 0.8cm;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 8pt;
+            font-size: 7pt;
             color: #000;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #1e3a8a;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #1e3a8a;
         }
 
         .header h1 {
-            font-size: 18pt;
+            font-size: 16pt;
             color: #1e3a8a;
-            margin: 0 0 3px 0;
+            margin: 0 0 2px 0;
             font-weight: bold;
         }
 
         .header h2 {
-            font-size: 14pt;
+            font-size: 13pt;
             color: #3B82F6;
-            margin: 0 0 5px 0;
+            margin: 0 0 4px 0;
             font-weight: normal;
         }
 
         .header-info {
-            font-size: 8pt;
+            font-size: 7pt;
             color: #666;
-            margin: 3px 0;
+            margin: 2px 0;
         }
 
         .category-title {
-            font-size: 11pt;
+            font-size: 10pt;
             font-weight: bold;
             color: #1e3a8a;
-            margin: 20px 0 8px 0;
-            padding: 4px 8px;
+            margin: 15px 0 6px 0;
+            padding: 3px 6px;
             background-color: #f0f4ff;
             border-left: 3px solid #3B82F6;
         }
@@ -55,24 +55,24 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         th {
             background-color: #1e3a8a;
-            color: white;
-            padding: 5px 3px;
+            color: white !important;
+            padding: 4px 2px;
             text-align: left;
-            font-size: 7pt;
+            font-size: 6.5pt;
             font-weight: bold;
             border: 1px solid #1e3a8a;
         }
 
         td {
-            padding: 3px 3px;
+            padding: 2px 2px;
             border: 1px solid #ddd;
-            font-size: 7pt;
-            line-height: 1.1;
+            font-size: 6.5pt;
+            line-height: 1.05;
         }
 
         tr:nth-child(even) {
@@ -80,16 +80,23 @@
         }
 
         .pos {
+            text-align: center;
+            width: 28px;
+        }
+
+        th.pos {
+            font-weight: bold;
+        }
+
+        td.pos {
             font-weight: bold;
             color: #1e3a8a;
-            text-align: center;
-            width: 30px;
         }
 
         .bib {
             font-weight: bold;
             text-align: center;
-            width: 35px;
+            width: 32px;
         }
 
         .name {
@@ -99,23 +106,23 @@
         .time {
             font-weight: bold;
             text-align: center;
-            width: 55px;
+            width: 50px;
         }
 
         .speed {
             text-align: center;
-            width: 50px;
+            width: 48px;
         }
 
         .category {
             text-align: center;
-            width: 60px;
-            font-size: 7pt;
+            width: 55px;
+            font-size: 6.5pt;
         }
 
         .status {
             text-align: center;
-            width: 35px;
+            width: 32px;
             font-size: 6pt;
             font-weight: bold;
         }
@@ -143,7 +150,7 @@
             text-align: center;
             font-size: 6pt;
             color: #999;
-            padding-top: 5px;
+            padding-top: 4px;
             border-top: 1px solid #ddd;
         }
 
@@ -155,10 +162,17 @@
             text-align: right;
             font-size: 7pt;
             color: #666;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
             font-style: italic;
         }
     </style>
+    @if($autoPrint ?? false)
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
+    @endif
 </head>
 <body>
     <div class="header">
@@ -183,7 +197,7 @@
                     <th class="bib">Dos.</th>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th style="width: 25px; text-align: center;">Sexe</th>
+                    <th style="width: 22px; text-align: center;">Sexe</th>
                     <th class="category">Catégorie</th>
                     <th>Club</th>
                     <th class="time">Temps</th>

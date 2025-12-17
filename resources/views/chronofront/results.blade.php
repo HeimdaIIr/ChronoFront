@@ -563,8 +563,8 @@ function resultsManager() {
         printResults() {
             if (!this.selectedRace) return;
 
-            // Ouvrir le PDF dans un nouvel onglet pour impression
-            let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}`;
+            // Ouvrir le PDF dans un nouvel onglet avec auto-print
+            let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}&print=true`;
             window.open(url, '_blank');
         },
 

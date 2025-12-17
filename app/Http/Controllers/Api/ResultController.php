@@ -582,6 +582,7 @@ class ResultController extends Controller
         // Get filters from request
         $displayMode = $request->query('display_mode', 'general');
         $statusFilter = $request->query('status_filter', 'all');
+        $autoPrint = $request->query('print', false);
 
         // Build query
         $query = Result::where('race_id', $raceId)
@@ -611,6 +612,7 @@ class ResultController extends Controller
             'results' => $results,
             'displayMode' => $displayMode,
             'resultsByCategory' => $resultsByCategory,
+            'autoPrint' => $autoPrint,
         ];
 
         // Generate PDF
@@ -623,6 +625,11 @@ class ResultController extends Controller
             $race->name,
             now()->format('Y-m-d')
         );
+
+        // Si print=true, afficher en ligne au lieu de télécharger
+        if ($autoPrint) {
+            return $pdf->stream($filename);
+        }
 
         return $pdf->download($filename);
     }
