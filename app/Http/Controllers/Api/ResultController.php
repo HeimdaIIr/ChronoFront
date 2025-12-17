@@ -15,13 +15,62 @@ class ResultController extends Controller
 {
     /**
      * Display all results across all races
+     * Supports filtering via query parameters
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $results = Result::with(['entrant.category', 'wave', 'race'])
-            ->orderBy('raw_time', 'desc')
-            ->limit(500) // Limit to last 500 results for performance
-            ->get();
+        $query = Result::with(['entrant.category', 'wave', 'race']);
+
+        // Apply filters if provided
+        $hasFilters = false;
+
+        // Search by bib number or name
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->whereHas('entrant', function($q) use ($search) {
+                $q->where('bib_number', 'like', "%{$search}%")
+                  ->orWhere('firstname', 'like', "%{$search}%")
+                  ->orWhere('lastname', 'like', "%{$search}%");
+            });
+            $hasFilters = true;
+        }
+
+        // Filter by race
+        if ($request->has('race_id') && $request->race_id) {
+            $query->where('race_id', $request->race_id);
+            $hasFilters = true;
+        }
+
+        // Filter by category
+        if ($request->has('category') && $request->category) {
+            $query->whereHas('entrant.category', function($q) use ($request) {
+                $q->where('name', $request->category);
+            });
+            $hasFilters = true;
+        }
+
+        // Filter by wave
+        if ($request->has('wave') && $request->wave) {
+            $query->whereHas('wave', function($q) use ($request) {
+                $q->where('name', $request->wave);
+            });
+            $hasFilters = true;
+        }
+
+        // Filter by checkpoint/reader location
+        if ($request->has('checkpoint') && $request->checkpoint) {
+            $query->where('reader_location', $request->checkpoint);
+            $hasFilters = true;
+        }
+
+        $query->orderBy('raw_time', 'desc');
+
+        // Only apply limit if no filters (for performance)
+        if (!$hasFilters) {
+            $query->limit(500);
+        }
+
+        $results = $query->get();
 
         return response()->json($results);
     }

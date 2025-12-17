@@ -2067,49 +2067,74 @@ function chronoApp() {
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         },
 
-        filterResults() {
-            this.displayedResults = this.results.filter(result => {
-                // Filter by search query (bib number or name)
-                if (this.searchQuery) {
-                    const searchNormalized = this.normalizeString(this.searchQuery);
-                    const bibNumber = result.entrant?.bib_number?.toString() || '';
-                    const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
-                    const fullNameNormalized = this.normalizeString(fullName);
+        async filterResults() {
+            // Check if any filters are active
+            const hasActiveFilters = this.searchQuery || this.categoryFilter || this.sasFilter || this.raceFilter || this.checkpointFilter;
 
-                    const matchesSearch = bibNumber.includes(this.searchQuery) ||
-                        fullNameNormalized.includes(searchNormalized);
-
-                    if (!matchesSearch) return false;
-                }
-
-                // Filter by category
-                if (this.categoryFilter && result.entrant?.category?.name !== this.categoryFilter) {
-                    return false;
-                }
-
-                // Filter by SAS (wave)
-                if (this.sasFilter && result.wave?.name !== this.sasFilter) {
-                    return false;
-                }
-
-                // Filter by race/parcours
-                if (this.raceFilter && result.race?.name !== this.raceFilter) {
-                    return false;
-                }
-
-                // Filter by checkpoint/reader location
-                if (this.checkpointFilter && result.reader_location !== this.checkpointFilter) {
-                    return false;
-                }
-
-                return true;
-            });
+            if (hasActiveFilters) {
+                // When filters are active, fetch from API to search ALL results
+                await this.fetchFilteredResults();
+            } else {
+                // No filters: filter locally from cached results (last 500)
+                this.displayedResults = this.results;
+            }
 
             // Calculate positions after filtering
             this.calculatePositions();
 
             // Apply sorting
             this.sortResults();
+        },
+
+        async fetchFilteredResults() {
+            try {
+                // Build query parameters
+                const params = new URLSearchParams();
+
+                if (this.searchQuery) {
+                    params.append('search', this.searchQuery);
+                }
+                if (this.categoryFilter) {
+                    params.append('category', this.categoryFilter);
+                }
+                if (this.sasFilter) {
+                    params.append('wave', this.sasFilter);
+                }
+                if (this.raceFilter) {
+                    // Find race ID from race name
+                    const race = this.races.find(r => r.name === this.raceFilter);
+                    if (race) {
+                        params.append('race_id', race.id);
+                    }
+                }
+                if (this.checkpointFilter) {
+                    params.append('checkpoint', this.checkpointFilter);
+                }
+
+                const response = await axios.get(`/results?${params.toString()}`);
+                this.displayedResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+            } catch (error) {
+                console.error('Erreur lors de la recherche filtrée:', error);
+                // Fallback to local filtering
+                this.displayedResults = this.results.filter(result => {
+                    if (this.searchQuery) {
+                        const searchNormalized = this.normalizeString(this.searchQuery);
+                        const bibNumber = result.entrant?.bib_number?.toString() || '';
+                        const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
+                        const fullNameNormalized = this.normalizeString(fullName);
+
+                        const matchesSearch = bibNumber.includes(this.searchQuery) ||
+                            fullNameNormalized.includes(searchNormalized);
+
+                        if (!matchesSearch) return false;
+                    }
+                    if (this.categoryFilter && result.entrant?.category?.name !== this.categoryFilter) return false;
+                    if (this.sasFilter && result.wave?.name !== this.sasFilter) return false;
+                    if (this.raceFilter && result.race?.name !== this.raceFilter) return false;
+                    if (this.checkpointFilter && result.reader_location !== this.checkpointFilter) return false;
+                    return true;
+                });
+            }
         },
 
         sortResults() {
