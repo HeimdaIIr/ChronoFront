@@ -2441,14 +2441,11 @@ function chronoApp() {
         },
 
         startAutoRefresh() {
-            // Auto-refresh every 3 seconds for real-time updates
-            // Only refresh when there are started races
-            // Use checkForNewResults for smooth updates without visual jump
+            // Auto-refresh every 1 second for real-time updates
+            // Always check for new results, even without TOP DÉPART (for contre-la-montre with individual start times)
             this.autoRefreshInterval = setInterval(() => {
-                if (this.hasOngoingRaces()) {
-                    this.checkForNewResults();
-                }
-            }, 3000);
+                this.checkForNewResults();
+            }, 1000);
         },
 
         startAlertCheck() {
