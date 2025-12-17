@@ -55,7 +55,12 @@
     </div>
 
     <!-- Modal Configuration Récompenses -->
-    <div x-show="showAwardsModal" class="modal" style="display: none;" :style="showAwardsModal && 'display: block; background: rgba(0,0,0,0.5);'">
+    <div x-show="showAwardsModal"
+         x-cloak
+         class="modal fade show"
+         style="display: block; background: rgba(0,0,0,0.5);"
+         tabindex="-1"
+         @click.self="showAwardsModal = false">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -69,7 +74,7 @@
                             <label class="form-label fw-bold">Scratch Général</label>
                             <div class="input-group">
                                 <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model="awards.topScratch" min="0" max="50">
+                                <input type="number" class="form-control" x-model.number="awards.topScratch" min="0" max="50">
                                 <span class="input-group-text">premiers</span>
                             </div>
                             <small class="text-muted">0 = désactivé</small>
@@ -80,7 +85,7 @@
                             <label class="form-label fw-bold">Par Genre (F/H)</label>
                             <div class="input-group">
                                 <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model="awards.topGender" min="0" max="50">
+                                <input type="number" class="form-control" x-model.number="awards.topGender" min="0" max="50">
                                 <span class="input-group-text">par genre</span>
                             </div>
                             <small class="text-muted">Ex: Top 3 F + Top 3 H</small>
@@ -91,7 +96,7 @@
                             <label class="form-label fw-bold">Par Catégorie</label>
                             <div class="input-group">
                                 <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model="awards.topCategory" min="0" max="50">
+                                <input type="number" class="form-control" x-model.number="awards.topCategory" min="0" max="50">
                                 <span class="input-group-text">par catégorie</span>
                             </div>
                             <small class="text-muted">Ex: 1er de chaque catégorie</small>
@@ -102,7 +107,7 @@
                             <label class="form-label fw-bold">Par Genre ET Catégorie</label>
                             <div class="input-group">
                                 <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model="awards.topGenderCategory" min="0" max="50">
+                                <input type="number" class="form-control" x-model.number="awards.topGenderCategory" min="0" max="50">
                                 <span class="input-group-text">F/H par cat.</span>
                             </div>
                             <small class="text-muted">Ex: 1er F + 1er H par catégorie</small>
