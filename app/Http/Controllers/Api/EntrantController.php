@@ -336,8 +336,8 @@ class EntrantController extends Controller
                     $rfidTag = '2000' . str_pad($bibNumber, 4, '0', STR_PAD_LEFT);
                 }
 
-                // Clean gender (N pour neutre/non spécifié si absent du CSV)
-                $gender = in_array(strtoupper($gender), ['M', 'F']) ? strtoupper($gender) : 'N';
+                // Normalize gender intelligently
+                $gender = $this->normalizeGender($gender);
 
                 // Prepare entrant data
                 $entrantData = [
@@ -456,5 +456,33 @@ class EntrantController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Normalize gender value to M or F
+     * Accepts various formats: H/Homme/Male/A -> M, F/Femme/Female/B -> F
+     */
+    private function normalizeGender(?string $gender): string
+    {
+        if (empty($gender)) {
+            return 'N'; // Neutre/Non spécifié
+        }
+
+        $gender = strtoupper(trim($gender));
+
+        // Masculin / Male
+        $maleVariants = ['M', 'H', 'HOMME', 'MALE', 'MAN', 'A', 'MASCULIN'];
+        if (in_array($gender, $maleVariants)) {
+            return 'M';
+        }
+
+        // Féminin / Female
+        $femaleVariants = ['F', 'FEMME', 'FEMALE', 'WOMAN', 'B', 'FEMININ', 'FÉMININ'];
+        if (in_array($gender, $femaleVariants)) {
+            return 'F';
+        }
+
+        // Par défaut, si non reconnu
+        return 'N';
     }
 }
