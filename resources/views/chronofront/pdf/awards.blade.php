@@ -36,12 +36,6 @@
             font-weight: bold;
         }
 
-        .header .trophy {
-            font-size: 40pt;
-            color: #f59e0b;
-            margin-bottom: 10px;
-        }
-
         .header-info {
             font-size: 9pt;
             color: #666;
@@ -56,10 +50,22 @@
             font-size: 9pt;
         }
 
+        .section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            background-color: #f59e0b;
+            color: white;
+            padding: 8px 12px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         th {
@@ -139,6 +145,10 @@
             color: #f59e0b;
             margin-bottom: 15px;
         }
+
+        .page-break {
+            page-break-after: always;
+        }
     </style>
     @if($autoPrint ?? false)
     <script>
@@ -150,7 +160,6 @@
 </head>
 <body>
     <div class="header">
-        <div class="trophy">🏆</div>
         <h1>{{ $race->event->name ?? 'Événement' }}</h1>
         <h2>{{ $race->name }} - RÉCOMPENSES</h2>
         <div class="header-info">
@@ -179,9 +188,45 @@
     </div>
 
     <div class="total-awards">
-        🎖️ {{ $results->count() }} RÉCOMPENSES AU TOTAL 🎖️
+        {{ $results->count() }} RÉCOMPENSES AU TOTAL
     </div>
 
+    <!-- SCRATCH GÉNÉRAL -->
+    @if($scratchResults->isNotEmpty())
+    <div class="section-title">CLASSEMENT SCRATCH GÉNÉRAL</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="pos">Pos.</th>
+                <th class="bib">Dos.</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th style="width: 30px; text-align: center;">Sexe</th>
+                <th class="category">Catégorie</th>
+                <th>Club</th>
+                <th class="time">Temps</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($scratchResults as $result)
+                <tr>
+                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                    <td>{{ $result->entrant->firstname ?? '' }}</td>
+                    <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                    <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
+                    <td>{{ $result->entrant->club ?? '-' }}</td>
+                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
+    <!-- PAR GENRE -->
+    @if($genderResults->isNotEmpty())
+    <div class="section-title">CLASSEMENT PAR GENRE</div>
     <table>
         <thead>
             <tr>
@@ -197,7 +242,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($results as $result)
+            @foreach($genderResults as $result)
                 <tr>
                     <td class="pos">{{ $result->position ?? '-' }}</td>
                     <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
@@ -207,11 +252,47 @@
                     <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                     <td>{{ $result->entrant->club ?? '-' }}</td>
                     <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                    <td><span class="award-reason">{{ $result->award_reason ?? 'Récompensé' }}</span></td>
+                    <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
                 </tr>
             @endforeach
         </tbody>
     </table>
+    @endif
+
+    <!-- PAR CATÉGORIE -->
+    @if($categoryResults->isNotEmpty())
+    <div class="section-title">CLASSEMENT PAR CATÉGORIE</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="pos">Pos.</th>
+                <th class="bib">Dos.</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th style="width: 30px; text-align: center;">Sexe</th>
+                <th class="category">Catégorie</th>
+                <th>Club</th>
+                <th class="time">Temps</th>
+                <th>Récompense</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($categoryResults as $result)
+                <tr>
+                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                    <td>{{ $result->entrant->firstname ?? '' }}</td>
+                    <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                    <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
+                    <td>{{ $result->entrant->club ?? '-' }}</td>
+                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                    <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
 
     <div class="footer">
         ChronoFront - ATS Sport | Document généré le {{ now()->format('d/m/Y à H:i') }}

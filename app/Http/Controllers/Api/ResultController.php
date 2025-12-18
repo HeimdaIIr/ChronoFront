@@ -771,10 +771,29 @@ class ResultController extends Controller
         // Sort by position
         $awardedResults = $awardedResults->sortBy('position')->values();
 
+        // Group results by award type for better display
+        $scratchResults = $awardedResults->filter(function($r) {
+            return str_contains($r->award_reason, 'Scratch');
+        })->values();
+
+        $genderResults = $awardedResults->filter(function($r) {
+            return (str_contains($r->award_reason, 'Femmes') || str_contains($r->award_reason, 'Hommes'))
+                && !str_contains($r->award_reason, 'Scratch');
+        })->values();
+
+        $categoryResults = $awardedResults->filter(function($r) {
+            return !str_contains($r->award_reason, 'Scratch')
+                && !str_contains($r->award_reason, 'Femmes')
+                && !str_contains($r->award_reason, 'Hommes');
+        })->values();
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
             'results' => $awardedResults,
+            'scratchResults' => $scratchResults,
+            'genderResults' => $genderResults,
+            'categoryResults' => $categoryResults,
             'autoPrint' => $autoPrint,
             'config' => [
                 'topScratch' => $topScratch,
