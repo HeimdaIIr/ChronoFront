@@ -56,81 +56,82 @@
 
     <!-- Modal Configuration Récompenses -->
     <div x-show="showAwardsModal"
-         class="modal"
-         :style="showAwardsModal ? 'display: block; background: rgba(0,0,0,0.5);' : 'display: none;'"
-         tabindex="-1"
-         @click.self="showAwardsModal = false">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-trophy text-warning"></i> Configuration des Récompenses</h5>
-                    <button type="button" class="btn-close" @click="showAwardsModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <!-- Scratch général -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Scratch Général</label>
-                            <div class="input-group">
-                                <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model.number="awards.topScratch" min="0" max="50">
-                                <span class="input-group-text">premiers</span>
-                            </div>
-                            <small class="text-muted">0 = désactivé</small>
-                        </div>
+         @click.self="showAwardsModal = false"
+         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 8px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <!-- Header -->
+            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+                <h5 style="margin: 0;"><i class="bi bi-trophy text-warning"></i> Configuration des Récompenses</h5>
+                <button type="button" class="btn-close" @click="showAwardsModal = false"></button>
+            </div>
 
-                        <!-- Par genre -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Par Genre (F/H)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model.number="awards.topGender" min="0" max="50">
-                                <span class="input-group-text">par genre</span>
-                            </div>
-                            <small class="text-muted">Ex: Top 3 F + Top 3 H</small>
+            <!-- Body -->
+            <div style="padding: 1.5rem;">
+                <div class="row g-3">
+                    <!-- Scratch général -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Scratch Général</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Top</span>
+                            <input type="number" class="form-control" x-model.number="awards.topScratch" min="0" max="50">
+                            <span class="input-group-text">premiers</span>
                         </div>
-
-                        <!-- Par catégorie -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Par Catégorie</label>
-                            <div class="input-group">
-                                <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model.number="awards.topCategory" min="0" max="50">
-                                <span class="input-group-text">par catégorie</span>
-                            </div>
-                            <small class="text-muted">Ex: 1er de chaque catégorie</small>
-                        </div>
-
-                        <!-- Par genre ET catégorie -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Par Genre ET Catégorie</label>
-                            <div class="input-group">
-                                <span class="input-group-text">Top</span>
-                                <input type="number" class="form-control" x-model.number="awards.topGenderCategory" min="0" max="50">
-                                <span class="input-group-text">F/H par cat.</span>
-                            </div>
-                            <small class="text-muted">Ex: 1er F + 1er H par catégorie</small>
-                        </div>
+                        <small class="text-muted">0 = désactivé</small>
                     </div>
 
-                    <!-- Exemples -->
-                    <div class="alert alert-info mt-3">
-                        <strong>Exemples :</strong>
-                        <ul class="mb-0">
-                            <li><strong>Exemple 1 :</strong> Top 3 scratch + 1er par catégorie → Top Scratch: 3, Top Catégorie: 1</li>
-                            <li><strong>Exemple 2 :</strong> Top 3 F + Top 3 H + 1er F/H par catégorie → Top Genre: 3, Top Genre ET Catégorie: 1</li>
-                        </ul>
+                    <!-- Par genre -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Par Genre (F/H)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Top</span>
+                            <input type="number" class="form-control" x-model.number="awards.topGender" min="0" max="50">
+                            <span class="input-group-text">par genre</span>
+                        </div>
+                        <small class="text-muted">Ex: Top 3 F + Top 3 H</small>
+                    </div>
+
+                    <!-- Par catégorie -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Par Catégorie</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Top</span>
+                            <input type="number" class="form-control" x-model.number="awards.topCategory" min="0" max="50">
+                            <span class="input-group-text">par catégorie</span>
+                        </div>
+                        <small class="text-muted">Ex: 1er de chaque catégorie</small>
+                    </div>
+
+                    <!-- Par genre ET catégorie -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Par Genre ET Catégorie</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Top</span>
+                            <input type="number" class="form-control" x-model.number="awards.topGenderCategory" min="0" max="50">
+                            <span class="input-group-text">F/H par cat.</span>
+                        </div>
+                        <small class="text-muted">Ex: 1er F + 1er H par catégorie</small>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="showAwardsModal = false">Annuler</button>
-                    <button type="button" class="btn btn-success" @click="downloadAwardsPDF">
-                        <i class="bi bi-file-pdf"></i> Télécharger PDF
-                    </button>
-                    <button type="button" class="btn btn-primary" @click="printAwardsPDF">
-                        <i class="bi bi-printer"></i> Imprimer
-                    </button>
+
+                <!-- Exemples -->
+                <div class="alert alert-info mt-3">
+                    <strong>Exemples :</strong>
+                    <ul class="mb-0">
+                        <li><strong>Exemple 1 :</strong> Top 3 scratch + 1er par catégorie → Top Scratch: 3, Top Catégorie: 1</li>
+                        <li><strong>Exemple 2 :</strong> Top 3 F + Top 3 H + 1er F/H par catégorie → Top Genre: 3, Top Genre ET Catégorie: 1</li>
+                    </ul>
                 </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary" @click="showAwardsModal = false">Annuler</button>
+                <button type="button" class="btn btn-success" @click="downloadAwardsPDF">
+                    <i class="bi bi-file-pdf"></i> Télécharger PDF
+                </button>
+                <button type="button" class="btn btn-primary" @click="printAwardsPDF">
+                    <i class="bi bi-printer"></i> Imprimer
+                </button>
             </div>
         </div>
     </div>
