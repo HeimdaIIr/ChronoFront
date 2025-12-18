@@ -704,28 +704,37 @@ class ResultController extends Controller
             ->orderBy('position')
             ->get();
 
-        $awardedResults = collect();
+        // Separate collections for each award type
+        $scratchResults = collect();
+        $genderResults = collect();
+        $categoryResults = collect();
+        $genderCategoryResults = collect();
 
         // Top Scratch général
         if ($topScratch > 0) {
-            $scratchResults = $allResults->take($topScratch)->map(function($r) {
-                $r->award_reason = "Top {$r->position} Scratch";
-                return $r;
-            });
-            $awardedResults = $awardedResults->merge($scratchResults);
+            $topScratch = $allResults->take($topScratch);
+            foreach ($topScratch as $result) {
+                $clone = clone $result;
+                $clone->award_reason = "Top {$clone->position} Scratch";
+                $clone->award_type = 'scratch';
+                $scratchResults->push($clone);
+            }
         }
 
         // Top par Genre (F/H)
         if ($topGender > 0) {
             foreach (['F', 'H'] as $gender) {
-                $genderResults = $allResults
+                $topByGender = $allResults
                     ->where('entrant.gender', $gender)
                     ->take($topGender);
 
                 $position = 1;
-                foreach ($genderResults as $result) {
-                    $result->award_reason = "Top {$position} " . ($gender === 'F' ? 'Femmes' : 'Hommes');
-                    $awardedResults->push($result);
+                foreach ($topByGender as $result) {
+                    $clone = clone $result;
+                    $genderLabel = $gender === 'F' ? 'Femmes' : 'Hommes';
+                    $clone->award_reason = "Top {$position} {$genderLabel}";
+                    $clone->award_type = 'gender';
+                    $genderResults->push($clone);
                     $position++;
                 }
             }
@@ -734,12 +743,14 @@ class ResultController extends Controller
         // Top par Catégorie
         if ($topCategory > 0) {
             $byCategory = $allResults->groupBy('entrant.category.name');
-            foreach ($byCategory as $categoryName => $categoryResults) {
-                $topCatResults = $categoryResults->take($topCategory);
+            foreach ($byCategory as $categoryName => $catResults) {
+                $topCatResults = $catResults->take($topCategory);
                 $position = 1;
                 foreach ($topCatResults as $result) {
-                    $result->award_reason = "Top {$position} {$categoryName}";
-                    $awardedResults->push($result);
+                    $clone = clone $result;
+                    $clone->award_reason = "Top {$position} {$categoryName}";
+                    $clone->award_type = 'category';
+                    $categoryResults->push($clone);
                     $position++;
                 }
             }
@@ -748,44 +759,37 @@ class ResultController extends Controller
         // Top par Genre ET Catégorie
         if ($topGenderCategory > 0) {
             $byCategory = $allResults->groupBy('entrant.category.name');
-            foreach ($byCategory as $categoryName => $categoryResults) {
+            foreach ($byCategory as $categoryName => $catResults) {
                 foreach (['F', 'H'] as $gender) {
-                    $genderCatResults = $categoryResults
+                    $topGenderCat = $catResults
                         ->where('entrant.gender', $gender)
                         ->take($topGenderCategory);
 
                     $position = 1;
-                    foreach ($genderCatResults as $result) {
+                    foreach ($topGenderCat as $result) {
+                        $clone = clone $result;
                         $genderLabel = $gender === 'F' ? 'Femmes' : 'Hommes';
-                        $result->award_reason = "Top {$position} {$genderLabel} {$categoryName}";
-                        $awardedResults->push($result);
+                        $clone->award_reason = "Top {$position} {$genderLabel} {$categoryName}";
+                        $clone->award_type = 'gender_category';
+                        $genderCategoryResults->push($clone);
                         $position++;
                     }
                 }
             }
         }
 
-        // Remove duplicates based on result ID
-        $awardedResults = $awardedResults->unique('id')->values();
+        // Combine all results for total count
+        $awardedResults = collect()
+            ->merge($scratchResults)
+            ->merge($genderResults)
+            ->merge($categoryResults)
+            ->merge($genderCategoryResults);
 
         // Sort by position
-        $awardedResults = $awardedResults->sortBy('position')->values();
-
-        // Group results by award type for better display
-        $scratchResults = $awardedResults->filter(function($r) {
-            return str_contains($r->award_reason, 'Scratch');
-        })->values();
-
-        $genderResults = $awardedResults->filter(function($r) {
-            return (str_contains($r->award_reason, 'Femmes') || str_contains($r->award_reason, 'Hommes'))
-                && !str_contains($r->award_reason, 'Scratch');
-        })->values();
-
-        $categoryResults = $awardedResults->filter(function($r) {
-            return !str_contains($r->award_reason, 'Scratch')
-                && !str_contains($r->award_reason, 'Femmes')
-                && !str_contains($r->award_reason, 'Hommes');
-        })->values();
+        $scratchResults = $scratchResults->sortBy('position')->values();
+        $genderResults = $genderResults->sortBy('position')->values();
+        $categoryResults = $categoryResults->sortBy('position')->values();
+        $genderCategoryResults = $genderCategoryResults->sortBy('position')->values();
 
         // Prepare data for PDF
         $data = [
@@ -794,6 +798,7 @@ class ResultController extends Controller
             'scratchResults' => $scratchResults,
             'genderResults' => $genderResults,
             'categoryResults' => $categoryResults,
+            'genderCategoryResults' => $genderCategoryResults,
             'autoPrint' => $autoPrint,
             'config' => [
                 'topScratch' => $topScratch,

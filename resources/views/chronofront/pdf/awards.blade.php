@@ -294,6 +294,41 @@
     </table>
     @endif
 
+    <!-- PAR GENRE ET CATÉGORIE -->
+    @if($genderCategoryResults->isNotEmpty())
+    <div class="section-title">CLASSEMENT PAR GENRE ET CATÉGORIE</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="pos">Pos.</th>
+                <th class="bib">Dos.</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th style="width: 30px; text-align: center;">Sexe</th>
+                <th class="category">Catégorie</th>
+                <th>Club</th>
+                <th class="time">Temps</th>
+                <th>Récompense</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($genderCategoryResults as $result)
+                <tr>
+                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                    <td>{{ $result->entrant->firstname ?? '' }}</td>
+                    <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                    <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
+                    <td>{{ $result->entrant->club ?? '-' }}</td>
+                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                    <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     <div class="footer">
         ChronoFront - ATS Sport | Document généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
