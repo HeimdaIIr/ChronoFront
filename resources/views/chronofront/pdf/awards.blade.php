@@ -207,7 +207,20 @@
             </tr>
         </thead>
         <tbody>
+            @php
+                $lastGender = null;
+            @endphp
             @foreach($scratchResults as $result)
+                @php
+                    $currentGender = $result->entrant->gender ?? '';
+                    $showSeparator = $lastGender !== null && $lastGender !== $currentGender;
+                    $lastGender = $currentGender;
+                @endphp
+                @if($showSeparator)
+                    <tr>
+                        <td colspan="8" style="border-top: 3px solid #f59e0b; padding: 0; height: 3px;"></td>
+                    </tr>
+                @endif
                 <tr>
                     <td class="pos">{{ $result->position ?? '-' }}</td>
                     <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
