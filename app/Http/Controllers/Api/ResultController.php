@@ -724,14 +724,14 @@ class ResultController extends Controller
         // Top par Genre (F/H)
         if ($topGender > 0) {
             foreach (['F', 'H'] as $gender) {
-                // Récupérer directement depuis la DB pour ce genre
-                $topByGender = Result::where('race_id', $raceId)
-                    ->where('status', 'V')
+                // Utiliser un join direct pour être sûr du filtrage
+                $topByGender = Result::select('results.*')
+                    ->join('entrants', 'results.entrant_id', '=', 'entrants.id')
+                    ->where('results.race_id', $raceId)
+                    ->where('results.status', 'V')
+                    ->where('entrants.gender', $gender)
                     ->with(['entrant.category'])
-                    ->whereHas('entrant', function($query) use ($gender) {
-                        $query->where('gender', $gender);
-                    })
-                    ->orderBy('position')
+                    ->orderBy('results.position')
                     ->limit($topGender)
                     ->get();
 
@@ -769,17 +769,16 @@ class ResultController extends Controller
 
             foreach ($categories as $categoryName) {
                 foreach (['F', 'H'] as $gender) {
-                    // Récupérer directement depuis la DB pour cette catégorie + genre
-                    $topGenderCat = Result::where('race_id', $raceId)
-                        ->where('status', 'V')
+                    // Utiliser des joins directs pour filtrage genre + catégorie
+                    $topGenderCat = Result::select('results.*')
+                        ->join('entrants', 'results.entrant_id', '=', 'entrants.id')
+                        ->join('categories', 'entrants.category_id', '=', 'categories.id')
+                        ->where('results.race_id', $raceId)
+                        ->where('results.status', 'V')
+                        ->where('entrants.gender', $gender)
+                        ->where('categories.name', $categoryName)
                         ->with(['entrant.category'])
-                        ->whereHas('entrant', function($query) use ($gender, $categoryName) {
-                            $query->where('gender', $gender)
-                                  ->whereHas('category', function($q) use ($categoryName) {
-                                      $q->where('name', $categoryName);
-                                  });
-                        })
-                        ->orderBy('position')
+                        ->orderBy('results.position')
                         ->limit($topGenderCategory)
                         ->get();
 
