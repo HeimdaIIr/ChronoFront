@@ -728,6 +728,7 @@ class ResultController extends Controller
                     ->filter(function($result) use ($gender) {
                         return $result->entrant->gender === $gender;
                     })
+                    ->values()
                     ->take($topGender);
 
                 $position = 1;
@@ -767,6 +768,7 @@ class ResultController extends Controller
                         ->filter(function($result) use ($gender) {
                             return $result->entrant->gender === $gender;
                         })
+                        ->values()
                         ->take($topGenderCategory);
 
                     $position = 1;

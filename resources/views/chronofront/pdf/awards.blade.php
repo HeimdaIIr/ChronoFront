@@ -120,12 +120,8 @@
         }
 
         .award-reason {
-            background-color: #fef3c7;
-            color: #92400e;
-            padding: 3px 6px;
-            border-radius: 3px;
-            font-size: 8pt;
-            font-weight: bold;
+            font-size: 6.5pt;
+            font-weight: normal;
         }
 
         .footer {
