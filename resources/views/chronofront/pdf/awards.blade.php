@@ -306,40 +306,54 @@
     @if($genderCategoryResults->isNotEmpty())
         <div class="section-title">CLASSEMENT PAR GENRE ET CATÉGORIE</div>
         @php
-            $byCategory = $genderCategoryResults->groupBy('entrant.category.name');
+            // Grouper d'abord par genre, puis par catégorie
+            $byGender = $genderCategoryResults->groupBy('entrant.gender');
         @endphp
-        @foreach($byCategory as $categoryName => $catResults)
-            <div class="table-section">
-                <div style="font-size: 7.5pt; font-weight: bold; margin-top: 8px; margin-bottom: 3px; color: #1e3a8a;">{{ $categoryName }}</div>
-                <table>
-                <thead>
-                    <tr>
-                        <th class="pos">Pos.</th>
-                        <th class="bib">Dos.</th>
-                        <th>Nom</th>
-                        <th>Prénom</th>
-                        <th style="width: 30px; text-align: center;">Sexe</th>
-                        <th>Club</th>
-                        <th class="time">Temps</th>
-                        <th>Récompense</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($catResults as $result)
-                        <tr>
-                            <td class="pos">{{ $result->position ?? '-' }}</td>
-                            <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                            <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                            <td>{{ $result->entrant->firstname ?? '' }}</td>
-                            <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
-                            <td>{{ $result->entrant->club ?? '-' }}</td>
-                            <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                            <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-                </table>
-            </div>
+
+        @foreach(['F', 'M'] as $gender)
+            @if(isset($byGender[$gender]) && $byGender[$gender]->isNotEmpty())
+                <!-- Titre genre -->
+                <div style="font-size: 8pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; color: #f59e0b; text-transform: uppercase;">
+                    {{ $gender === 'F' ? 'FEMMES' : 'HOMMES' }}
+                </div>
+
+                @php
+                    $genderResults = $byGender[$gender];
+                    $byCategory = $genderResults->groupBy('entrant.category.name');
+                @endphp
+
+                @foreach($byCategory as $categoryName => $catResults)
+                    <div class="table-section">
+                        <div style="font-size: 7.5pt; font-weight: bold; margin-top: 8px; margin-bottom: 3px; color: #1e3a8a;">{{ $categoryName }}</div>
+                        <table>
+                        <thead>
+                            <tr>
+                                <th class="pos">Pos.</th>
+                                <th class="bib">Dos.</th>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Club</th>
+                                <th class="time">Temps</th>
+                                <th>Récompense</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($catResults as $result)
+                                <tr>
+                                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                    <td>{{ $result->entrant->firstname ?? '' }}</td>
+                                    <td>{{ $result->entrant->club ?? '-' }}</td>
+                                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                                    <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        </table>
+                    </div>
+                @endforeach
+            @endif
         @endforeach
     @endif
 
