@@ -325,9 +325,14 @@
 
         @foreach(['F', 'M'] as $gender)
             @if(isset($byGender[$gender]) && $byGender[$gender]->isNotEmpty())
-                <!-- Titre genre -->
-                <div style="font-size: 8pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; color: #f59e0b; text-transform: uppercase;">
-                    {{ $gender === 'F' ? 'FEMMES' : 'HOMMES' }}
+                <!-- Séparation visuelle forte entre genres -->
+                @if($gender === 'M')
+                    <div style="border-top: 4px solid #f59e0b; margin: 15px 0 10px 0;"></div>
+                @endif
+
+                <!-- Titre genre avec background -->
+                <div style="font-size: 9pt; font-weight: bold; padding: 6px 10px; margin-bottom: 8px; background-color: #fef3c7; border-left: 5px solid #f59e0b; color: #92400e; text-transform: uppercase;">
+                    {{ $gender === 'F' ? '👩 FEMMES' : '👨 HOMMES' }}
                 </div>
 
                 @php
