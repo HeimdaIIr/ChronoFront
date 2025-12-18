@@ -56,9 +56,8 @@
 
     <!-- Modal Configuration Récompenses -->
     <div x-show="showAwardsModal"
-         x-cloak
-         class="modal fade show"
-         style="display: block; background: rgba(0,0,0,0.5);"
+         class="modal"
+         :style="showAwardsModal ? 'display: block; background: rgba(0,0,0,0.5);' : 'display: none;'"
          tabindex="-1"
          @click.self="showAwardsModal = false">
         <div class="modal-dialog modal-lg">
