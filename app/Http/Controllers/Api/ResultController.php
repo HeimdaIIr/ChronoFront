@@ -712,8 +712,8 @@ class ResultController extends Controller
 
         // Top Scratch général
         if ($topScratch > 0) {
-            $topScratch = $allResults->take($topScratch);
-            foreach ($topScratch as $result) {
+            $topScratchList = $allResults->take($topScratch);
+            foreach ($topScratchList as $result) {
                 $clone = clone $result;
                 $clone->award_reason = "Top {$clone->position} Scratch";
                 $clone->award_type = 'scratch';
