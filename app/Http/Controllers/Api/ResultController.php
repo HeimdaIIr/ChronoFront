@@ -721,9 +721,9 @@ class ResultController extends Controller
             }
         }
 
-        // Top par Genre (F/H)
+        // Top par Genre (F/M)
         if ($topGender > 0) {
-            foreach (['F', 'H'] as $gender) {
+            foreach (['F', 'M'] as $gender) {
                 // Utiliser un join direct pour être sûr du filtrage
                 $topByGender = Result::select('results.*')
                     ->join('entrants', 'results.entrant_id', '=', 'entrants.id')
@@ -768,7 +768,7 @@ class ResultController extends Controller
             $categories = $allResults->pluck('entrant.category.name')->unique();
 
             foreach ($categories as $categoryName) {
-                foreach (['F', 'H'] as $gender) {
+                foreach (['F', 'M'] as $gender) {
                     // Utiliser des joins directs pour filtrage genre + catégorie
                     $topGenderCat = Result::select('results.*')
                         ->join('entrants', 'results.entrant_id', '=', 'entrants.id')
