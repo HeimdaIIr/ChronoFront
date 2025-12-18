@@ -724,20 +724,23 @@ class ResultController extends Controller
         // Top par Genre (F/H)
         if ($topGender > 0) {
             foreach (['F', 'H'] as $gender) {
-                $topByGender = $allResults
-                    ->filter(function($result) use ($gender) {
-                        return $result->entrant->gender === $gender;
+                // Récupérer directement depuis la DB pour ce genre
+                $topByGender = Result::where('race_id', $raceId)
+                    ->where('status', 'V')
+                    ->with(['entrant.category'])
+                    ->whereHas('entrant', function($query) use ($gender) {
+                        $query->where('gender', $gender);
                     })
-                    ->values()
-                    ->take($topGender);
+                    ->orderBy('position')
+                    ->limit($topGender)
+                    ->get();
 
                 $position = 1;
                 foreach ($topByGender as $result) {
-                    $clone = clone $result;
                     $genderLabel = $gender === 'F' ? 'Femmes' : 'Hommes';
-                    $clone->award_reason = "Top {$position} {$genderLabel}";
-                    $clone->award_type = 'gender';
-                    $genderResults->push($clone);
+                    $result->award_reason = "Top {$position} {$genderLabel}";
+                    $result->award_type = 'gender';
+                    $genderResults->push($result);
                     $position++;
                 }
             }
@@ -761,23 +764,31 @@ class ResultController extends Controller
 
         // Top par Genre ET Catégorie
         if ($topGenderCategory > 0) {
-            $byCategory = $allResults->groupBy('entrant.category.name');
-            foreach ($byCategory as $categoryName => $catResults) {
+            // Récupérer toutes les catégories
+            $categories = $allResults->pluck('entrant.category.name')->unique();
+
+            foreach ($categories as $categoryName) {
                 foreach (['F', 'H'] as $gender) {
-                    $topGenderCat = $catResults
-                        ->filter(function($result) use ($gender) {
-                            return $result->entrant->gender === $gender;
+                    // Récupérer directement depuis la DB pour cette catégorie + genre
+                    $topGenderCat = Result::where('race_id', $raceId)
+                        ->where('status', 'V')
+                        ->with(['entrant.category'])
+                        ->whereHas('entrant', function($query) use ($gender, $categoryName) {
+                            $query->where('gender', $gender)
+                                  ->whereHas('category', function($q) use ($categoryName) {
+                                      $q->where('name', $categoryName);
+                                  });
                         })
-                        ->values()
-                        ->take($topGenderCategory);
+                        ->orderBy('position')
+                        ->limit($topGenderCategory)
+                        ->get();
 
                     $position = 1;
                     foreach ($topGenderCat as $result) {
-                        $clone = clone $result;
                         $genderLabel = $gender === 'F' ? 'Femmes' : 'Hommes';
-                        $clone->award_reason = "Top {$position} {$genderLabel} {$categoryName}";
-                        $clone->award_type = 'gender_category';
-                        $genderCategoryResults->push($clone);
+                        $result->award_reason = "Top {$position} {$genderLabel} {$categoryName}";
+                        $result->award_type = 'gender_category';
+                        $genderCategoryResults->push($result);
                         $position++;
                     }
                 }
