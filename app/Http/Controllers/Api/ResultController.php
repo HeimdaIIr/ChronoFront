@@ -725,7 +725,9 @@ class ResultController extends Controller
         if ($topGender > 0) {
             foreach (['F', 'H'] as $gender) {
                 $topByGender = $allResults
-                    ->where('entrant.gender', $gender)
+                    ->filter(function($result) use ($gender) {
+                        return $result->entrant->gender === $gender;
+                    })
                     ->take($topGender);
 
                 $position = 1;
@@ -762,7 +764,9 @@ class ResultController extends Controller
             foreach ($byCategory as $categoryName => $catResults) {
                 foreach (['F', 'H'] as $gender) {
                     $topGenderCat = $catResults
-                        ->where('entrant.gender', $gender)
+                        ->filter(function($result) use ($gender) {
+                            return $result->entrant->gender === $gender;
+                        })
                         ->take($topGenderCategory);
 
                     $position = 1;

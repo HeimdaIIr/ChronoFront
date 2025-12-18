@@ -5,84 +5,86 @@
     <title>Récompenses {{ $race->name }}</title>
     <style>
         @page {
-            margin: 1.5cm 1cm;
+            margin: 1cm 0.8cm;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 10pt;
+            font-size: 7pt;
             color: #000;
-            line-height: 1.3;
+            line-height: 1.1;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 4px solid #f59e0b;
-            padding-bottom: 15px;
+            margin-bottom: 12px;
+            border-bottom: 3px solid #f59e0b;
+            padding-bottom: 8px;
         }
 
         .header h1 {
-            font-size: 22pt;
+            font-size: 16pt;
             color: #1e3a8a;
-            margin: 0 0 5px 0;
+            margin: 0 0 3px 0;
             font-weight: bold;
         }
 
         .header h2 {
-            font-size: 18pt;
+            font-size: 13pt;
             color: #f59e0b;
-            margin: 0 0 8px 0;
+            margin: 0 0 5px 0;
             font-weight: bold;
         }
 
         .header-info {
-            font-size: 9pt;
+            font-size: 7pt;
             color: #666;
-            margin: 5px 0;
+            margin: 3px 0;
         }
 
         .config-info {
             background-color: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 10px;
-            margin-bottom: 20px;
-            font-size: 9pt;
+            border-left: 3px solid #f59e0b;
+            padding: 6px 8px;
+            margin-bottom: 12px;
+            font-size: 7pt;
         }
 
         .section-title {
-            font-size: 12pt;
+            font-size: 9pt;
             font-weight: bold;
-            color: #1e3a8a;
-            background-color: #f59e0b;
             color: white;
-            padding: 8px 12px;
-            margin-top: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
+            background-color: #f59e0b;
+            padding: 5px 8px;
+            margin-top: 8px;
+            margin-bottom: 5px;
+        }
+
+        .table-section {
+            page-break-inside: avoid;
+            margin-bottom: 15px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
         }
 
         th {
             background-color: #f59e0b;
             color: white !important;
-            padding: 8px 4px;
+            padding: 4px 2px;
             text-align: left;
-            font-size: 9pt;
+            font-size: 6.5pt;
             font-weight: bold;
             border: 1px solid #f59e0b;
         }
 
         td {
-            padding: 6px 4px;
+            padding: 2px 2px;
             border: 1px solid #ddd;
-            font-size: 9pt;
-            line-height: 1.2;
+            font-size: 6.5pt;
+            line-height: 1.05;
         }
 
         tr:nth-child(even) {
@@ -140,10 +142,10 @@
 
         .total-awards {
             text-align: center;
-            font-size: 11pt;
+            font-size: 8pt;
             font-weight: bold;
             color: #f59e0b;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .page-break {
@@ -193,8 +195,9 @@
 
     <!-- SCRATCH GÉNÉRAL -->
     @if($scratchResults->isNotEmpty())
-    <div class="section-title">CLASSEMENT SCRATCH GÉNÉRAL</div>
-    <table>
+    <div class="table-section">
+        <div class="section-title">CLASSEMENT SCRATCH GÉNÉRAL</div>
+        <table>
         <thead>
             <tr>
                 <th class="pos">Pos.</th>
@@ -221,13 +224,15 @@
                 </tr>
             @endforeach
         </tbody>
-    </table>
+        </table>
+    </div>
     @endif
 
     <!-- PAR GENRE -->
     @if($genderResults->isNotEmpty())
-    <div class="section-title">CLASSEMENT PAR GENRE</div>
-    <table>
+    <div class="table-section">
+        <div class="section-title">CLASSEMENT PAR GENRE</div>
+        <table>
         <thead>
             <tr>
                 <th class="pos">Pos.</th>
@@ -256,13 +261,15 @@
                 </tr>
             @endforeach
         </tbody>
-    </table>
+        </table>
+    </div>
     @endif
 
     <!-- PAR CATÉGORIE -->
     @if($categoryResults->isNotEmpty())
-    <div class="section-title">CLASSEMENT PAR CATÉGORIE</div>
-    <table>
+    <div class="table-section">
+        <div class="section-title">CLASSEMENT PAR CATÉGORIE</div>
+        <table>
         <thead>
             <tr>
                 <th class="pos">Pos.</th>
@@ -291,13 +298,15 @@
                 </tr>
             @endforeach
         </tbody>
-    </table>
+        </table>
+    </div>
     @endif
 
     <!-- PAR GENRE ET CATÉGORIE -->
     @if($genderCategoryResults->isNotEmpty())
-    <div class="section-title">CLASSEMENT PAR GENRE ET CATÉGORIE</div>
-    <table>
+    <div class="table-section">
+        <div class="section-title">CLASSEMENT PAR GENRE ET CATÉGORIE</div>
+        <table>
         <thead>
             <tr>
                 <th class="pos">Pos.</th>
@@ -326,7 +335,8 @@
                 </tr>
             @endforeach
         </tbody>
-    </table>
+        </table>
+    </div>
     @endif
 
     <div class="footer">
