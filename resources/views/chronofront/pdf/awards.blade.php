@@ -193,47 +193,49 @@
     @if($scratchResults->isNotEmpty())
     <div class="table-section">
         <div class="section-title">CLASSEMENT SCRATCH GÉNÉRAL</div>
-        <table>
-        <thead>
-            <tr>
-                <th class="pos">Pos.</th>
-                <th class="bib">Dos.</th>
-                <th>Nom</th>
-                <th>Prénom</th>
-                <th style="width: 30px; text-align: center;">Sexe</th>
-                <th class="category">Catégorie</th>
-                <th>Club</th>
-                <th class="time">Temps</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-                $lastGender = null;
-            @endphp
-            @foreach($scratchResults as $result)
-                @php
-                    $currentGender = $result->entrant->gender ?? '';
-                    $showSeparator = $lastGender !== null && $lastGender !== $currentGender;
-                    $lastGender = $currentGender;
-                @endphp
-                @if($showSeparator)
-                    <tr>
-                        <td colspan="8" style="border-top: 3px solid #f59e0b; padding: 0; height: 3px;"></td>
-                    </tr>
+        @php
+            $scratchByGender = $scratchResults->groupBy('entrant.gender');
+        @endphp
+
+        @foreach(['F', 'M'] as $gender)
+            @if(isset($scratchByGender[$gender]) && $scratchByGender[$gender]->isNotEmpty())
+                @if($gender === 'M' && isset($scratchByGender['F']) && $scratchByGender['F']->isNotEmpty())
+                    <!-- Séparation entre Femmes et Hommes -->
+                    <div style="border-top: 3px solid #f59e0b; margin: 8px 0;"></div>
                 @endif
-                <tr>
-                    <td class="pos">{{ $result->position ?? '-' }}</td>
-                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                    <td>{{ $result->entrant->firstname ?? '' }}</td>
-                    <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
-                    <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
-                    <td>{{ $result->entrant->club ?? '-' }}</td>
-                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-        </table>
+
+                <table>
+                @if($loop->first)
+                <thead>
+                    <tr>
+                        <th class="pos">Pos.</th>
+                        <th class="bib">Dos.</th>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th style="width: 30px; text-align: center;">Sexe</th>
+                        <th class="category">Catégorie</th>
+                        <th>Club</th>
+                        <th class="time">Temps</th>
+                    </tr>
+                </thead>
+                @endif
+                <tbody>
+                    @foreach($scratchByGender[$gender] as $result)
+                        <tr>
+                            <td class="pos">{{ $result->position ?? '-' }}</td>
+                            <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                            <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                            <td>{{ $result->entrant->firstname ?? '' }}</td>
+                            <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                            <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
+                            <td>{{ $result->entrant->club ?? '-' }}</td>
+                            <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                </table>
+            @endif
+        @endforeach
     </div>
     @endif
 
@@ -241,49 +243,51 @@
     @if($genderResults->isNotEmpty())
     <div class="table-section">
         <div class="section-title">CLASSEMENT PAR GENRE</div>
-        <table>
-        <thead>
-            <tr>
-                <th class="pos">Pos.</th>
-                <th class="bib">Dos.</th>
-                <th>Nom</th>
-                <th>Prénom</th>
-                <th style="width: 30px; text-align: center;">Sexe</th>
-                <th class="category">Catégorie</th>
-                <th>Club</th>
-                <th class="time">Temps</th>
-                <th>Récompense</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-                $lastGender = null;
-            @endphp
-            @foreach($genderResults as $result)
-                @php
-                    $currentGender = $result->entrant->gender ?? '';
-                    $showSeparator = $lastGender !== null && $lastGender !== $currentGender;
-                    $lastGender = $currentGender;
-                @endphp
-                @if($showSeparator)
-                    <tr>
-                        <td colspan="9" style="border-top: 3px solid #f59e0b; padding: 0; height: 3px;"></td>
-                    </tr>
+        @php
+            $genreByGender = $genderResults->groupBy('entrant.gender');
+        @endphp
+
+        @foreach(['F', 'M'] as $gender)
+            @if(isset($genreByGender[$gender]) && $genreByGender[$gender]->isNotEmpty())
+                @if($gender === 'M' && isset($genreByGender['F']) && $genreByGender['F']->isNotEmpty())
+                    <!-- Séparation entre Femmes et Hommes -->
+                    <div style="border-top: 3px solid #f59e0b; margin: 8px 0;"></div>
                 @endif
-                <tr>
-                    <td class="pos">{{ $result->position ?? '-' }}</td>
-                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                    <td>{{ $result->entrant->firstname ?? '' }}</td>
-                    <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
-                    <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
-                    <td>{{ $result->entrant->club ?? '-' }}</td>
-                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                    <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
-                </tr>
-            @endforeach
-        </tbody>
-        </table>
+
+                <table>
+                @if($loop->first)
+                <thead>
+                    <tr>
+                        <th class="pos">Pos.</th>
+                        <th class="bib">Dos.</th>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th style="width: 30px; text-align: center;">Sexe</th>
+                        <th class="category">Catégorie</th>
+                        <th>Club</th>
+                        <th class="time">Temps</th>
+                        <th>Récompense</th>
+                    </tr>
+                </thead>
+                @endif
+                <tbody>
+                    @foreach($genreByGender[$gender] as $result)
+                        <tr>
+                            <td class="pos">{{ $result->position ?? '-' }}</td>
+                            <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                            <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                            <td>{{ $result->entrant->firstname ?? '' }}</td>
+                            <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                            <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
+                            <td>{{ $result->entrant->club ?? '-' }}</td>
+                            <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                            <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                </table>
+            @endif
+        @endforeach
     </div>
     @endif
 
