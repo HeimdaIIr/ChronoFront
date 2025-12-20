@@ -66,14 +66,24 @@ class DatabaseController extends Controller
         // Récupérer le fichier uploadé
         $uploadedFile = $request->file('database_file');
 
+        // Log de debug
+        \Log::info("Import DB - Fichier uploadé : " . $uploadedFile->getClientOriginalName());
+        \Log::info("Import DB - Taille fichier : " . $uploadedFile->getSize() . " octets");
+
         // Vérifier que c'est un vrai fichier SQLite
         try {
             // Tenter d'ouvrir le fichier avec SQLite pour validation
             $tempPath = $uploadedFile->getPathname();
             $testDb = new \PDO("sqlite:{$tempPath}");
-            $testDb->query("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1");
+
+            // Compter le nombre d'events dans le fichier uploadé
+            $stmt = $testDb->query("SELECT COUNT(*) as count FROM events");
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            \Log::info("Import DB - Nombre d'events dans le fichier : " . $result['count']);
+
             $testDb = null; // Fermer la connexion
         } catch (\Exception $e) {
+            \Log::error("Import DB - Erreur validation : " . $e->getMessage());
             return redirect()->route('dashboard')
                 ->with('error', 'Le fichier n\'est pas une base de données SQLite valide.');
         }
@@ -100,9 +110,25 @@ class DatabaseController extends Controller
 
         // Copier le fichier uploadé vers la destination finale
         $tempPath = $uploadedFile->getPathname();
+        \Log::info("Import DB - Copie de {$tempPath} vers {$currentDbPath}");
+
         if (!@copy($tempPath, $currentDbPath)) {
+            \Log::error("Import DB - Échec de la copie");
             return redirect()->route('dashboard')
                 ->with('error', "Impossible de copier la nouvelle base de données. Vérifiez les permissions.");
+        }
+
+        \Log::info("Import DB - Copie réussie, taille finale : " . filesize($currentDbPath) . " octets");
+
+        // Vérifier le contenu après copie
+        try {
+            $checkDb = new \PDO("sqlite:{$currentDbPath}");
+            $stmt = $checkDb->query("SELECT COUNT(*) as count FROM events");
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            \Log::info("Import DB - Nombre d'events après copie : " . $result['count']);
+            $checkDb = null;
+        } catch (\Exception $e) {
+            \Log::error("Import DB - Erreur vérification après copie : " . $e->getMessage());
         }
 
         // S'assurer que les permissions sont correctes
