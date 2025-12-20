@@ -82,17 +82,28 @@ class DatabaseController extends Controller
         DB::purge('tenant');
         DB::disconnect('tenant');
 
+        // Attendre un peu pour que les connexions se ferment complètement
+        usleep(500000); // 0.5 secondes
+
         // Supprimer l'ancien fichier DB pour s'assurer du remplacement
         if (file_exists($currentDbPath)) {
-            unlink($currentDbPath);
+            if (!@unlink($currentDbPath)) {
+                return redirect()->route('dashboard')
+                    ->with('error', "Impossible de supprimer l'ancienne base de données. Vérifiez les permissions.");
+            }
         }
 
         // Copier le fichier uploadé vers la destination finale
         $tempPath = $uploadedFile->getPathname();
-        copy($tempPath, $currentDbPath);
+        if (!@copy($tempPath, $currentDbPath)) {
+            return redirect()->route('dashboard')
+                ->with('error', "Impossible de copier la nouvelle base de données. Vérifiez les permissions.");
+        }
 
         // S'assurer que les permissions sont correctes
-        chmod($currentDbPath, 0664);
+        @chmod($currentDbPath, 0664);
+        @chown($currentDbPath, fileowner(storage_path('databases')));
+        @chgrp($currentDbPath, filegroup(storage_path('databases')));
 
         // Purger tous les caches Laravel
         \Artisan::call('cache:clear');
