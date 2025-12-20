@@ -965,7 +965,7 @@ class ResultController extends Controller
             }
 
             // Get all results for this race, grouped by entrant
-            $results = Result::where('race_id', $raceId)
+            $entrantResults = Result::where('race_id', $raceId)
                 ->where('status', 'V')
                 ->with(['entrant.category'])
                 ->get()
@@ -978,9 +978,38 @@ class ResultController extends Controller
                     } else {
                         return $entrantResults->sortByDesc('lap_number')->first();
                     }
-                })
-                ->sortBy('calculated_time')
-                ->values();
+                });
+
+            // Sort based on race type
+            if ($race->type === 'infinite_loop') {
+                // INFINITE LOOP: Sort by distance (laps × distance), then by time
+                $results = $entrantResults->sort(function ($a, $b) use ($race) {
+                    $distanceA = $a->lap_number * ($race->distance ?? 0);
+                    $distanceB = $b->lap_number * ($race->distance ?? 0);
+
+                    // Primary: distance (descending - more is better)
+                    if ($distanceA != $distanceB) {
+                        return $distanceB <=> $distanceA;
+                    }
+
+                    // Secondary: time (ascending - faster is better)
+                    return $a->calculated_time <=> $b->calculated_time;
+                })->values();
+
+            } elseif ($race->type === 'n_laps') {
+                // N LAPS: Only include those who completed all laps, sort by time
+                $requiredLaps = $race->laps ?? 1;
+                $results = $entrantResults
+                    ->filter(function ($result) use ($requiredLaps) {
+                        return $result->lap_number >= $requiredLaps;
+                    })
+                    ->sortBy('calculated_time')
+                    ->values();
+
+            } else {
+                // 1_PASSAGE: Sort by time (original behavior)
+                $results = $entrantResults->sortBy('calculated_time')->values();
+            }
 
             // Calculate overall positions
             $position = 1;

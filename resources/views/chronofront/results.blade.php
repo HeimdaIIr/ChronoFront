@@ -252,6 +252,8 @@
                                         <th>Sexe</th>
                                         <th>Catégorie</th>
                                         <th>Club</th>
+                                        <th x-show="isMultiLapRaceByType(raceData.race.type)">Tours</th>
+                                        <th x-show="isMultiLapRaceByType(raceData.race.type)">Distance</th>
                                         <th>Temps</th>
                                         <th>Vitesse</th>
                                         <th>Pos. Cat.</th>
@@ -268,6 +270,12 @@
                                             <td x-text="result.entrant?.gender"></td>
                                             <td><span class="badge bg-info" x-text="result.entrant?.category?.name || 'N/A'"></span></td>
                                             <td x-text="result.entrant?.club || '-'"></td>
+                                            <td x-show="isMultiLapRaceByType(raceData.race.type)">
+                                                <strong x-text="result.lap_number || '-'"></strong>
+                                            </td>
+                                            <td x-show="isMultiLapRaceByType(raceData.race.type)">
+                                                <span x-text="calculateDistanceByRace(result, raceData.race)"></span>
+                                            </td>
                                             <td><strong x-text="formatDuration(result.calculated_time)"></strong></td>
                                             <td x-text="result.speed ? result.speed + ' km/h' : 'N/A'"></td>
                                             <td x-text="result.category_position || '-'"></td>
@@ -317,6 +325,8 @@
                             <th>Sexe</th>
                             <th>Catégorie</th>
                             <th>Club</th>
+                            <th x-show="isMultiLapRace()">Tours</th>
+                            <th x-show="isMultiLapRace()">Distance</th>
                             <th>Temps</th>
                             <th>Vitesse</th>
                             <th>Pos. Cat.</th>
@@ -341,6 +351,12 @@
                                     <span class="badge bg-info" x-text="result.entrant?.category?.name || 'N/A'"></span>
                                 </td>
                                 <td x-text="result.entrant?.club || '-'"></td>
+                                <td x-show="isMultiLapRace()">
+                                    <strong x-text="result.lap_number || '-'"></strong>
+                                </td>
+                                <td x-show="isMultiLapRace()">
+                                    <span x-text="calculateDistance(result)"></span>
+                                </td>
                                 <td>
                                     <strong x-text="formatDuration(result.calculated_time)"></strong>
                                 </td>
@@ -701,6 +717,35 @@ function resultsManager() {
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = seconds % 60;
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        },
+
+        // Check if current selected race is multi-lap (n_laps or infinite_loop)
+        isMultiLapRace() {
+            if (!this.selectedRace) return false;
+            const race = this.races.find(r => r.id == this.selectedRace);
+            return race && (race.type === 'n_laps' || race.type === 'infinite_loop');
+        },
+
+        // Check if a given race type is multi-lap
+        isMultiLapRaceByType(raceType) {
+            return raceType === 'n_laps' || raceType === 'infinite_loop';
+        },
+
+        // Calculate total distance for a result (lap_number × race distance)
+        calculateDistance(result) {
+            if (!result.lap_number) return 'N/A';
+            const race = this.races.find(r => r.id == this.selectedRace);
+            if (!race || !race.distance) return 'N/A';
+            const totalDistance = result.lap_number * parseFloat(race.distance);
+            return totalDistance.toFixed(2) + ' km';
+        },
+
+        // Calculate total distance for a result with specific race
+        calculateDistanceByRace(result, race) {
+            if (!result.lap_number) return 'N/A';
+            if (!race || !race.distance) return 'N/A';
+            const totalDistance = result.lap_number * parseFloat(race.distance);
+            return totalDistance.toFixed(2) + ' km';
         }
     }
 }

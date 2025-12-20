@@ -106,6 +106,20 @@ class RaspberryController extends Controller
                 continue;
             }
 
+            // Check race duration for infinite_loop type
+            $race = $entrant->race;
+            if ($race && $race->type === 'infinite_loop' && $race->duration && $race->start_time) {
+                $raceStartTime = Carbon::parse($race->start_time);
+                $raceDurationSeconds = $race->duration * 60; // Convert minutes to seconds
+                $elapsedSeconds = $datetime->diffInSeconds($raceStartTime);
+
+                if ($elapsedSeconds > $raceDurationSeconds) {
+                    Log::info("Passage ignored for bib {$bibNumber} - race duration exceeded ({$elapsedSeconds}s > {$raceDurationSeconds}s)");
+                    $skipped++;
+                    continue;
+                }
+            }
+
             // Get passage number
             $passageNumber = $this->getPassageNumber($entrant, $reader);
 
