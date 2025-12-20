@@ -886,27 +886,68 @@ class ResultController extends Controller
     {
         $result->load(['wave', 'race', 'entrant']);
 
-        // Calculate time from individual start, wave start or race start (TOP DÉPART)
-        // The calculateTime() method handles the 3-level priority internally
-        $result->calculateTime();
+        // Check race type for different calculation logic
+        $raceType = $result->race->type ?? '1_passage';
 
-        // Calculate speed
-        if ($result->race && $result->race->distance > 0 && $result->calculated_time > 0) {
-            $result->calculateSpeed($result->race->distance);
-        }
+        if (in_array($raceType, ['n_laps', 'infinite_loop'])) {
+            // === LOGIC FOR N LAPS AND INFINITE LOOP ===
 
-        // Calculate lap time if this is not the first lap
-        if ($result->lap_number > 1) {
-            $previousLap = Result::where('race_id', $result->race_id)
-                ->where('entrant_id', $result->entrant_id)
-                ->where('lap_number', $result->lap_number - 1)
-                ->first();
+            if ($result->lap_number == 1) {
+                // TOUR 1: lap_time = passage time - start time (TOP or individual start)
+                $result->calculateTime(); // This sets calculated_time based on start time
+                $result->lap_time = $result->calculated_time;
+            } else {
+                // TOURS SUIVANTS: lap_time = passage actuel - passage précédent
+                $previousLap = Result::where('race_id', $result->race_id)
+                    ->where('entrant_id', $result->entrant_id)
+                    ->where('lap_number', $result->lap_number - 1)
+                    ->first();
 
-            if ($previousLap && $previousLap->calculated_time && $result->calculated_time) {
-                $result->lap_time = $result->calculated_time - $previousLap->calculated_time;
+                if ($previousLap) {
+                    // Calculate lap time: current passage - previous passage
+                    $currentPassage = \Carbon\Carbon::parse($result->raw_time);
+                    $previousPassage = \Carbon\Carbon::parse($previousLap->raw_time);
+                    $result->lap_time = abs($currentPassage->diffInSeconds($previousPassage));
+
+                    // Calculate total time: previous total + current lap time
+                    $result->calculated_time = $previousLap->calculated_time + $result->lap_time;
+                } else {
+                    // Fallback if previous lap not found
+                    $result->calculateTime();
+                    $result->lap_time = $result->calculated_time;
+                }
             }
+
+            // Calculate speed based on lap distance
+            if ($result->race->distance > 0 && $result->lap_time > 0) {
+                $hours = $result->lap_time / 3600;
+                $result->speed = round($result->race->distance / $hours, 2);
+            }
+
         } else {
-            $result->lap_time = $result->calculated_time;
+            // === LOGIC FOR 1_PASSAGE (original logic) ===
+
+            // Calculate time from individual start, wave start or race start (TOP DÉPART)
+            $result->calculateTime();
+
+            // Calculate speed
+            if ($result->race && $result->race->distance > 0 && $result->calculated_time > 0) {
+                $result->calculateSpeed($result->race->distance);
+            }
+
+            // Calculate lap time if this is not the first lap
+            if ($result->lap_number > 1) {
+                $previousLap = Result::where('race_id', $result->race_id)
+                    ->where('entrant_id', $result->entrant_id)
+                    ->where('lap_number', $result->lap_number - 1)
+                    ->first();
+
+                if ($previousLap && $previousLap->calculated_time && $result->calculated_time) {
+                    $result->lap_time = $result->calculated_time - $previousLap->calculated_time;
+                }
+            } else {
+                $result->lap_time = $result->calculated_time;
+            }
         }
 
         $result->save();
