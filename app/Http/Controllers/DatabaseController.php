@@ -39,10 +39,16 @@ class DatabaseController extends Controller
      */
     public function import(Request $request)
     {
+        // LOG AU TOUT DÉBUT pour voir si la méthode s'exécute
+        \Log::info("=== DÉBUT IMPORT DB ===");
+        \Log::info("Tenant: " . $request->attributes->get('tenant', 'inconnu'));
+
         // Validation
         $request->validate([
             'database_file' => 'required|file|mimes:sqlite,db|max:102400', // Max 100MB
         ]);
+
+        \Log::info("Validation passée");
 
         // Récupérer le tenant actuel
         $tenant = $request->attributes->get('tenant', 'main');
