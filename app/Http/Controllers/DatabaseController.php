@@ -78,10 +78,19 @@ class DatabaseController extends Controller
                 ->with('error', 'Le fichier n\'est pas une base de données SQLite valide.');
         }
 
+        // IMPORTANT : Fermer toutes les connexions à la DB actuelle avant de la remplacer
+        DB::purge('tenant');
+        DB::disconnect('tenant');
+
+        // Supprimer l'ancien fichier DB pour s'assurer du remplacement
+        if (file_exists($currentDbPath)) {
+            unlink($currentDbPath);
+        }
+
         // Remplacer la DB actuelle par le fichier uploadé
         $uploadedFile->move(storage_path('databases'), "{$tenant}.sqlite");
 
-        // Purger les connexions pour forcer le rechargement
+        // Purger à nouveau les connexions pour forcer le rechargement
         DB::purge('tenant');
 
         return redirect()->route('dashboard')
