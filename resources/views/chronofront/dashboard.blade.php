@@ -2,6 +2,12 @@
 
 @section('title', 'Tableau de bord')
 
+@section('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endsection
+
 @section('content')
 <div x-data="dashboard()">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -117,7 +123,7 @@
     </div>
 
     <!-- Modal Import DB -->
-    <div x-show="showImportModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div x-show="showImportModal" x-cloak class="modal" tabindex="-1" :class="{'d-block': showImportModal}" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
