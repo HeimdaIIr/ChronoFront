@@ -103,9 +103,6 @@ class DatabaseController extends Controller
         DB::purge('tenant');
         DB::disconnect('tenant');
 
-        // Attendre un peu pour que les connexions se ferment complètement
-        usleep(500000); // 0.5 secondes
-
         // Supprimer l'ancien fichier DB ET ses fichiers de journalisation SQLite
         if (file_exists($currentDbPath)) {
             if (!@unlink($currentDbPath)) {
@@ -147,12 +144,10 @@ class DatabaseController extends Controller
         @chown($currentDbPath, fileowner(storage_path('databases')));
         @chgrp($currentDbPath, filegroup(storage_path('databases')));
 
-        // Purger tous les caches Laravel
-        \Artisan::call('cache:clear');
+        // Purger uniquement le cache de configuration (plus rapide)
         \Artisan::call('config:clear');
-        \Artisan::call('view:clear');
 
-        // Purger à nouveau les connexions pour forcer le rechargement
+        // Purger les connexions pour forcer le rechargement de la nouvelle DB
         DB::purge('tenant');
         DB::reconnect('tenant');
 
