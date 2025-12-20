@@ -85,13 +85,18 @@ class DatabaseController extends Controller
         // Attendre un peu pour que les connexions se ferment complètement
         usleep(500000); // 0.5 secondes
 
-        // Supprimer l'ancien fichier DB pour s'assurer du remplacement
+        // Supprimer l'ancien fichier DB ET ses fichiers de journalisation SQLite
         if (file_exists($currentDbPath)) {
             if (!@unlink($currentDbPath)) {
                 return redirect()->route('dashboard')
                     ->with('error', "Impossible de supprimer l'ancienne base de données. Vérifiez les permissions.");
             }
         }
+
+        // Supprimer les fichiers de journalisation SQLite (WAL, SHM)
+        @unlink("{$currentDbPath}-wal");
+        @unlink("{$currentDbPath}-shm");
+        @unlink("{$currentDbPath}-journal");
 
         // Copier le fichier uploadé vers la destination finale
         $tempPath = $uploadedFile->getPathname();
