@@ -87,13 +87,24 @@ class DatabaseController extends Controller
             unlink($currentDbPath);
         }
 
-        // Remplacer la DB actuelle par le fichier uploadé
-        $uploadedFile->move(storage_path('databases'), "{$tenant}.sqlite");
+        // Copier le fichier uploadé vers la destination finale
+        $tempPath = $uploadedFile->getPathname();
+        copy($tempPath, $currentDbPath);
+
+        // S'assurer que les permissions sont correctes
+        chmod($currentDbPath, 0664);
+
+        // Purger tous les caches Laravel
+        \Artisan::call('cache:clear');
+        \Artisan::call('config:clear');
+        \Artisan::call('view:clear');
 
         // Purger à nouveau les connexions pour forcer le rechargement
         DB::purge('tenant');
+        DB::reconnect('tenant');
 
         return redirect()->route('dashboard')
-            ->with('success', "Base de données importée avec succès ! L'ancienne DB a été sauvegardée dans archives/");
+            ->with('success', "Base de données importée avec succès ! L'ancienne DB a été sauvegardée dans archives/")
+            ->with('timestamp', time()); // Force le reload
     }
 }
