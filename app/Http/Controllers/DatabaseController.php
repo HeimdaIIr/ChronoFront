@@ -43,12 +43,20 @@ class DatabaseController extends Controller
         \Log::info("=== DÉBUT IMPORT DB ===");
         \Log::info("Tenant: " . $request->attributes->get('tenant', 'inconnu'));
 
-        // Validation
+        // Validation - Accepter n'importe quel fichier .sqlite peu importe le MIME type
         $request->validate([
-            'database_file' => 'required|file|mimes:sqlite,db|max:102400', // Max 100MB
+            'database_file' => 'required|file|max:102400', // Max 100MB, pas de restriction MIME
         ]);
 
         \Log::info("Validation passée");
+
+        // Vérifier que le fichier a bien l'extension .sqlite
+        $uploadedFile = $request->file('database_file');
+        if (!in_array(strtolower($uploadedFile->getClientOriginalExtension()), ['sqlite', 'db'])) {
+            \Log::error("Extension invalide : " . $uploadedFile->getClientOriginalExtension());
+            return redirect()->route('dashboard')
+                ->with('error', 'Le fichier doit avoir l\'extension .sqlite ou .db');
+        }
 
         // Récupérer le tenant actuel
         $tenant = $request->attributes->get('tenant', 'main');
@@ -68,9 +76,6 @@ class DatabaseController extends Controller
             $backupPath = "{$archiveDir}/{$backupFilename}";
             copy($currentDbPath, $backupPath);
         }
-
-        // Récupérer le fichier uploadé
-        $uploadedFile = $request->file('database_file');
 
         // Log de debug
         \Log::info("Import DB - Fichier uploadé : " . $uploadedFile->getClientOriginalName());
