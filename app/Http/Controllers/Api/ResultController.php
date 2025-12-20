@@ -63,6 +63,12 @@ class ResultController extends Controller
             $hasFilters = true;
         }
 
+        // Filter by lap number
+        if ($request->has('lap_number') && $request->lap_number) {
+            $query->where('lap_number', $request->lap_number);
+            $hasFilters = true;
+        }
+
         $query->orderBy('raw_time', 'desc');
 
         // Only apply limit if no filters (for performance)

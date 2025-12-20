@@ -904,40 +904,50 @@ body {
                 </div>
 
                 <!-- Filters -->
-                <div class="filters-bar">
-                    <div class="search-box">
+                <div class="filters-bar" style="flex-wrap: wrap; gap: 0.75rem;">
+                    <!-- Row 1: Search and core filters -->
+                    <div class="search-box" style="flex: 1; min-width: 250px;">
                         <i class="bi bi-search"></i>
                         <input type="text" placeholder="Rechercher dossard / nom" x-model="searchQuery" @input="filterResults">
                     </div>
-                    <select class="filter-select" x-model="categoryFilter" @change="filterResults">
-                        <option value="">Toutes catégories</option>
-                        <template x-for="category in [...new Set(results.map(r => r.entrant?.category?.name).filter(c => c))]" :key="category">
-                            <option :value="category" x-text="category"></option>
-                        </template>
-                    </select>
-                    <select class="filter-select" x-model="sasFilter" @change="filterResults">
-                        <option value="">Tous SAS</option>
-                        <template x-for="wave in [...new Set(results.map(r => r.wave?.name).filter(w => w))]" :key="wave">
-                            <option :value="wave" x-text="wave"></option>
-                        </template>
-                    </select>
-                    <select class="filter-select" x-model="raceFilter" @change="filterResults">
+                    <select class="filter-select" x-model="raceFilter" @change="filterResults" style="min-width: 150px;">
                         <option value="">Tous parcours</option>
                         <template x-for="race in [...new Set(results.map(r => r.race?.name).filter(r => r))]" :key="race">
                             <option :value="race" x-text="race"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="checkpointFilter" @change="filterResults">
+                    <select class="filter-select" x-model="categoryFilter" @change="filterResults" style="min-width: 150px;">
+                        <option value="">Toutes catégories</option>
+                        <template x-for="category in [...new Set(results.map(r => r.entrant?.category?.name).filter(c => c))]" :key="category">
+                            <option :value="category" x-text="category"></option>
+                        </template>
+                    </select>
+                    <select class="filter-select" x-model="sasFilter" @change="filterResults" style="min-width: 120px;">
+                        <option value="">Tous SAS</option>
+                        <template x-for="wave in [...new Set(results.map(r => r.wave?.name).filter(w => w))]" :key="wave">
+                            <option :value="wave" x-text="wave"></option>
+                        </template>
+                    </select>
+                    <select class="filter-select" x-model="checkpointFilter" @change="filterResults" style="min-width: 130px;">
                         <option value="">Tous checkpoints</option>
                         <template x-for="checkpoint in [...new Set(results.map(r => r.reader_location).filter(c => c))]" :key="checkpoint">
                             <option :value="checkpoint" x-text="checkpoint"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6;">
+                    <select class="filter-select" x-model="lapFilter" @change="filterResults" style="min-width: 100px;">
+                        <option value="">Tous tours</option>
+                        <template x-for="lap in [...new Set(results.map(r => r.lap_number).filter(l => l))].sort((a,b) => a - b)" :key="lap">
+                            <option :value="lap" x-text="'Tour ' + lap"></option>
+                        </template>
+                    </select>
+                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6; min-width: 140px;">
                         <option value="recent">Tri: Plus récent</option>
                         <option value="position">Tri: Position</option>
                         <option value="time">Tri: Temps</option>
                     </select>
+
+                    <!-- Row 2: Action buttons -->
+                    <div style="flex-basis: 100%; height: 0;"></div>
                     <button class="btn-filter" @click="showTopDepartModal = true">
                         <i class="bi bi-flag-fill"></i>
                         TOP DÉPART
@@ -980,6 +990,7 @@ body {
                                 <th>Parcours</th>
                                 <th>SAS</th>
                                 <th>Lecteur</th>
+                                <th>Tour</th>
                                 <th>Temps</th>
                                 <th>Vit</th>
                                 <th>Détection</th>
@@ -996,6 +1007,7 @@ body {
                                     <td x-text="result.race?.name || '-'"></td>
                                     <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
+                                    <td><strong x-text="result.lap_number || '-'"></strong></td>
                                     <td><strong x-text="getDisplayTime(result)"></strong></td>
                                     <td x-text="result.speed ? result.speed + ' km/h' : '-'"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
@@ -1093,13 +1105,24 @@ body {
                                          :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
                                     <div style="flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.9rem;" x-text="checkpoint.location"></div>
-                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance ? checkpoint.distance + ' km' : ''"></div>
+                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance ? checkpoint.distance.toFixed(2) + ' km' : ''"></div>
+                                        <!-- Lap time for multi-lap races -->
+                                        <div style="font-size: 0.75rem; color: #22c55e;" x-show="checkpoint.lap_time_display">
+                                            <i class="bi bi-stopwatch"></i> <span x-text="checkpoint.lap_time_display"></span>
+                                            <span x-show="checkpoint.speed" style="color: #a1a1aa; margin-left: 0.5rem;">
+                                                (<span x-text="checkpoint.speed"></span> km/h)
+                                            </span>
+                                        </div>
                                     </div>
                                     <div style="text-align: right; flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.95rem;"
                                              :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
                                              x-text="checkpoint.time_display"></div>
                                         <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.is_estimated">Estimé</div>
+                                        <!-- Cumulative time for multi-lap races -->
+                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.calculated_time_display && !checkpoint.is_estimated">
+                                            Total: <span x-text="checkpoint.calculated_time_display"></span>
+                                        </div>
                                     </div>
                                     <!-- Edit buttons for real checkpoints only -->
                                     <div style="display: flex; gap: 0.25rem;" x-show="!checkpoint.is_estimated && checkpoint.id">
@@ -1510,6 +1533,7 @@ function chronoApp() {
         sasFilter: '',
         raceFilter: '',
         checkpointFilter: '',
+        lapFilter: '',
         sortBy: 'recent',
         loading: false,
         saving: false,
@@ -2069,7 +2093,7 @@ function chronoApp() {
 
         async filterResults() {
             // Check if any filters are active
-            const hasActiveFilters = this.searchQuery || this.categoryFilter || this.sasFilter || this.raceFilter || this.checkpointFilter;
+            const hasActiveFilters = this.searchQuery || this.categoryFilter || this.sasFilter || this.raceFilter || this.checkpointFilter || this.lapFilter;
 
             if (hasActiveFilters) {
                 // When filters are active, fetch from API to search ALL results
@@ -2110,6 +2134,9 @@ function chronoApp() {
                 if (this.checkpointFilter) {
                     params.append('checkpoint', this.checkpointFilter);
                 }
+                if (this.lapFilter) {
+                    params.append('lap_number', this.lapFilter);
+                }
 
                 const response = await axios.get(`/results?${params.toString()}`);
                 this.displayedResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
@@ -2132,6 +2159,7 @@ function chronoApp() {
                     if (this.sasFilter && result.wave?.name !== this.sasFilter) return false;
                     if (this.raceFilter && result.race?.name !== this.raceFilter) return false;
                     if (this.checkpointFilter && result.reader_location !== this.checkpointFilter) return false;
+                    if (this.lapFilter && result.lap_number != this.lapFilter) return false;
                     return true;
                 });
             }
@@ -2248,82 +2276,136 @@ function chronoApp() {
                 return;
             }
 
-            // Get all results for this runner
-            const runnerResults = this.results.filter(r => r.entrant_id === this.selectedResult.entrant_id);
-
-            // Get configured readers sorted by distance
-            const sortedReaders = [...this.readers]
-                .filter(r => r.distance_from_start !== undefined)
-                .sort((a, b) => parseFloat(a.distance_from_start || 0) - parseFloat(b.distance_from_start || 0));
-
-            if (sortedReaders.length === 0) {
-                this.runnerCheckpoints = [];
-                return;
-            }
-
-            // Build checkpoint list
-            this.runnerCheckpoints = [];
-            let lastRealCheckpoint = null;
-
-            // Add race start as first checkpoint (use runner's race, not selected filter)
+            // Check if this is a multi-lap race (n_laps or infinite_loop)
             const runnerRace = this.selectedResult.race;
-            const runnerWave = this.selectedResult.wave;
+            const isMultiLap = runnerRace && (runnerRace.type === 'n_laps' || runnerRace.type === 'infinite_loop');
 
-            // Get start time from wave first, then race (wave has priority)
-            const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
+            if (isMultiLap) {
+                // FOR MULTI-LAP RACES: Show all laps/passages for this runner
+                const runnerResults = this.results
+                    .filter(r => r.entrant_id === this.selectedResult.entrant_id)
+                    .sort((a, b) => (a.lap_number || 0) - (b.lap_number || 0));
 
-            if (startTime) {
-                this.runnerCheckpoints.push({
-                    id: null, // Start time is not editable
-                    location: 'DÉPART',
-                    distance: 0,
-                    time_display: this.formatTime(startTime),
-                    raw_time: new Date(startTime),
-                    is_estimated: false
-                });
-                lastRealCheckpoint = {
-                    distance: 0,
-                    raw_time: new Date(startTime)
-                };
-            }
+                this.runnerCheckpoints = [];
 
-            // Process each reader checkpoint
-            for (let reader of sortedReaders) {
-                // Find if runner was detected at this checkpoint
-                const detection = runnerResults.find(r => r.reader_id === reader.id || r.reader_location === reader.location);
+                // Add race start
+                const runnerWave = this.selectedResult.wave;
+                const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
 
-                if (detection && detection.raw_time) {
-                    // Real detection
+                if (startTime) {
                     this.runnerCheckpoints.push({
-                        id: detection.id, // Include result ID for editing
-                        location: reader.location,
-                        distance: reader.distance_from_start,
-                        time_display: this.formatTime(detection.raw_time),
-                        raw_time: new Date(detection.raw_time),
+                        id: null,
+                        location: 'DÉPART',
+                        lap_number: null,
+                        distance: 0,
+                        time_display: this.formatTime(startTime),
+                        lap_time_display: null,
+                        raw_time: new Date(startTime),
+                        is_estimated: false
+                    });
+                }
+
+                // Add each lap
+                runnerResults.forEach((result, index) => {
+                    this.runnerCheckpoints.push({
+                        id: result.id,
+                        location: `Tour ${result.lap_number || (index + 1)}`,
+                        lap_number: result.lap_number || (index + 1),
+                        distance: (result.lap_number || (index + 1)) * (runnerRace.distance || 0),
+                        time_display: this.formatTime(result.raw_time),
+                        lap_time_display: this.formatDuration(result.lap_time),
+                        calculated_time_display: this.formatDuration(result.calculated_time),
+                        speed: result.speed,
+                        raw_time: new Date(result.raw_time),
+                        is_estimated: false
+                    });
+                });
+
+                // Calculate average speed for multi-lap
+                if (runnerResults.length > 0 && runnerRace.distance) {
+                    const lastResult = runnerResults[runnerResults.length - 1];
+                    const totalDistance = (lastResult.lap_number || runnerResults.length) * runnerRace.distance;
+                    const totalTimeSeconds = lastResult.calculated_time || 0;
+                    if (totalTimeSeconds > 0) {
+                        this.runnerAverageSpeed = (totalDistance / (totalTimeSeconds / 3600));
+                    }
+                }
+
+            } else {
+                // FOR SINGLE-PASSAGE RACES: Use checkpoint logic (original code)
+                const runnerResults = this.results.filter(r => r.entrant_id === this.selectedResult.entrant_id);
+
+                // Get configured readers sorted by distance
+                const sortedReaders = [...this.readers]
+                    .filter(r => r.distance_from_start !== undefined)
+                    .sort((a, b) => parseFloat(a.distance_from_start || 0) - parseFloat(b.distance_from_start || 0));
+
+                if (sortedReaders.length === 0) {
+                    this.runnerCheckpoints = [];
+                    return;
+                }
+
+                // Build checkpoint list
+                this.runnerCheckpoints = [];
+                let lastRealCheckpoint = null;
+
+                // Add race start as first checkpoint
+                const runnerWave = this.selectedResult.wave;
+                const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
+
+                if (startTime) {
+                    this.runnerCheckpoints.push({
+                        id: null,
+                        location: 'DÉPART',
+                        distance: 0,
+                        time_display: this.formatTime(startTime),
+                        raw_time: new Date(startTime),
                         is_estimated: false
                     });
                     lastRealCheckpoint = {
-                        distance: parseFloat(reader.distance_from_start),
-                        raw_time: new Date(detection.raw_time)
+                        distance: 0,
+                        raw_time: new Date(startTime)
                     };
-                } else if (lastRealCheckpoint) {
-                    // Estimate time based on average speed
-                    const estimatedTime = this.estimateCheckpointTime(lastRealCheckpoint, reader.distance_from_start);
-                    if (estimatedTime) {
+                }
+
+                // Process each reader checkpoint
+                for (let reader of sortedReaders) {
+                    // Find if runner was detected at this checkpoint
+                    const detection = runnerResults.find(r => r.reader_id === reader.id || r.reader_location === reader.location);
+
+                    if (detection && detection.raw_time) {
+                        // Real detection
                         this.runnerCheckpoints.push({
-                            id: null, // No ID for estimated checkpoints
+                            id: detection.id,
                             location: reader.location,
                             distance: reader.distance_from_start,
-                            time_display: this.formatTime(estimatedTime.toISOString()),
-                            raw_time: estimatedTime,
-                            is_estimated: true
+                            time_display: this.formatTime(detection.raw_time),
+                            raw_time: new Date(detection.raw_time),
+                            is_estimated: false
                         });
+                        lastRealCheckpoint = {
+                            distance: parseFloat(reader.distance_from_start),
+                            raw_time: new Date(detection.raw_time)
+                        };
+                    } else if (lastRealCheckpoint) {
+                        // Estimate time based on average speed
+                        const estimatedTime = this.estimateCheckpointTime(lastRealCheckpoint, reader.distance_from_start);
+                        if (estimatedTime) {
+                            this.runnerCheckpoints.push({
+                                id: null,
+                                location: reader.location,
+                                distance: reader.distance_from_start,
+                                time_display: this.formatTime(estimatedTime.toISOString()),
+                                raw_time: estimatedTime,
+                                is_estimated: true
+                            });
+                        }
                     }
                 }
-            }
 
-            // Calculate average speed
-            this.calculateAverageSpeed();
+                // Calculate average speed
+                this.calculateAverageSpeed();
+            }
         },
 
         estimateCheckpointTime(lastCheckpoint, targetDistance) {
@@ -2578,6 +2660,14 @@ function chronoApp() {
         formatTime(datetime) {
             if (!datetime) return '-';
             return new Date(datetime).toLocaleTimeString('fr-FR');
+        },
+
+        formatDuration(seconds) {
+            if (!seconds || seconds === 0) return '-';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         },
 
         // Manual timing functions
