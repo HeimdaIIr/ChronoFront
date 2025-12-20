@@ -12,12 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Ajouter le middleware TenantBySubdomain pour web et api
-        $middleware->web(append: [
+        // Ajouter le middleware TenantBySubdomain EN PREMIER (avant le model binding)
+        $middleware->web(prepend: [
             \App\Http\Middleware\TenantBySubdomain::class,
         ]);
 
-        $middleware->api(append: [
+        $middleware->api(prepend: [
             \App\Http\Middleware\TenantBySubdomain::class,
         ]);
     })
