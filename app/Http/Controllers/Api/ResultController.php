@@ -649,7 +649,16 @@ class ResultController extends Controller
             $query->where('status', 'V');
         }
 
-        $results = $query->get();
+        $allResults = $query->get();
+
+        // For multi-lap races, keep only the last lap per entrant
+        if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $results = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            })->sortBy('position')->values();
+        } else {
+            $results = $allResults;
+        }
 
         // Group by category if needed
         $resultsByCategory = [];
