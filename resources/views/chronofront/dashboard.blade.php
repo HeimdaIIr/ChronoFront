@@ -98,8 +98,53 @@
                                 <span class="mt-2">Voir résultats</span>
                             </a>
                         </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ route('database.export') }}" class="btn btn-secondary w-100 py-3" download>
+                                <i class="bi bi-download"></i><br>
+                                <span class="mt-2">Exporter DB</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button @click="showImportModal = true" class="btn btn-danger w-100 py-3">
+                                <i class="bi bi-upload"></i><br>
+                                <span class="mt-2">Importer DB</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import DB -->
+    <div x-show="showImportModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-upload"></i> Importer une base de données</h5>
+                    <button type="button" class="btn-close" @click="showImportModal = false"></button>
+                </div>
+                <form action="{{ route('database.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Attention !</strong> Cette action va remplacer toutes les données actuelles par celles du fichier importé.
+                            Un backup automatique sera créé dans <code>storage/databases/archives/</code>.
+                        </div>
+                        <div class="mb-3">
+                            <label for="database_file" class="form-label">Fichier SQLite (.sqlite)</label>
+                            <input type="file" class="form-control" id="database_file" name="database_file" accept=".sqlite" required>
+                            <div class="form-text">Sélectionnez un fichier .sqlite à importer</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="showImportModal = false">Annuler</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-upload"></i> Importer et remplacer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -186,6 +231,7 @@ function dashboard() {
             results: 0
         },
         recentEvents: [],
+        showImportModal: false,
 
         init() {
             this.loadStats();
