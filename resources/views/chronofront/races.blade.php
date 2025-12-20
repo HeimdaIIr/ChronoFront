@@ -190,6 +190,12 @@
                                 <input type="number" class="form-control" x-model="form.laps">
                             </div>
 
+                            <div class="col-md-4" x-show="form.type === 'infinite_loop'">
+                                <label class="form-label">Durée (minutes)</label>
+                                <input type="number" class="form-control" x-model="form.duration" placeholder="Ex: 360 pour 6h">
+                                <small class="text-muted">Durée totale de la course</small>
+                            </div>
+
                             <div class="col-12">
                                 <label class="form-label">Description</label>
                                 <textarea class="form-control" x-model="form.description" rows="3"></textarea>
@@ -231,6 +237,7 @@ function racesManager() {
             type: '1_passage',
             distance: null,
             laps: null,
+            duration: null,
             description: ''
         },
 
@@ -297,6 +304,7 @@ function racesManager() {
                 type: race.type,
                 distance: race.distance,
                 laps: race.laps,
+                duration: race.duration,
                 description: race.description || ''
             };
             this.showModal = true;
