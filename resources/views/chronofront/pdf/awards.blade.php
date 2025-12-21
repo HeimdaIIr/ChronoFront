@@ -193,6 +193,13 @@
     @if($scratchResults->isNotEmpty())
     <div class="table-section">
         <div class="section-title">CLASSEMENT SCRATCH GÉNÉRAL</div>
+
+        @php
+            $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+            $maxLaps = $isMultiLap && $race->laps > 0 ? $race->laps : 0;
+            $colspanTotal = 8 + $maxLaps;
+        @endphp
+
         <table>
         <thead>
             <tr>
@@ -203,6 +210,11 @@
                 <th style="width: 30px; text-align: center;">Sexe</th>
                 <th class="category">Catégorie</th>
                 <th>Club</th>
+                @if($isMultiLap && $maxLaps > 0)
+                    @for($i = 1; $i <= $maxLaps; $i++)
+                        <th class="time" style="width: 45px; font-size: 6pt;">T{{ $i }}</th>
+                    @endfor
+                @endif
                 <th class="time">Temps</th>
             </tr>
         </thead>
@@ -218,7 +230,7 @@
                 @endphp
                 @if($showSeparator)
                     <tr style="height: 0; background: none;">
-                        <td colspan="8" style="padding: 0; border: none; border-top: 3px solid #f59e0b; height: 0;"></td>
+                        <td colspan="{{ $colspanTotal }}" style="padding: 0; border: none; border-top: 3px solid #f59e0b; height: 0;"></td>
                     </tr>
                 @endif
                 <tr>
@@ -229,6 +241,25 @@
                     <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
                     <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                     <td>{{ $result->entrant->club ?? '-' }}</td>
+                    @if($isMultiLap && $maxLaps > 0)
+                        @php
+                            $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                        @endphp
+                        @for($i = 1; $i <= $maxLaps; $i++)
+                            @php
+                                $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                if ($lap && $lap->lap_time) {
+                                    $hours = floor($lap->lap_time / 3600);
+                                    $minutes = floor(($lap->lap_time % 3600) / 60);
+                                    $seconds = floor($lap->lap_time % 60);
+                                    $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                } else {
+                                    $lapTime = '-';
+                                }
+                            @endphp
+                            <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                        @endfor
+                    @endif
                     <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                 </tr>
             @endforeach
@@ -241,6 +272,11 @@
     @if($genderResults->isNotEmpty())
     <div class="table-section">
         <div class="section-title">CLASSEMENT PAR GENRE</div>
+
+        @php
+            $colspanGender = 9 + $maxLaps;
+        @endphp
+
         <table>
         <thead>
             <tr>
@@ -251,6 +287,11 @@
                 <th style="width: 30px; text-align: center;">Sexe</th>
                 <th class="category">Catégorie</th>
                 <th>Club</th>
+                @if($isMultiLap && $maxLaps > 0)
+                    @for($i = 1; $i <= $maxLaps; $i++)
+                        <th class="time" style="width: 45px; font-size: 6pt;">T{{ $i }}</th>
+                    @endfor
+                @endif
                 <th class="time">Temps</th>
                 <th>Récompense</th>
             </tr>
@@ -267,7 +308,7 @@
                 @endphp
                 @if($showSeparator)
                     <tr style="height: 0; background: none;">
-                        <td colspan="9" style="padding: 0; border: none; border-top: 3px solid #f59e0b; height: 0;"></td>
+                        <td colspan="{{ $colspanGender }}" style="padding: 0; border: none; border-top: 3px solid #f59e0b; height: 0;"></td>
                     </tr>
                 @endif
                 <tr>
@@ -278,6 +319,25 @@
                     <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
                     <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                     <td>{{ $result->entrant->club ?? '-' }}</td>
+                    @if($isMultiLap && $maxLaps > 0)
+                        @php
+                            $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                        @endphp
+                        @for($i = 1; $i <= $maxLaps; $i++)
+                            @php
+                                $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                if ($lap && $lap->lap_time) {
+                                    $hours = floor($lap->lap_time / 3600);
+                                    $minutes = floor(($lap->lap_time % 3600) / 60);
+                                    $seconds = floor($lap->lap_time % 60);
+                                    $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                } else {
+                                    $lapTime = '-';
+                                }
+                            @endphp
+                            <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                        @endfor
+                    @endif
                     <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                     <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
                 </tr>
@@ -305,6 +365,11 @@
                         <th>Prénom</th>
                         <th style="width: 30px; text-align: center;">Sexe</th>
                         <th>Club</th>
+                        @if($isMultiLap && $maxLaps > 0)
+                            @for($i = 1; $i <= $maxLaps; $i++)
+                                <th class="time" style="width: 45px; font-size: 6pt;">T{{ $i }}</th>
+                            @endfor
+                        @endif
                         <th class="time">Temps</th>
                         <th>Récompense</th>
                     </tr>
@@ -318,6 +383,25 @@
                             <td>{{ $result->entrant->firstname ?? '' }}</td>
                             <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
                             <td>{{ $result->entrant->club ?? '-' }}</td>
+                            @if($isMultiLap && $maxLaps > 0)
+                                @php
+                                    $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                                @endphp
+                                @for($i = 1; $i <= $maxLaps; $i++)
+                                    @php
+                                        $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                        if ($lap && $lap->lap_time) {
+                                            $hours = floor($lap->lap_time / 3600);
+                                            $minutes = floor(($lap->lap_time % 3600) / 60);
+                                            $seconds = floor($lap->lap_time % 60);
+                                            $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                        } else {
+                                            $lapTime = '-';
+                                        }
+                                    @endphp
+                                    <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                                @endfor
+                            @endif
                             <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                             <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
                         </tr>
@@ -364,6 +448,11 @@
                                 <th>Nom</th>
                                 <th>Prénom</th>
                                 <th>Club</th>
+                                @if($isMultiLap && $maxLaps > 0)
+                                    @for($i = 1; $i <= $maxLaps; $i++)
+                                        <th class="time" style="width: 45px; font-size: 6pt;">T{{ $i }}</th>
+                                    @endfor
+                                @endif
                                 <th class="time">Temps</th>
                                 <th>Récompense</th>
                             </tr>
@@ -376,6 +465,25 @@
                                     <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
                                     <td>{{ $result->entrant->firstname ?? '' }}</td>
                                     <td>{{ $result->entrant->club ?? '-' }}</td>
+                                    @if($isMultiLap && $maxLaps > 0)
+                                        @php
+                                            $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                                        @endphp
+                                        @for($i = 1; $i <= $maxLaps; $i++)
+                                            @php
+                                                $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                                if ($lap && $lap->lap_time) {
+                                                    $hours = floor($lap->lap_time / 3600);
+                                                    $minutes = floor(($lap->lap_time % 3600) / 60);
+                                                    $seconds = floor($lap->lap_time % 60);
+                                                    $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                                } else {
+                                                    $lapTime = '-';
+                                                }
+                                            @endphp
+                                            <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                                        @endfor
+                                    @endif
                                     <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                                     <td><span class="award-reason">{{ $result->award_reason ?? '' }}</span></td>
                                 </tr>
