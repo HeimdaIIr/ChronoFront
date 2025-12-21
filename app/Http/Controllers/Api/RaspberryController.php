@@ -119,7 +119,9 @@ class RaspberryController extends Controller
                 continue;
             }
 
-            // Check anti-rebounce
+            // TEMPORARILY DISABLED: Check anti-rebounce
+            // NOTE: Anti-rebounce disabled for debugging multi-lap detection issues
+            /*
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime);
             if (!$antiRebounceCheck) {
                 $lastResult = Result::where('entrant_id', $entrant->id)
@@ -142,16 +144,40 @@ class RaspberryController extends Controller
                 $skipped++;
                 continue;
             }
+            */
+
+            Log::info("Anti-rebounce check passed (DISABLED FOR DEBUG)", [
+                'bib' => $bibNumber,
+                'entrant_id' => $entrant->id,
+            ]);
 
             // Check race duration for infinite_loop type
             $race = $entrant->race;
+            Log::info("Race type check", [
+                'bib' => $bibNumber,
+                'race_type' => $race ? $race->type : 'null',
+                'race_duration' => $race ? $race->duration : 'null',
+                'race_start_time' => $race && $race->start_time ? $race->start_time : 'null',
+            ]);
+
             if ($race && $race->type === 'infinite_loop' && $race->duration && $race->start_time) {
                 $raceStartTime = Carbon::parse($race->start_time);
                 $raceDurationSeconds = $race->duration * 60; // Convert minutes to seconds
                 $elapsedSeconds = $datetime->diffInSeconds($raceStartTime);
 
+                Log::info("Infinite loop duration check", [
+                    'bib' => $bibNumber,
+                    'elapsed_seconds' => $elapsedSeconds,
+                    'race_duration_seconds' => $raceDurationSeconds,
+                    'is_exceeded' => $elapsedSeconds > $raceDurationSeconds,
+                ]);
+
                 if ($elapsedSeconds > $raceDurationSeconds) {
-                    Log::info("Passage ignored for bib {$bibNumber} - race duration exceeded ({$elapsedSeconds}s > {$raceDurationSeconds}s)");
+                    Log::warning("Passage BLOCKED - race duration exceeded", [
+                        'bib' => $bibNumber,
+                        'elapsed_seconds' => $elapsedSeconds,
+                        'race_duration_seconds' => $raceDurationSeconds,
+                    ]);
                     $skipped++;
                     continue;
                 }
@@ -159,6 +185,14 @@ class RaspberryController extends Controller
 
             // Get passage number
             $passageNumber = $this->getPassageNumber($entrant, $reader);
+
+            Log::info("About to create result", [
+                'bib' => $bibNumber,
+                'entrant_id' => $entrant->id,
+                'lap_number' => $passageNumber,
+                'reader' => $reader->serial,
+                'time' => $datetime->format('Y-m-d H:i:s'),
+            ]);
 
             // Create result
             $result = Result::create([
