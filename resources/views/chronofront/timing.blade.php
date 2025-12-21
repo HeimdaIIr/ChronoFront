@@ -1032,8 +1032,54 @@ body {
             <div class="chrono-right" x-show="selectedResult">
                 <div class="detail-header">
                     <div class="bib-title">Dossard</div>
-                    <div class="bib-value" x-text="'#' + (selectedResult?.entrant?.bib_number || '')"></div>
-                    <div class="runner-name" x-text="(selectedResult?.entrant?.firstname || '') + ' ' + (selectedResult?.entrant?.lastname || '')"></div>
+                    <!-- Editable Bib Number -->
+                    <div class="bib-value"
+                         x-show="editingField !== 'bib_number'"
+                         @dblclick="startEditField('bib_number', selectedResult?.entrant?.bib_number)"
+                         style="cursor: pointer;"
+                         x-text="'#' + (selectedResult?.entrant?.bib_number || '')">
+                    </div>
+                    <input x-show="editingField === 'bib_number'"
+                           x-model="editingValue"
+                           @keyup.enter="saveEditField()"
+                           @keyup.escape="cancelEditField()"
+                           @blur="saveEditField()"
+                           type="text"
+                           class="form-control"
+                           style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 1.5rem; font-weight: 700;">
+
+                    <!-- Editable Runner Name -->
+                    <div class="runner-name"
+                         x-show="editingField !== 'firstname' && editingField !== 'lastname'"
+                         @dblclick="startEditField('firstname', selectedResult?.entrant?.firstname)"
+                         style="cursor: pointer;"
+                         x-text="(selectedResult?.entrant?.firstname || '') + ' ' + (selectedResult?.entrant?.lastname || '')">
+                    </div>
+                    <div x-show="editingField === 'firstname' || editingField === 'lastname'" style="display: flex; gap: 0.5rem;">
+                        <input x-show="editingField === 'firstname'"
+                               x-model="editingValue"
+                               @keyup.enter="saveEditField()"
+                               @keyup.escape="cancelEditField()"
+                               @blur="saveEditField()"
+                               type="text"
+                               placeholder="Prénom"
+                               class="form-control"
+                               style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                        <button x-show="editingField === 'firstname'"
+                                @click="editingField = 'lastname'; editingValue = selectedResult?.entrant?.lastname || ''"
+                                class="btn btn-sm btn-secondary">
+                            Nom →
+                        </button>
+                        <input x-show="editingField === 'lastname'"
+                               x-model="editingValue"
+                               @keyup.enter="saveEditField()"
+                               @keyup.escape="cancelEditField()"
+                               @blur="saveEditField()"
+                               type="text"
+                               placeholder="Nom"
+                               class="form-control"
+                               style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                    </div>
                 </div>
 
                 <div class="detail-body">
@@ -1066,13 +1112,47 @@ body {
 
                     <!-- Info de base -->
                     <div class="mb-3">
-                        <div class="row mb-2">
+                        <div class="row mb-2 align-items-center">
                             <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Épreuve:</div>
-                            <div class="col-6" style="text-align: right; font-size: 0.9rem;" x-text="selectedResult?.race?.name || '-'"></div>
+                            <div class="col-6" style="text-align: right;">
+                                <!-- Editable Race -->
+                                <div x-show="editingField !== 'race_id'"
+                                     @dblclick="startEditField('race_id', selectedResult?.race?.id)"
+                                     style="cursor: pointer; font-size: 0.9rem;"
+                                     x-text="selectedResult?.race?.name || '-'">
+                                </div>
+                                <select x-show="editingField === 'race_id'"
+                                        x-model="editingValue"
+                                        @change="saveEditField()"
+                                        @blur="cancelEditField()"
+                                        class="form-select form-select-sm"
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                                    <template x-for="race in races" :key="race.id">
+                                        <option :value="race.id" x-text="race.name"></option>
+                                    </template>
+                                </select>
+                            </div>
                         </div>
-                        <div class="row mb-2">
+                        <div class="row mb-2 align-items-center">
                             <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Catégorie:</div>
-                            <div class="col-6" style="text-align: right;" x-text="selectedResult?.entrant?.category?.name || '-'"></div>
+                            <div class="col-6" style="text-align: right;">
+                                <!-- Editable Category -->
+                                <div x-show="editingField !== 'category_id'"
+                                     @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
+                                     style="cursor: pointer;"
+                                     x-text="selectedResult?.entrant?.category?.name || '-'">
+                                </div>
+                                <select x-show="editingField === 'category_id'"
+                                        x-model="editingValue"
+                                        @change="saveEditField()"
+                                        @blur="cancelEditField()"
+                                        class="form-select form-select-sm"
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                                    <template x-for="cat in categories" :key="cat.id">
+                                        <option :value="cat.id" x-text="cat.name"></option>
+                                    </template>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -1107,11 +1187,26 @@ body {
                                         <div style="font-weight: 600; font-size: 0.9rem;" x-text="checkpoint.location"></div>
                                         <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance ? checkpoint.distance.toFixed(2) + ' km' : ''"></div>
                                         <!-- Lap time for multi-lap races -->
-                                        <div style="font-size: 0.75rem; color: #22c55e;" x-show="checkpoint.lap_time_display">
-                                            <i class="bi bi-stopwatch"></i> <span x-text="checkpoint.lap_time_display"></span>
+                                        <div style="font-size: 0.75rem; color: #22c55e;" x-show="checkpoint.lap_time_display && editingField !== 'lap_time_' + checkpoint.id">
+                                            <i class="bi bi-stopwatch"></i>
+                                            <span @dblclick="checkpoint.id && startEditField('lap_time_' + checkpoint.id, checkpoint.lap_time_display, checkpoint.id)"
+                                                  :style="checkpoint.id ? 'cursor: pointer; text-decoration: underline;' : ''"
+                                                  x-text="checkpoint.lap_time_display">
+                                            </span>
                                             <span x-show="checkpoint.speed" style="color: #a1a1aa; margin-left: 0.5rem;">
                                                 (<span x-text="checkpoint.speed"></span> km/h)
                                             </span>
+                                        </div>
+                                        <!-- Edit lap time input -->
+                                        <div x-show="editingField === 'lap_time_' + checkpoint.id" style="font-size: 0.75rem;">
+                                            <i class="bi bi-stopwatch"></i>
+                                            <input x-model="editingValue"
+                                                   @keyup.enter="saveEditField()"
+                                                   @keyup.escape="cancelEditField()"
+                                                   @blur="saveEditField()"
+                                                   type="text"
+                                                   placeholder="HH:MM:SS"
+                                                   style="width: 80px; background: #1a1d2e; color: #22c55e; border: 1px solid #3b82f6; padding: 0.1rem 0.3rem; font-size: 0.75rem;">
                                         </div>
                                     </div>
                                     <div style="text-align: right; flex: 1;">
@@ -1522,12 +1617,16 @@ function chronoApp() {
         raceChrono: '00:00:00',
         selectedRaceId: null,
         races: [],
+        categories: [],
         readers: [],
         results: [],
         displayedResults: [],
         selectedResult: null,
         runnerCheckpoints: [],
         runnerAverageSpeed: null,
+        editingField: null,
+        editingValue: '',
+        editingCheckpointId: null,
         searchQuery: '',
         categoryFilter: '',
         sasFilter: '',
@@ -1581,6 +1680,7 @@ function chronoApp() {
                 // Checkpoint is now loaded in loadEvent() after readers are loaded
             });
             this.loadRaces().then(() => this.autoSelectLastStartedRace());
+            this.loadCategories();
             this.loadAllResults().then(() => {
                 this.loadAlertsFromStorage(); // Restore alerts after loading results
             });
@@ -1666,6 +1766,15 @@ function chronoApp() {
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur chargement courses', error);
+            }
+        },
+
+        async loadCategories() {
+            try {
+                const response = await axios.get('/categories');
+                this.categories = response.data;
+            } catch (error) {
+                console.error('Erreur chargement catégories', error);
             }
         },
 
@@ -2280,6 +2389,13 @@ function chronoApp() {
 
                 // Add each lap
                 runnerResults.forEach((result, index) => {
+                    // Calculate lap speed: distance / (lap_time / 3600)
+                    let lapSpeed = null;
+                    if (result.lap_time && runnerRace.distance > 0) {
+                        const hours = result.lap_time / 3600;
+                        lapSpeed = (runnerRace.distance / hours).toFixed(2);
+                    }
+
                     this.runnerCheckpoints.push({
                         id: result.id,
                         location: `Tour ${result.lap_number || (index + 1)}`,
@@ -2288,7 +2404,7 @@ function chronoApp() {
                         time_display: this.formatTime(result.raw_time),
                         lap_time_display: this.formatDuration(result.lap_time),
                         calculated_time_display: this.formatDuration(result.calculated_time),
-                        speed: result.speed,
+                        speed: lapSpeed,
                         raw_time: new Date(result.raw_time),
                         is_estimated: false
                     });
@@ -2427,6 +2543,72 @@ function chronoApp() {
             const timeHours = timeMs / (1000 * 60 * 60);
 
             this.runnerAverageSpeed = distance / timeHours; // km/h
+        },
+
+        // Edit runner field functions
+        startEditField(field, currentValue, checkpointId = null) {
+            this.editingField = field;
+            this.editingValue = currentValue || '';
+            this.editingCheckpointId = checkpointId;
+        },
+
+        cancelEditField() {
+            this.editingField = null;
+            this.editingValue = '';
+            this.editingCheckpointId = null;
+        },
+
+        async saveEditField() {
+            if (!this.selectedResult || !this.editingField) return;
+
+            const field = this.editingField;
+            const value = this.editingValue;
+
+            this.saving = true;
+            try {
+                if (field === 'bib_number' || field === 'firstname' || field === 'lastname') {
+                    // Update entrant
+                    await axios.put(`/entrants/${this.selectedResult.entrant.id}`, {
+                        [field]: value
+                    });
+                } else if (field === 'category_id') {
+                    // Update entrant category
+                    await axios.put(`/entrants/${this.selectedResult.entrant.id}`, {
+                        category_id: parseInt(value)
+                    });
+                } else if (field === 'race_id') {
+                    // Update result race
+                    await axios.put(`/results/${this.selectedResult.id}`, {
+                        race_id: parseInt(value)
+                    });
+                } else if (field.startsWith('lap_time_') && this.editingCheckpointId) {
+                    // Update lap time for specific checkpoint
+                    const seconds = this.parseTimeToSeconds(value);
+                    await axios.put(`/results/${this.editingCheckpointId}`, {
+                        lap_time: seconds
+                    });
+                }
+
+                this.cancelEditField();
+                await this.loadAllResults();
+                this.showToast('Modification enregistrée', 'success');
+            } catch (error) {
+                console.error('Error saving field:', error);
+                this.showToast('Erreur lors de la sauvegarde', 'error');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        parseTimeToSeconds(timeStr) {
+            // Parse HH:MM:SS or MM:SS to seconds
+            const parts = timeStr.split(':').map(p => parseInt(p) || 0);
+            if (parts.length === 3) {
+                return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else if (parts.length === 2) {
+                return parts[0] * 60 + parts[1];
+            }
+            return parseInt(timeStr) || 0;
         },
 
         async addManualTime() {
