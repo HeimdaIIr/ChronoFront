@@ -547,7 +547,15 @@ class ResultController extends Controller
                     $allResults = Result::where('race_id', $race->id)->get();
                     foreach ($allResults as $result) {
                         if ($result->calculated_time > 0) {
-                            $result->calculateSpeed($race->distance);
+                            // For multi-lap races, calculate speed based on TOTAL distance and TOTAL time
+                            if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                                $totalDistance = $race->distance * $result->lap_number;
+                                $hours = $result->calculated_time / 3600;
+                                $result->speed = round($totalDistance / $hours, 2);
+                            } else {
+                                // For single-passage races, use standard calculation
+                                $result->calculateSpeed($race->distance);
+                            }
                             $result->save();
                         }
                     }
