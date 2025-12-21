@@ -120,21 +120,37 @@ class RaspberryController extends Controller
             }
 
             // Check anti-rebounce (intelligent mode for multi-lap races)
+            $race = $entrant->race;
+            $lastResult = Result::where('entrant_id', $entrant->id)
+                ->where('reader_id', $reader->id)
+                ->orderBy('raw_time', 'desc')
+                ->first();
+
+            $lastTime = $lastResult ? Carbon::parse($lastResult->raw_time) : null;
+            $secondsSinceLast = $lastTime ? $datetime->diffInSeconds($lastTime) : null;
+
+            // Determine anti-rebounce seconds
+            $configuredAntiRebounce = $reader->anti_rebounce_seconds ?? 5;
+            $effectiveAntiRebounce = ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) ? 3 : $configuredAntiRebounce;
+
+            Log::info("Anti-rebounce check details", [
+                'bib' => $bibNumber,
+                'race_type' => $race ? $race->type : 'null',
+                'configured_anti_rebounce' => $configuredAntiRebounce,
+                'effective_anti_rebounce' => $effectiveAntiRebounce,
+                'seconds_since_last' => $secondsSinceLast,
+                'will_pass' => !$lastTime || $secondsSinceLast >= $effectiveAntiRebounce,
+            ]);
+
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime);
             if (!$antiRebounceCheck) {
-                $lastResult = Result::where('entrant_id', $entrant->id)
-                    ->where('reader_id', $reader->id)
-                    ->orderBy('raw_time', 'desc')
-                    ->first();
-
-                $lastTime = $lastResult ? Carbon::parse($lastResult->raw_time) : null;
-                $secondsSinceLast = $lastTime ? $datetime->diffInSeconds($lastTime) : null;
-
-                Log::warning("Detection blocked by anti-rebounce", [
+                Log::warning("Detection BLOCKED by anti-rebounce", [
                     'bib' => $bibNumber,
                     'entrant_id' => $entrant->id,
                     'reader' => $reader->serial,
-                    'anti_rebounce_seconds' => $reader->anti_rebounce_seconds,
+                    'race_type' => $race ? $race->type : 'null',
+                    'configured_anti_rebounce' => $configuredAntiRebounce,
+                    'effective_anti_rebounce' => $effectiveAntiRebounce,
                     'seconds_since_last' => $secondsSinceLast,
                     'last_detection_time' => $lastTime ? $lastTime->format('Y-m-d H:i:s') : null,
                     'current_detection_time' => $datetime->format('Y-m-d H:i:s'),
@@ -333,11 +349,12 @@ class RaspberryController extends Controller
         $lastTime = Carbon::parse($lastResult->raw_time);
         $secondsSinceLast = $currentTime->diffInSeconds($lastTime);
 
-        // For multi-lap races (n_laps, infinite_loop), use a maximum of 3 seconds anti-rebounce
-        // to avoid blocking legitimate laps while still preventing accidental duplicates
+        // For multi-lap races (n_laps, infinite_loop), FORCE 3 seconds anti-rebounce
+        // This prevents accidental duplicates while allowing legitimate laps
+        // regardless of the reader's configured anti-rebounce setting
         $race = $entrant->race;
         if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
-            $antiRebounceSeconds = min(3, $reader->anti_rebounce_seconds);
+            $antiRebounceSeconds = 3; // Always 3 seconds for multi-lap races
         } else {
             $antiRebounceSeconds = $reader->anti_rebounce_seconds;
         }
