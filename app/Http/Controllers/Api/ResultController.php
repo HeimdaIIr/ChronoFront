@@ -80,18 +80,23 @@ class ResultController extends Controller
 
         // For multi-lap races, show only ONE result per runner (their latest/last lap)
         // This prevents showing duplicates in the results table
-        $results = $results->groupBy('entrant_id')->map(function ($entrantResults) {
-            // Get the race type from the first result
-            $race = $entrantResults->first()->race;
+        // EXCEPT in timing mode where we want to see ALL laps
+        $timingMode = $request->boolean('timing_mode', false);
 
-            // For multi-lap races, keep only the last lap
-            if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
-                return $entrantResults->sortByDesc('lap_number')->first();
-            }
+        if (!$timingMode) {
+            $results = $results->groupBy('entrant_id')->map(function ($entrantResults) {
+                // Get the race type from the first result
+                $race = $entrantResults->first()->race;
 
-            // For single-passage races, keep the first result (should only be one anyway)
-            return $entrantResults->first();
-        })->values();
+                // For multi-lap races, keep only the last lap
+                if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                    return $entrantResults->sortByDesc('lap_number')->first();
+                }
+
+                // For single-passage races, keep the first result (should only be one anyway)
+                return $entrantResults->first();
+            })->values();
+        }
 
         return response()->json($results);
     }

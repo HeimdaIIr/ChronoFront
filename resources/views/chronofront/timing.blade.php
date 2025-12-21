@@ -1722,7 +1722,7 @@ function chronoApp() {
                     }
                 });
 
-                const response = await axios.get('/results');
+                const response = await axios.get('/results?timing_mode=true');
                 this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
 
                 // Restore alerts after reload
@@ -1743,7 +1743,7 @@ function chronoApp() {
         async checkForNewResults() {
             // Silent check for new results without loading spinner
             try {
-                const response = await axios.get('/results');
+                const response = await axios.get('/results?timing_mode=true');
                 const newResults = response.data;
 
                 // Find truly new results (not in current array)
@@ -2137,6 +2137,7 @@ function chronoApp() {
                 if (this.lapFilter) {
                     params.append('lap_number', this.lapFilter);
                 }
+                params.append('timing_mode', 'true');
 
                 const response = await axios.get(`/results?${params.toString()}`);
                 this.displayedResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
