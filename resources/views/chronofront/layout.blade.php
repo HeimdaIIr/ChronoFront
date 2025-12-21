@@ -167,18 +167,6 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('chronofront.waves') ? 'active' : '' }}"
-                               href="{{ route('waves') }}">
-                                <i class="bi bi-flag"></i> Vagues
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('chronofront.categories') ? 'active' : '' }}"
-                               href="{{ route('categories') }}">
-                                <i class="bi bi-grid"></i> Catégories
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('chronofront.timing') ? 'active' : '' }}"
                                href="{{ route('timing') }}">
                                 <i class="bi bi-stopwatch"></i> Chronométrage

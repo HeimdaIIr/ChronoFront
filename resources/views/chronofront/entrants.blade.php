@@ -131,7 +131,6 @@
                             <th>Catégorie</th>
                             <th>Épreuve</th>
                             <th>Vague</th>
-                            <th>Tag RFID</th>
                             <th>Club</th>
                             <th>Actions</th>
                         </tr>
@@ -155,7 +154,6 @@
                                 <td>
                                     <span class="badge bg-warning" x-text="entrant.wave?.name || 'N/A'"></span>
                                 </td>
-                                <td><code x-text="entrant.rfid_tag || 'N/A'"></code></td>
                                 <td x-text="entrant.club || '-'"></td>
                                 <td>
                                     <div class="btn-group btn-group-sm">

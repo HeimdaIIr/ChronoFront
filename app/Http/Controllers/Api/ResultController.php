@@ -966,7 +966,9 @@ class ResultController extends Controller
 
         // Top par Catégorie
         if ($topCategory > 0) {
-            $byCategory = $allResults->groupBy('entrant.category.name');
+            $byCategory = $allResults->groupBy(function ($result) {
+                return $result->entrant->category->name ?? 'Sans catégorie';
+            });
             foreach ($byCategory as $categoryName => $catResults) {
                 $topCatResults = $catResults->take($topCategory);
                 $position = 1;
@@ -983,7 +985,9 @@ class ResultController extends Controller
         // Top par Genre ET Catégorie
         if ($topGenderCategory > 0) {
             // Récupérer toutes les catégories
-            $categories = $allResults->pluck('entrant.category.name')->unique();
+            $categories = $allResults->map(function ($result) {
+                return $result->entrant->category->name ?? 'Sans catégorie';
+            })->unique();
 
             foreach ($categories as $categoryName) {
                 foreach (['F', 'M'] as $gender) {

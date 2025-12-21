@@ -183,29 +183,6 @@
                             </div>
                         </div>
 
-                        <!-- HTTP Authentication (for VPN or custom readers) -->
-                        <div class="row" x-show="currentReader.network_type === 'vpn' || currentReader.network_type === 'custom'">
-                            <div class="col-12 mb-2">
-                                <div class="border-top pt-3">
-                                    <h6 class="text-muted">
-                                        <i class="bi bi-shield-lock"></i> Authentification HTTP (optionnel)
-                                    </h6>
-                                    <small class="text-muted">Si le lecteur nécessite une authentification pour accéder à son interface web</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nom d'utilisateur HTTP</label>
-                                <input type="text" class="form-control" x-model="currentReader.http_username"
-                                       placeholder="Ex: admin, pi, atssport">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Mot de passe HTTP</label>
-                                <input type="password" class="form-control" x-model="currentReader.http_password"
-                                       placeholder="••••••••">
-                                <small class="text-muted">Le mot de passe sera chiffré en base de données</small>
-                            </div>
-                        </div>
-
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Localisation *</label>
