@@ -1571,7 +1571,6 @@ function chronoApp() {
         rfidImportResults: null,
         clockInterval: null,
         autoRefreshInterval: null,
-        readerPingInterval: null,
         detectionFlash: false,
 
         init() {
@@ -1586,7 +1585,6 @@ function chronoApp() {
                 this.loadAlertsFromStorage(); // Restore alerts after loading results
             });
             this.startAutoRefresh();
-            this.startReaderPing();
             this.startAlertCheck();
         },
 
@@ -1680,35 +1678,9 @@ function chronoApp() {
                 // Load only readers for current event
                 const response = await axios.get(`/readers/event/${this.currentEventId}`);
                 this.readers = response.data;
-
-                // Check if any reader has issues
-                const offlineReaders = this.readers.filter(r => !r.is_online);
-                if (offlineReaders.length > 0) {
-                    this.alertMessage = `Attention : ${offlineReaders.length} lecteur(s) hors ligne`;
-                } else if (this.readers.length > 0) {
-                    this.alertMessage = null; // Clear alert if all readers are OK
-                }
             } catch (error) {
                 console.error('Erreur chargement lecteurs', error);
             }
-        },
-
-        async pingAllReaders() {
-            if (!this.currentEventId) return;
-
-            try {
-                await axios.post(`/readers/event/${this.currentEventId}/ping-all`);
-                // After ping, reload readers to get updated status
-                await this.loadReaders();
-            } catch (error) {
-                console.error('Error pinging readers:', error);
-            }
-        },
-
-        startReaderPing() {
-            // Ping readers every 10 seconds to check connection
-            this.pingAllReaders(); // Initial ping
-            this.readerPingInterval = setInterval(() => this.pingAllReaders(), 10000);
         },
 
         async loadAllResults() {

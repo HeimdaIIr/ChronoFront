@@ -115,10 +115,6 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-info" @click="pingReader(reader)"
-                                                title="Tester la connexion" :disabled="pinging === reader.id">
-                                            <i class="bi" :class="pinging === reader.id ? 'bi-hourglass-split' : 'bi-broadcast'"></i>
-                                        </button>
                                         <button class="btn btn-outline-primary" @click="editReader(reader)" title="Modifier">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -247,7 +243,6 @@ function readersManager(eventId) {
         showModal: false,
         editMode: false,
         saving: false,
-        pinging: null,
         currentReader: {},
         calculatedIP: '',
 
@@ -397,31 +392,6 @@ function readersManager(eventId) {
             } catch (error) {
                 console.error('Error deleting reader:', error);
                 alert('Erreur lors de la suppression du lecteur');
-            }
-        },
-
-        async pingReader(reader) {
-            this.pinging = reader.id;
-            try {
-                const response = await axios.post(`/readers/${reader.id}/ping`);
-                const ip = response.data.ip || this.calculateIP(reader);
-                const networkType = response.data.network_type || reader.network_type;
-
-                if (response.data.success) {
-                    alert(`✓ Lecteur ${reader.location}\nIP: ${ip} (${networkType})\nStatut: EN LIGNE`);
-                } else {
-                    alert(`✗ Lecteur ${reader.location}\nIP: ${ip} (${networkType})\nStatut: HORS LIGNE\n${response.data.message}`);
-                }
-
-                // Reload readers to update status
-                await this.loadReaders();
-            } catch (error) {
-                console.error('Error pinging reader:', error);
-                const ip = error.response?.data?.ip || this.calculateIP(reader);
-                const networkType = error.response?.data?.network_type || reader.network_type;
-                alert(`✗ Erreur lors du test de connexion\nIP: ${ip} (${networkType})\n${error.response?.data?.message || error.message}`);
-            } finally {
-                this.pinging = null;
             }
         }
     }
