@@ -136,7 +136,14 @@ class RaceController extends Controller
 
                 // Calculate speed if distance is available
                 if ($result->race && $result->race->distance > 0 && $result->calculated_time > 0) {
-                    $result->calculateSpeed($result->race->distance);
+                    // For multi-lap races, use total distance and total time
+                    if (in_array($result->race->type, ['n_laps', 'infinite_loop'])) {
+                        $totalDistance = $result->race->distance * $result->lap_number;
+                        $hours = $result->calculated_time / 3600;
+                        $result->speed = round($totalDistance / $hours, 2);
+                    } else {
+                        $result->calculateSpeed($result->race->distance);
+                    }
                 }
 
                 // Calculate lap time if this is not the first lap
