@@ -25,10 +25,20 @@ class RaspberryController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Log all incoming requests for debugging
+        Log::info('RFID Detection Request', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'ip' => $request->ip(),
+            'serial_header' => $request->header('Serial'),
+            'body_preview' => substr($request->getContent(), 0, 200),
+        ]);
+
         // Get reader serial from header
         $readerSerial = $request->header('Serial');
 
         if (!$readerSerial) {
+            Log::warning('RFID request missing Serial header');
             return response()->json([
                 'error' => 'Missing Serial header'
             ], 400);
@@ -38,11 +48,21 @@ class RaspberryController extends Controller
         $reader = Reader::getActiveConfig($readerSerial);
 
         if (!$reader) {
+            Log::error('Reader not found or not active', [
+                'serial' => $readerSerial,
+            ]);
             return response()->json([
                 'error' => 'Reader not configured or not active',
                 'serial' => $readerSerial
             ], 404);
         }
+
+        Log::info('Reader found and active', [
+            'serial' => $readerSerial,
+            'reader_id' => $reader->id,
+            'event_id' => $reader->event_id,
+            'race_id' => $reader->race_id,
+        ]);
 
         // Mark reader as tested
         $reader->markAsTested();
@@ -160,6 +180,14 @@ class RaspberryController extends Controller
 
         // Log to file (optional, for debugging)
         $this->logToFile($readerSerial, $reader->location, ob_get_clean());
+
+        Log::info('RFID detections processed', [
+            'reader' => $readerSerial,
+            'location' => $reader->location,
+            'processed' => $processed,
+            'skipped' => $skipped,
+            'total_detections' => count($detections),
+        ]);
 
         return response()->json([
             'success' => true,
