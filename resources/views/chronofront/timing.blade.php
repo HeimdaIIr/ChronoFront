@@ -1009,7 +1009,7 @@ body {
                                     <td x-text="result.reader_location || '-'"></td>
                                     <td><strong x-text="result.lap_number || '-'"></strong></td>
                                     <td><strong x-text="getDisplayTime(result)"></strong></td>
-                                    <td x-text="result.speed ? result.speed + ' km/h' : '-'"></td>
+                                    <td x-text="getLapSpeed(result)"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
                                 </tr>
                             </template>
@@ -3040,6 +3040,23 @@ function chronoApp() {
 
             // For single-passage races, show formatted time (cumulative)
             return result.formatted_time || '-';
+        },
+
+        getLapSpeed(result) {
+            if (!result || !result.race) return '-';
+
+            const raceType = result.race.type;
+            const distance = result.race.distance;
+
+            // For multi-lap races (n_laps, infinite_loop), show LAP SPEED (vitesse du tour)
+            if ((raceType === 'n_laps' || raceType === 'infinite_loop') && result.lap_time && distance > 0) {
+                const hours = result.lap_time / 3600;
+                const lapSpeed = (distance / hours).toFixed(2);
+                return lapSpeed + ' km/h';
+            }
+
+            // For single-passage races, show cumulative speed
+            return result.speed ? result.speed + ' km/h' : '-';
         },
 
         // Intermediate time management functions
