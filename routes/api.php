@@ -80,6 +80,10 @@ Route::put('raspberry', [RaspberryController::class, 'store']);
 Route::post('raspberry', [RaspberryController::class, 'store']);
 Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-config endpoint
 
+// Alternative endpoint names (aliases)
+Route::post('rfid/detections', [RaspberryController::class, 'store']);
+Route::put('rfid/detections', [RaspberryController::class, 'store']);
+
 // Health check
 Route::get('health', function () {
     try {
