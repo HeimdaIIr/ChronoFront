@@ -434,10 +434,12 @@ class RaspberryController extends Controller
                 }
             }
 
-            // Calculate speed based on lap distance
-            if ($result->race->distance > 0 && $result->lap_time > 0) {
-                $hours = $result->lap_time / 3600;
-                $result->speed = round($result->race->distance / $hours, 2);
+            // Calculate average speed based on TOTAL distance and TOTAL time
+            // This gives the true average speed (not average of lap speeds)
+            if ($result->race->distance > 0 && $result->calculated_time > 0) {
+                $totalDistance = $result->race->distance * $result->lap_number; // Total km covered
+                $hours = $result->calculated_time / 3600; // Total time in hours
+                $result->speed = round($totalDistance / $hours, 2);
             }
 
         } else {

@@ -78,6 +78,21 @@ class ResultController extends Controller
 
         $results = $query->get();
 
+        // For multi-lap races, show only ONE result per runner (their latest/last lap)
+        // This prevents showing duplicates in the results table
+        $results = $results->groupBy('entrant_id')->map(function ($entrantResults) {
+            // Get the race type from the first result
+            $race = $entrantResults->first()->race;
+
+            // For multi-lap races, keep only the last lap
+            if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            }
+
+            // For single-passage races, keep the first result (should only be one anyway)
+            return $entrantResults->first();
+        })->values();
+
         return response()->json($results);
     }
 
@@ -86,10 +101,18 @@ class ResultController extends Controller
      */
     public function byRace(int $raceId): JsonResponse
     {
+        $race = Race::find($raceId);
         $results = Result::where('race_id', $raceId)
-            ->with(['entrant.category', 'wave'])
+            ->with(['entrant.category', 'wave', 'race'])
             ->orderBy('position')
             ->get();
+
+        // For multi-lap races, show only ONE result per runner (their latest/last lap)
+        if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $results = $results->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            })->sortBy('position')->values();
+        }
 
         return response()->json($results);
     }
@@ -777,6 +800,86 @@ class ResultController extends Controller
     }
 
     /**
+     * Export detailed results to PDF (landscape mode with lap times)
+     */
+    public function exportDetailedPdf(int $raceId, Request $request)
+    {
+        $race = Race::with('event')->findOrFail($raceId);
+
+        // Get filters from request
+        $displayMode = $request->query('display_mode', 'general');
+        $statusFilter = $request->query('status_filter', 'all');
+        $autoPrint = $request->query('print', false);
+
+        // Build query
+        $query = Result::where('race_id', $raceId)
+            ->with(['entrant.category'])
+            ->orderBy('position');
+
+        // Apply status filter
+        if ($statusFilter === 'V') {
+            $query->where('status', 'V');
+        }
+
+        $allResults = $query->get();
+
+        // For multi-lap races, keep only the last lap per entrant for display
+        // BUT also keep all laps data for showing individual lap times
+        $lapsByEntrant = [];
+        if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            // Group all laps by entrant
+            $lapsByEntrant = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortBy('lap_number')->values();
+            });
+
+            // Keep only final result per entrant for main display
+            $results = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            })->sortBy('position')->values();
+        } else {
+            $results = $allResults;
+        }
+
+        // Group by category if needed
+        $resultsByCategory = [];
+        if ($displayMode === 'category') {
+            $resultsByCategory = $results->groupBy(function ($result) {
+                return $result->entrant->category->name ?? 'Sans catégorie';
+            })->map(function ($categoryResults) {
+                return $categoryResults->sortBy('category_position');
+            });
+        }
+
+        // Prepare data for PDF
+        $data = [
+            'race' => $race,
+            'results' => $results,
+            'displayMode' => $displayMode,
+            'resultsByCategory' => $resultsByCategory,
+            'autoPrint' => $autoPrint,
+            'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+        ];
+
+        // Generate PDF in LANDSCAPE mode
+        $pdf = Pdf::loadView('chronofront.pdf.results-detailed', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        $filename = sprintf(
+            'resultats_detailles_%s_%s_%s.pdf',
+            $race->event->name ?? 'event',
+            $race->name,
+            now()->format('Y-m-d')
+        );
+
+        // Si print=true, afficher en ligne au lieu de télécharger
+        if ($autoPrint) {
+            return $pdf->stream($filename);
+        }
+
+        return $pdf->download($filename);
+    }
+
+    /**
      * Export awards (récompenses) to PDF
      */
     public function exportAwardsPdf(int $raceId, Request $request)
@@ -796,6 +899,14 @@ class ResultController extends Controller
             ->with(['entrant.category'])
             ->orderBy('position')
             ->get();
+
+        // For multi-lap races, keep only ONE result per runner (their final lap)
+        // This prevents duplicates in awards
+        if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $allResults = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            })->sortBy('position')->values();
+        }
 
         // Separate collections for each award type
         $scratchResults = collect();
@@ -823,10 +934,19 @@ class ResultController extends Controller
                     ->where('results.race_id', $raceId)
                     ->where('results.status', 'V')
                     ->where('entrants.gender', $gender)
-                    ->with(['entrant.category'])
+                    ->with(['entrant.category', 'race'])
                     ->orderBy('results.position')
-                    ->limit($topGender)
-                    ->get();
+                    ->get(); // Get all, then filter
+
+                // For multi-lap races, keep only ONE result per runner
+                if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                    $topByGender = $topByGender->groupBy('entrant_id')->map(function ($entrantResults) {
+                        return $entrantResults->sortByDesc('lap_number')->first();
+                    })->sortBy('position')->values();
+                }
+
+                // Now take top N
+                $topByGender = $topByGender->take($topGender);
 
                 $position = 1;
                 foreach ($topByGender as $result) {
@@ -870,10 +990,19 @@ class ResultController extends Controller
                         ->where('results.status', 'V')
                         ->where('entrants.gender', $gender)
                         ->where('categories.name', $categoryName)
-                        ->with(['entrant.category'])
+                        ->with(['entrant.category', 'race'])
                         ->orderBy('results.position')
-                        ->limit($topGenderCategory)
-                        ->get();
+                        ->get(); // Get all, then filter
+
+                    // For multi-lap races, keep only ONE result per runner
+                    if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                        $topGenderCat = $topGenderCat->groupBy('entrant_id')->map(function ($entrantResults) {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        })->sortBy('position')->values();
+                    }
+
+                    // Now take top N
+                    $topGenderCat = $topGenderCat->take($topGenderCategory);
 
                     $position = 1;
                     foreach ($topGenderCat as $result) {

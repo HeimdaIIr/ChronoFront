@@ -30,20 +30,52 @@
             >
                 <i class="bi bi-download"></i> Exporter CSV
             </button>
-            <button
-                class="btn btn-danger me-2"
-                @click="downloadPDF"
-                :disabled="!selectedRace || filteredResults.length === 0"
-            >
-                <i class="bi bi-file-pdf"></i> Télécharger PDF
-            </button>
-            <button
-                class="btn btn-secondary me-2"
-                @click="printResults"
-                :disabled="!selectedRace || filteredResults.length === 0"
-            >
-                <i class="bi bi-printer"></i> Imprimer
-            </button>
+            <div class="btn-group me-2" role="group">
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    @click="downloadPDF"
+                    :disabled="!selectedRace || filteredResults.length === 0"
+                >
+                    <i class="bi bi-file-pdf"></i> Télécharger PDF
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-danger dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    :disabled="!selectedRace || filteredResults.length === 0"
+                >
+                    <span class="visually-hidden">Options</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" @click.prevent="downloadPDF">PDF Standard</a></li>
+                    <li><a class="dropdown-item" href="#" @click.prevent="downloadDetailedPDF">PDF Détaillé</a></li>
+                </ul>
+            </div>
+            <div class="btn-group me-2" role="group">
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="printResults"
+                    :disabled="!selectedRace || filteredResults.length === 0"
+                >
+                    <i class="bi bi-printer"></i> Imprimer
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-secondary dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    :disabled="!selectedRace || filteredResults.length === 0"
+                >
+                    <span class="visually-hidden">Options</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" @click.prevent="printResults">Imprimer Standard</a></li>
+                    <li><a class="dropdown-item" href="#" @click.prevent="printDetailedResults">Imprimer Détaillé</a></li>
+                </ul>
+            </div>
             <button
                 class="btn btn-warning"
                 @click="showAwardsModal = true"
@@ -672,11 +704,28 @@ function resultsManager() {
             window.location.href = url;
         },
 
+        downloadDetailedPDF() {
+            if (!this.selectedRace) return;
+
+            // Construire l'URL pour le PDF détaillé
+            let url = `/api/results/race/${this.selectedRace}/pdf-detailed?display_mode=${this.displayMode}&status_filter=${this.statusFilter}`;
+
+            window.location.href = url;
+        },
+
         printResults() {
             if (!this.selectedRace) return;
 
             // Ouvrir le PDF dans un nouvel onglet avec auto-print
             let url = `/api/results/race/${this.selectedRace}/pdf?display_mode=${this.displayMode}&status_filter=${this.statusFilter}&print=true`;
+            window.open(url, '_blank');
+        },
+
+        printDetailedResults() {
+            if (!this.selectedRace) return;
+
+            // Ouvrir le PDF détaillé dans un nouvel onglet avec auto-print
+            let url = `/api/results/race/${this.selectedRace}/pdf-detailed?display_mode=${this.displayMode}&status_filter=${this.statusFilter}&print=true`;
             window.open(url, '_blank');
         },
 
