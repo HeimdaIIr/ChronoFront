@@ -120,8 +120,25 @@ class RaspberryController extends Controller
             }
 
             // Check anti-rebounce
-            if (!$this->checkAntiRebounce($entrant, $reader, $datetime)) {
-                Log::info("Anti-rebounce triggered for bib {$bibNumber}");
+            $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime);
+            if (!$antiRebounceCheck) {
+                $lastResult = Result::where('entrant_id', $entrant->id)
+                    ->where('reader_id', $reader->id)
+                    ->orderBy('raw_time', 'desc')
+                    ->first();
+
+                $lastTime = $lastResult ? Carbon::parse($lastResult->raw_time) : null;
+                $secondsSinceLast = $lastTime ? $datetime->diffInSeconds($lastTime) : null;
+
+                Log::warning("Detection blocked by anti-rebounce", [
+                    'bib' => $bibNumber,
+                    'entrant_id' => $entrant->id,
+                    'reader' => $reader->serial,
+                    'anti_rebounce_seconds' => $reader->anti_rebounce_seconds,
+                    'seconds_since_last' => $secondsSinceLast,
+                    'last_detection_time' => $lastTime ? $lastTime->format('Y-m-d H:i:s') : null,
+                    'current_detection_time' => $datetime->format('Y-m-d H:i:s'),
+                ]);
                 $skipped++;
                 continue;
             }
@@ -160,6 +177,16 @@ class RaspberryController extends Controller
 
             // Calculate time and speed
             $this->calculateResult($result);
+
+            Log::info("Detection successfully processed", [
+                'bib' => $bibNumber,
+                'entrant_id' => $entrant->id,
+                'lap_number' => $passageNumber,
+                'time' => $datetime->format('Y-m-d H:i:s'),
+                'reader' => $reader->serial,
+                'location' => $reader->location,
+                'race_type' => $result->race->type ?? '1_passage',
+            ]);
 
             // Log for compatibility with old system
             $logEntry = "[{$serial}]:a" . date('YmdHis', intval($timestamp)) . $milliseconds;
