@@ -119,9 +119,7 @@ class RaspberryController extends Controller
                 continue;
             }
 
-            // TEMPORARILY DISABLED: Check anti-rebounce
-            // NOTE: Anti-rebounce disabled for debugging multi-lap detection issues
-            /*
+            // Check anti-rebounce (intelligent mode for multi-lap races)
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime);
             if (!$antiRebounceCheck) {
                 $lastResult = Result::where('entrant_id', $entrant->id)
@@ -144,12 +142,6 @@ class RaspberryController extends Controller
                 $skipped++;
                 continue;
             }
-            */
-
-            Log::info("Anti-rebounce check passed (DISABLED FOR DEBUG)", [
-                'bib' => $bibNumber,
-                'entrant_id' => $entrant->id,
-            ]);
 
             // Check race duration for infinite_loop type
             $race = $entrant->race;
@@ -193,6 +185,20 @@ class RaspberryController extends Controller
                 'reader' => $reader->serial,
                 'time' => $datetime->format('Y-m-d H:i:s'),
             ]);
+
+            // Check if max laps exceeded for n_laps races
+            if ($race && $race->type === 'n_laps' && $race->laps > 0) {
+                if ($passageNumber > $race->laps) {
+                    Log::warning("Passage BLOCKED - max laps exceeded", [
+                        'bib' => $bibNumber,
+                        'lap_number' => $passageNumber,
+                        'max_laps' => $race->laps,
+                        'race_name' => $race->name,
+                    ]);
+                    $skipped++;
+                    continue;
+                }
+            }
 
             // Create result
             $result = Result::create([
@@ -311,6 +317,7 @@ class RaspberryController extends Controller
 
     /**
      * Check if enough time has passed since last read (anti-rebounce)
+     * For multi-lap races, uses a maximum of 3 seconds to avoid blocking legitimate laps
      */
     private function checkAntiRebounce(Entrant $entrant, Reader $reader, Carbon $currentTime): bool
     {
@@ -326,7 +333,16 @@ class RaspberryController extends Controller
         $lastTime = Carbon::parse($lastResult->raw_time);
         $secondsSinceLast = $currentTime->diffInSeconds($lastTime);
 
-        return $secondsSinceLast >= $reader->anti_rebounce_seconds;
+        // For multi-lap races (n_laps, infinite_loop), use a maximum of 3 seconds anti-rebounce
+        // to avoid blocking legitimate laps while still preventing accidental duplicates
+        $race = $entrant->race;
+        if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $antiRebounceSeconds = min(3, $reader->anti_rebounce_seconds);
+        } else {
+            $antiRebounceSeconds = $reader->anti_rebounce_seconds;
+        }
+
+        return $secondsSinceLast >= $antiRebounceSeconds;
     }
 
     /**
