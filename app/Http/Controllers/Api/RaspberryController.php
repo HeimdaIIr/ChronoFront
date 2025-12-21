@@ -234,6 +234,28 @@ class RaspberryController extends Controller
             // Calculate time and speed
             $this->calculateResult($result);
 
+            // Auto-recalculate positions if runner finished all laps
+            if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                // For n_laps: recalc when reaching max laps
+                if ($race->type === 'n_laps' && $race->laps > 0 && $passageNumber >= $race->laps) {
+                    $this->recalculateRacePositions($race->id);
+                    Log::info("Positions auto-recalculated", [
+                        'bib' => $bibNumber,
+                        'race_id' => $race->id,
+                        'lap_number' => $passageNumber,
+                    ]);
+                }
+                // For infinite_loop: recalc after each lap
+                elseif ($race->type === 'infinite_loop') {
+                    $this->recalculateRacePositions($race->id);
+                    Log::info("Positions auto-recalculated (infinite_loop)", [
+                        'bib' => $bibNumber,
+                        'race_id' => $race->id,
+                        'lap_number' => $passageNumber,
+                    ]);
+                }
+            }
+
             Log::info("Detection successfully processed", [
                 'bib' => $bibNumber,
                 'entrant_id' => $entrant->id,
@@ -461,5 +483,58 @@ class RaspberryController extends Controller
 
         $logFile = $logDir . '/reader-' . $readerSerial . '-' . date('Ymd') . '.txt';
         file_put_contents($logFile, $content, FILE_APPEND);
+    }
+
+    /**
+     * Recalculate positions for a race
+     * Called automatically when a runner finishes all laps
+     */
+    private function recalculateRacePositions(int $raceId): void
+    {
+        try {
+            $race = \App\Models\Race::findOrFail($raceId);
+
+            // Get all results for this race, grouped by entrant
+            // For races with multiple laps, take best time or last lap depending on race type
+            $results = Result::where('race_id', $raceId)
+                ->where('status', 'V')
+                ->with(['entrant.category'])
+                ->get()
+                ->groupBy('entrant_id')
+                ->map(function ($entrantResults) use ($race) {
+                    // For best_time races, keep best time
+                    // Otherwise keep last lap
+                    if ($race->best_time) {
+                        return $entrantResults->sortBy('calculated_time')->first();
+                    } else {
+                        return $entrantResults->sortByDesc('lap_number')->first();
+                    }
+                })
+                ->sortBy('calculated_time')
+                ->values();
+
+            // Calculate overall positions
+            $position = 1;
+            foreach ($results as $result) {
+                $result->update(['position' => $position++]);
+            }
+
+            // Calculate category positions
+            $resultsByCategory = $results->groupBy(function ($result) {
+                return $result->entrant->category_id;
+            });
+
+            foreach ($resultsByCategory as $categoryId => $categoryResults) {
+                $categoryPosition = 1;
+                foreach ($categoryResults as $result) {
+                    $result->update(['category_position' => $categoryPosition++]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to recalculate positions", [
+                'race_id' => $raceId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

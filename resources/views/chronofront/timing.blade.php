@@ -3058,6 +3058,14 @@ function chronoApp() {
             // Show status text instead of time for DNS/DNF
             if (result.status === 'DNS') return 'Non partant';
             if (result.status === 'DNF') return 'ABD';
+
+            // For multi-lap races (n_laps, infinite_loop), show lap time instead of cumulative time
+            const raceType = result.race?.type;
+            if (raceType === 'n_laps' || raceType === 'infinite_loop') {
+                return this.formatDuration(result.lap_time);
+            }
+
+            // For single-passage races, show formatted time (cumulative)
             return result.formatted_time || '-';
         },
 

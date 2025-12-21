@@ -589,30 +589,99 @@ class ResultController extends Controller
     {
         $race = Race::with('event')->findOrFail($raceId);
 
-        $results = Result::where('race_id', $raceId)
-            ->with(['entrant.category'])
-            ->orderBy('position')
-            ->get();
-
         // UTF-8 BOM pour Excel
         $csv = "\xEF\xBB\xBF";
-        $csv .= "Position;Dossard;Nom;Prénom;Sexe;Catégorie;Club;Temps;Vitesse;Position Catégorie;Statut\n";
 
-        foreach ($results as $result) {
-            $csv .= sprintf(
-                "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",
-                $result->position ?? 'N/A',
-                $result->entrant->bib_number ?? '',
-                $result->entrant->lastname ?? '',
-                $result->entrant->firstname ?? '',
-                $result->entrant->gender ?? '',
-                $result->entrant->category->name ?? '',
-                $result->entrant->club ?? '',
-                $result->formatted_time ?? '',
-                $result->speed ? number_format($result->speed, 2) . ' km/h' : '',
-                $result->category_position ?? 'N/A',
-                $result->status
-            );
+        // Check if this is a multi-lap race
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+
+        if ($isMultiLap) {
+            // For multi-lap races, group results by entrant and show each lap
+            $allResults = Result::where('race_id', $raceId)
+                ->with(['entrant.category'])
+                ->orderBy('entrant_id')
+                ->orderBy('lap_number')
+                ->get();
+
+            // Group by entrant
+            $groupedResults = $allResults->groupBy('entrant_id');
+
+            // Determine number of laps (either configured or max found)
+            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+
+            // Build dynamic header
+            $header = "Position;Dossard;Nom;Prénom;Sexe;Catégorie;Club;";
+            for ($i = 1; $i <= $maxLaps; $i++) {
+                $header .= "Tour {$i};";
+            }
+            $header .= "Temps Total;Vitesse;Position Catégorie;Statut\n";
+            $csv .= $header;
+
+            // Build rows
+            foreach ($groupedResults as $entrantId => $entrantResults) {
+                $finalResult = $entrantResults->sortByDesc('lap_number')->first();
+                if (!$finalResult) continue;
+
+                $row = sprintf(
+                    "%s;%s;%s;%s;%s;%s;%s;",
+                    $finalResult->position ?? 'N/A',
+                    $finalResult->entrant->bib_number ?? '',
+                    $finalResult->entrant->lastname ?? '',
+                    $finalResult->entrant->firstname ?? '',
+                    $finalResult->entrant->gender ?? '',
+                    $finalResult->entrant->category->name ?? '',
+                    $finalResult->entrant->club ?? ''
+                );
+
+                // Add lap times
+                for ($i = 1; $i <= $maxLaps; $i++) {
+                    $lapResult = $entrantResults->firstWhere('lap_number', $i);
+                    if ($lapResult && $lapResult->lap_time) {
+                        $hours = floor($lapResult->lap_time / 3600);
+                        $minutes = floor(($lapResult->lap_time % 3600) / 60);
+                        $seconds = floor($lapResult->lap_time % 60);
+                        $row .= sprintf("%02d:%02d:%02d;", $hours, $minutes, $seconds);
+                    } else {
+                        $row .= "-;";
+                    }
+                }
+
+                // Add total time, speed, category position, status
+                $row .= sprintf(
+                    "%s;%s;%s;%s\n",
+                    $finalResult->formatted_time ?? '',
+                    $finalResult->speed ? number_format($finalResult->speed, 2) . ' km/h' : '',
+                    $finalResult->category_position ?? 'N/A',
+                    $finalResult->status
+                );
+
+                $csv .= $row;
+            }
+        } else {
+            // For single-passage races, use original logic
+            $results = Result::where('race_id', $raceId)
+                ->with(['entrant.category'])
+                ->orderBy('position')
+                ->get();
+
+            $csv .= "Position;Dossard;Nom;Prénom;Sexe;Catégorie;Club;Temps;Vitesse;Position Catégorie;Statut\n";
+
+            foreach ($results as $result) {
+                $csv .= sprintf(
+                    "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",
+                    $result->position ?? 'N/A',
+                    $result->entrant->bib_number ?? '',
+                    $result->entrant->lastname ?? '',
+                    $result->entrant->firstname ?? '',
+                    $result->entrant->gender ?? '',
+                    $result->entrant->category->name ?? '',
+                    $result->entrant->club ?? '',
+                    $result->formatted_time ?? '',
+                    $result->speed ? number_format($result->speed, 2) . ' km/h' : '',
+                    $result->category_position ?? 'N/A',
+                    $result->status
+                );
+            }
         }
 
         $filename = sprintf(
@@ -651,8 +720,16 @@ class ResultController extends Controller
 
         $allResults = $query->get();
 
-        // For multi-lap races, keep only the last lap per entrant
+        // For multi-lap races, keep only the last lap per entrant for display
+        // BUT also keep all laps data for showing individual lap times
+        $lapsByEntrant = [];
         if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            // Group all laps by entrant
+            $lapsByEntrant = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortBy('lap_number')->values();
+            });
+
+            // Keep only final result per entrant for main display
             $results = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
                 return $entrantResults->sortByDesc('lap_number')->first();
             })->sortBy('position')->values();
@@ -677,6 +754,7 @@ class ResultController extends Controller
             'displayMode' => $displayMode,
             'resultsByCategory' => $resultsByCategory,
             'autoPrint' => $autoPrint,
+            'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
         ];
 
         // Generate PDF
@@ -822,6 +900,21 @@ class ResultController extends Controller
         $categoryResults = $categoryResults->sortBy('position')->values();
         $genderCategoryResults = $genderCategoryResults->sortBy('position')->values();
 
+        // For multi-lap races, get all laps data for displaying individual lap times
+        $lapsByEntrant = [];
+        if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $allLaps = Result::where('race_id', $raceId)
+                ->where('status', 'V')
+                ->with(['entrant.category'])
+                ->orderBy('entrant_id')
+                ->orderBy('lap_number')
+                ->get();
+
+            $lapsByEntrant = $allLaps->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortBy('lap_number')->values();
+            });
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -831,6 +924,7 @@ class ResultController extends Controller
             'categoryResults' => $categoryResults,
             'genderCategoryResults' => $genderCategoryResults,
             'autoPrint' => $autoPrint,
+            'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
             'config' => [
                 'topScratch' => $topScratch,
                 'topGender' => $topGender,

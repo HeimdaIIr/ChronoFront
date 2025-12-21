@@ -190,6 +190,11 @@
         <!-- Classement Général -->
         <div class="total-participants">{{ $results->count() }} participant(s)</div>
 
+        @php
+            $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+            $maxLaps = $isMultiLap && $race->laps > 0 ? $race->laps : 0;
+        @endphp
+
         <table>
             <thead>
                 <tr>
@@ -200,6 +205,11 @@
                     <th style="width: 22px; text-align: center;">Sexe</th>
                     <th class="category">Catégorie</th>
                     <th>Club</th>
+                    @if($isMultiLap && $maxLaps > 0)
+                        @for($i = 1; $i <= $maxLaps; $i++)
+                            <th class="time" style="width: 42px;">T{{ $i }}</th>
+                        @endfor
+                    @endif
                     <th class="time">Temps</th>
                     <th class="speed">Vitesse</th>
                     <th class="pos">Pos. Cat.</th>
@@ -216,6 +226,25 @@
                         <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
                         <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                         <td>{{ $result->entrant->club ?? '-' }}</td>
+                        @if($isMultiLap && $maxLaps > 0)
+                            @php
+                                $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                            @endphp
+                            @for($i = 1; $i <= $maxLaps; $i++)
+                                @php
+                                    $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                    if ($lap && $lap->lap_time) {
+                                        $hours = floor($lap->lap_time / 3600);
+                                        $minutes = floor(($lap->lap_time % 3600) / 60);
+                                        $seconds = floor($lap->lap_time % 60);
+                                        $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                    } else {
+                                        $lapTime = '-';
+                                    }
+                                @endphp
+                                <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                            @endfor
+                        @endif
                         <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                         <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
                         <td class="pos">{{ $result->category_position ?? '-' }}</td>
@@ -235,6 +264,11 @@
                                     <th style="width: 22px; text-align: center;">Sexe</th>
                                     <th class="category">Catégorie</th>
                                     <th>Club</th>
+                                    @if($isMultiLap && $maxLaps > 0)
+                                        @for($i = 1; $i <= $maxLaps; $i++)
+                                            <th class="time" style="width: 42px;">T{{ $i }}</th>
+                                        @endfor
+                                    @endif
                                     <th class="time">Temps</th>
                                     <th class="speed">Vitesse</th>
                                     <th class="pos">Pos. Cat.</th>
@@ -248,6 +282,11 @@
         </table>
     @else
         <!-- Classement par Catégorie -->
+        @php
+            $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+            $maxLaps = $isMultiLap && $race->laps > 0 ? $race->laps : 0;
+        @endphp
+
         @foreach($resultsByCategory as $categoryName => $categoryResults)
             <div class="category-title">
                 {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
@@ -262,6 +301,11 @@
                         <th>Nom</th>
                         <th>Prénom</th>
                         <th>Club</th>
+                        @if($isMultiLap && $maxLaps > 0)
+                            @for($i = 1; $i <= $maxLaps; $i++)
+                                <th class="time" style="width: 42px;">T{{ $i }}</th>
+                            @endfor
+                        @endif
                         <th class="time">Temps</th>
                         <th class="speed">Vitesse</th>
                         <th class="status">Statut</th>
@@ -276,6 +320,25 @@
                             <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
                             <td>{{ $result->entrant->firstname ?? '' }}</td>
                             <td>{{ $result->entrant->club ?? '-' }}</td>
+                            @if($isMultiLap && $maxLaps > 0)
+                                @php
+                                    $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                                @endphp
+                                @for($i = 1; $i <= $maxLaps; $i++)
+                                    @php
+                                        $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                        if ($lap && $lap->lap_time) {
+                                            $hours = floor($lap->lap_time / 3600);
+                                            $minutes = floor(($lap->lap_time % 3600) / 60);
+                                            $seconds = floor($lap->lap_time % 60);
+                                            $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                        } else {
+                                            $lapTime = '-';
+                                        }
+                                    @endphp
+                                    <td class="time" style="font-size: 5.5pt;">{{ $lapTime }}</td>
+                                @endfor
+                            @endif
                             <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                             <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
                             <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
