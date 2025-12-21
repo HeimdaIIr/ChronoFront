@@ -1112,9 +1112,10 @@ body {
 
                     <!-- Info de base -->
                     <div class="mb-3">
-                        <div class="row mb-2 align-items-center">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Épreuve:</div>
-                            <div class="col-6" style="text-align: right;">
+                        <!-- Épreuve -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Épreuve:</div>
+                            <div style="text-align: right; flex: 1; margin-left: 0.5rem;">
                                 <!-- Editable Race -->
                                 <div x-show="editingField !== 'race_id'"
                                      @dblclick="startEditField('race_id', selectedResult?.race?.id)"
@@ -1126,16 +1127,17 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
                                     <template x-for="race in races" :key="race.id">
                                         <option :value="race.id" x-text="race.name"></option>
                                     </template>
                                 </select>
                             </div>
                         </div>
-                        <div class="row mb-2 align-items-center">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Catégorie:</div>
-                            <div class="col-6" style="text-align: right;">
+                        <!-- Catégorie -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Catégorie:</div>
+                            <div style="text-align: right; flex: 1; margin-left: 0.5rem;">
                                 <!-- Editable Category -->
                                 <div x-show="editingField !== 'category_id'"
                                      @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
@@ -1147,7 +1149,7 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
                                     <template x-for="cat in categories" :key="cat.id">
                                         <option :value="cat.id" x-text="cat.name"></option>
                                     </template>
@@ -2563,6 +2565,7 @@ function chronoApp() {
 
             const field = this.editingField;
             const value = this.editingValue;
+            const selectedResultId = this.selectedResult.id;
 
             this.saving = true;
             try {
@@ -2590,7 +2593,16 @@ function chronoApp() {
                 }
 
                 this.cancelEditField();
+
+                // Reload all results and re-select the current result
                 await this.loadAllResults();
+
+                // Re-select the result to update the panel
+                const updatedResult = this.results.find(r => r.id === selectedResultId);
+                if (updatedResult) {
+                    this.selectResult(updatedResult);
+                }
+
                 this.showToast('Modification enregistrée', 'success');
             } catch (error) {
                 console.error('Error saving field:', error);

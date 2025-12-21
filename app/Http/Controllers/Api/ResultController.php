@@ -1106,16 +1106,24 @@ class ResultController extends Controller
         $validated = $request->validate([
             'status' => 'sometimes|in:V,DNS,DNF,DSQ,NS',
             'raw_time' => 'sometimes|date',
+            'race_id' => 'sometimes|exists:races,id',
+            'lap_time' => 'sometimes|numeric',
         ]);
+
+        $oldRaceId = $result->race_id;
 
         $result->update($validated);
 
-        if (isset($validated['raw_time'])) {
+        // Recalculate if raw_time or lap_time changed
+        if (isset($validated['raw_time']) || isset($validated['lap_time'])) {
             $this->calculateResult($result);
         }
 
-        // Recalculate positions for this race
-        $this->recalculateRacePositions($result->race_id);
+        // Recalculate positions for affected races
+        $this->recalculateRacePositions($oldRaceId);
+        if (isset($validated['race_id']) && $validated['race_id'] != $oldRaceId) {
+            $this->recalculateRacePositions($validated['race_id']);
+        }
 
         return response()->json($result);
     }
