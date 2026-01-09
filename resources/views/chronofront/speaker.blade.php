@@ -87,6 +87,7 @@
         .results-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         .results-table thead th {
@@ -99,6 +100,9 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .results-table tbody tr {
@@ -120,6 +124,13 @@
         }
 
         /* Dynamic sizing based on line count */
+        /* Base cell styles for alignment */
+        .results-table tbody td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* 5 LIGNES (XL) */
         .size-large .results-table thead th {
             padding: 1rem;
@@ -186,6 +197,8 @@
         .col-name {
             color: #fff;
             font-weight: 600;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-category {
@@ -203,11 +216,15 @@
         .col-race {
             color: #00BCD4;
             font-weight: 600;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-club {
             color: #999;
             font-style: italic;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-speed {
@@ -229,6 +246,8 @@
             color: #888;
             font-size: 0.9em;
             font-variant-numeric: tabular-nums;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         /* Loading indicator */
