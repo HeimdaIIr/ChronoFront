@@ -33,16 +33,16 @@
         .speaker-header {
             background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
             border-bottom: 3px solid #FFD700;
-            padding: 1.5rem 2rem;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 90px;
+            height: 70px;
             flex-shrink: 0;
         }
 
         .event-title {
-            font-size: 2rem;
+            font-size: 1.6rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -55,7 +55,7 @@
         }
 
         .clock {
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             font-weight: 300;
             font-variant-numeric: tabular-nums;
             color: #fff;
@@ -65,8 +65,8 @@
             background: #1a1a1a;
             border: 2px solid #FFD700;
             color: #FFD700;
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
             font-weight: 600;
             border-radius: 4px;
             cursor: pointer;
@@ -79,7 +79,7 @@
 
         /* Results table */
         .results-container {
-            height: calc(100vh - 90px);
+            height: calc(100vh - 70px);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -141,46 +141,46 @@
         /* Dynamic sizing based on line count */
         /* 5 LIGNES (XL) */
         .size-large .results-table thead th {
-            padding: 1.2rem 1rem;
-            font-size: 2.5rem;
-            line-height: 1;
+            padding: 0.4rem 0.8rem;
+            font-size: 1.6rem;
+            line-height: 1.2;
         }
 
         .size-large .results-table tbody td {
-            padding: 0.8rem 1rem;
-            font-size: 2rem;
+            padding: 0.3rem 0.8rem;
+            font-size: 1.4rem;
             font-weight: 500;
-            line-height: 1;
+            line-height: 1.2;
             vertical-align: middle;
         }
 
         /* 10 LIGNES (M) */
         .size-medium .results-table thead th {
-            padding: 1rem 0.8rem;
-            font-size: 1.8rem;
-            line-height: 1;
+            padding: 0.3rem 0.6rem;
+            font-size: 1.2rem;
+            line-height: 1.2;
         }
 
         .size-medium .results-table tbody td {
-            padding: 0.5rem 0.8rem;
-            font-size: 1.4rem;
+            padding: 0.25rem 0.6rem;
+            font-size: 1rem;
             font-weight: 500;
-            line-height: 1;
+            line-height: 1.2;
             vertical-align: middle;
         }
 
         /* 20 LIGNES (S) */
         .size-small .results-table thead th {
-            padding: 0.6rem 0.5rem;
-            font-size: 1.2rem;
-            line-height: 1;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.85rem;
+            line-height: 1.2;
         }
 
         .size-small .results-table tbody td {
-            padding: 0.3rem 0.5rem;
-            font-size: 1rem;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.75rem;
             font-weight: 500;
-            line-height: 1;
+            line-height: 1.2;
             vertical-align: middle;
         }
 
@@ -188,14 +188,14 @@
         .col-bib {
             color: #FFD700;
             font-weight: 700;
-            font-size: 1.3em;
+            font-size: 1.15em;
             text-align: center;
         }
 
         .col-position {
             color: #4CAF50;
             font-weight: 700;
-            font-size: 1.2em;
+            font-size: 1.1em;
             text-align: center;
         }
 
@@ -243,7 +243,7 @@
             color: #FFD700;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
-            font-size: 1.3em;
+            font-size: 1.15em;
             text-align: center;
         }
 
