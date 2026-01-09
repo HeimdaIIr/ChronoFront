@@ -1167,14 +1167,28 @@ body {
                 <span class="event-status" x-show="!hasOngoingRaces() && races.length > 0" style="background: #f59e0b;">En attente</span>
             </div>
             <div class="topbar-right">
-                <div class="sync-status" x-show="readers.length > 0 && readers.every(r => r.is_online)">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>Synchro OK</span>
+                <!-- Action buttons -->
+                <button class="btn-filter" @click="showTopDepartModal = true" style="height: 38px;">
+                    <i class="bi bi-flag-fill"></i>
+                    TOP DÉPART
+                </button>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }" style="height: 38px;">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
+                        <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
+                    </button>
+                    <button x-show="manualTimestamps.length > 0"
+                            @click.stop="quickClearManualTimestamps()"
+                            title="Effacer tous les temps"
+                            style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #ef4444; color: white; border: 2px solid #18181b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; padding: 0;">
+                        ×
+                    </button>
                 </div>
-                <div class="sync-status" x-show="readers.length === 0 || readers.some(r => !r.is_online)" style="color: #f59e0b;">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>Lecteurs hors ligne</span>
-                </div>
+                <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6; height: 38px;">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                    IMPORTER HEURES
+                </button>
                 <div class="alert-badge" :class="{ 'no-alerts': getPendingAlertsCount() === 0 }" style="margin-left: 1rem;">
                     <i class="bi bi-bell-fill"></i>
                     <span x-text="getPendingAlertsCount() + ' alerte' + (getPendingAlertsCount() > 1 ? 's' : '')"></span>
@@ -1266,35 +1280,9 @@ body {
                         <option value="position">Tri: Position</option>
                         <option value="time">Tri: Temps</option>
                     </select>
-
-                    <!-- Row 2: Action buttons -->
-                    <div style="flex-basis: 100%; height: 0;"></div>
-                    <button class="btn-filter" @click="showTopDepartModal = true">
-                        <i class="bi bi-flag-fill"></i>
-                        TOP DÉPART
-                    </button>
-                    <div style="position: relative; display: inline-block;">
-                        <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }">
-                            <i class="bi bi-plus-circle-fill"></i>
-                            <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
-                            <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
-                        </button>
-                        <!-- Quick clear button when times are stored -->
-                        <button x-show="manualTimestamps.length > 0"
-                                @click.stop="quickClearManualTimestamps()"
-                                class="btn-clear-manual"
-                                title="Effacer tous les temps"
-                                style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #ef4444; color: white; border: 2px solid #18181b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; padding: 0;">
-                            ×
-                        </button>
-                    </div>
                     <button class="btn-import-csv" @click="showManualTimesModal = true" x-show="manualTimestamps.length > 0">
                         <i class="bi bi-file-earmark-arrow-up-fill"></i>
                         ATTRIBUER
-                    </button>
-                    <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6;">
-                        <i class="bi bi-file-earmark-text-fill"></i>
-                        IMPORTER HEURES
                     </button>
                 </div>
 
