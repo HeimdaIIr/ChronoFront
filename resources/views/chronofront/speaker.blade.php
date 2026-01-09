@@ -107,6 +107,9 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             border-bottom: 2px solid #FFD700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .results-table tbody {
@@ -136,6 +139,13 @@
         @keyframes highlight {
             0%, 100% { background: #0a0a0a; }
             50% { background: #2a4a2a; }
+        }
+
+        /* Base cell styles for alignment */
+        .results-table tbody td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Dynamic sizing based on line count */
@@ -208,6 +218,8 @@
         .col-name {
             color: #fff;
             font-weight: 600;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-category {
@@ -225,11 +237,15 @@
         .col-race {
             color: #00BCD4;
             font-weight: 600;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-club {
             color: #999;
             font-style: italic;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         .col-speed {
@@ -251,6 +267,8 @@
             color: #888;
             font-size: 0.9em;
             font-variant-numeric: tabular-nums;
+            white-space: normal !important;
+            word-wrap: break-word;
         }
 
         /* Loading indicator */
