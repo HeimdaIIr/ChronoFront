@@ -130,23 +130,23 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label text-muted">Limite</label>
-                    <select class="form-select" x-model="limit" @change="loadDetections">
+                    <label class="form-label text-muted">Charger historique</label>
+                    <select class="form-select" x-model="historyLimit">
+                        <option value="0">Aucun</option>
                         <option value="100">100 dernières</option>
                         <option value="500">500 dernières</option>
                         <option value="1000">1000 dernières</option>
-                        <option value="5000">5000 dernières</option>
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button class="btn btn-warning" @click="loadDetections">
-                        <i class="bi bi-arrow-clockwise"></i> Rafraîchir
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button class="btn btn-info" @click="loadHistoricalDetections">
+                        <i class="bi bi-clock-history"></i> Charger historique
                     </button>
                     <button class="btn btn-danger" @click="clearDetections">
                         <i class="bi bi-trash"></i> Vider
                     </button>
                     <div class="form-check form-switch d-flex align-items-center">
-                        <input class="form-check-input" type="checkbox" x-model="autoRefresh" id="autoRefresh">
+                        <input class="form-check-input" type="checkbox" x-model="autoRefresh" id="autoRefresh" checked>
                         <label class="form-check-label ms-2 text-muted" for="autoRefresh">
                             Auto-refresh (2s)
                         </label>
@@ -227,7 +227,7 @@
                 detections: [],
                 searchQuery: '',
                 statusFilter: '',
-                limit: 500,
+                historyLimit: 0,
                 loading: false,
                 autoRefresh: true,
                 lastUpdate: null,
@@ -266,35 +266,87 @@
                 },
 
                 init() {
-                    this.loadDetections();
+                    // Don't load anything on init - wait for real-time detections
                     this.startAutoRefresh();
                 },
 
-                async loadDetections() {
-                    this.loading = true;
+                async loadNewDetections() {
+                    // Only load detections newer than lastDetectionId
+                    if (this.lastDetectionId === 0) {
+                        // No detections yet, get the highest ID to start tracking from
+                        try {
+                            const response = await axios.get('/api/results/all-detections?limit=1');
+                            if (response.data.length > 0) {
+                                this.lastDetectionId = response.data[0].id;
+                            }
+                        } catch (error) {
+                            console.error('Erreur lors de l\'initialisation', error);
+                        }
+                        return;
+                    }
+
                     try {
-                        const response = await axios.get(`/api/results/all-detections?limit=${this.limit}`);
+                        const response = await axios.get(`/api/results/all-detections?since_id=${this.lastDetectionId}`);
 
-                        // Mark new detections
-                        const newDetections = response.data.map(d => ({
-                            ...d,
-                            is_new: d.id > this.lastDetectionId
-                        }));
+                        if (response.data.length > 0) {
+                            // Add new detections at the beginning
+                            const newDetections = response.data.map(d => ({
+                                ...d,
+                                is_new: true
+                            }));
 
-                        if (newDetections.length > 0) {
+                            // Update last detection ID
                             this.lastDetectionId = Math.max(...newDetections.map(d => d.id));
+
+                            // Add to beginning of array
+                            this.detections = [...newDetections, ...this.detections];
+                            this.lastUpdate = new Date().toLocaleTimeString('fr-FR');
+
+                            // Remove 'new' class after animation
+                            setTimeout(() => {
+                                this.detections = this.detections.map(d => ({ ...d, is_new: false }));
+                            }, 1000);
                         }
 
-                        this.detections = newDetections;
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des nouvelles détections', error);
+                    }
+                },
+
+                async loadHistoricalDetections() {
+                    if (this.historyLimit === 0 || this.historyLimit === '0') {
+                        alert('Veuillez sélectionner un nombre de détections à charger');
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        const response = await axios.get(`/api/results/all-detections?limit=${this.historyLimit}`);
+
+                        // Add historical detections to the end
+                        const historicalDetections = response.data.map(d => ({
+                            ...d,
+                            is_new: false
+                        }));
+
+                        // Update lastDetectionId if we got results
+                        if (historicalDetections.length > 0) {
+                            const maxId = Math.max(...historicalDetections.map(d => d.id));
+                            if (maxId > this.lastDetectionId) {
+                                this.lastDetectionId = maxId;
+                            }
+                        }
+
+                        // Merge with existing, avoid duplicates
+                        const existingIds = new Set(this.detections.map(d => d.id));
+                        const newHistorical = historicalDetections.filter(d => !existingIds.has(d.id));
+
+                        this.detections = [...this.detections, ...newHistorical];
                         this.lastUpdate = new Date().toLocaleTimeString('fr-FR');
 
-                        // Remove 'new' class after animation
-                        setTimeout(() => {
-                            this.detections = this.detections.map(d => ({ ...d, is_new: false }));
-                        }, 1000);
-
                     } catch (error) {
-                        console.error('Erreur lors du chargement des détections', error);
+                        console.error('Erreur lors du chargement de l\'historique', error);
+                        alert('Erreur lors du chargement de l\'historique');
                     } finally {
                         this.loading = false;
                     }
@@ -303,15 +355,15 @@
                 startAutoRefresh() {
                     setInterval(() => {
                         if (this.autoRefresh) {
-                            this.loadDetections();
+                            this.loadNewDetections();
                         }
                     }, 2000);
                 },
 
                 clearDetections() {
-                    if (confirm('Êtes-vous sûr de vouloir vider la liste des détections affichées ?')) {
+                    if (confirm('Êtes-vous sûr de vouloir vider la liste des détections affichées ?\n\nCeci ne supprime pas les données de la base, seulement l\'affichage.')) {
                         this.detections = [];
-                        this.lastDetectionId = 0;
+                        // Keep lastDetectionId to continue tracking new ones
                     }
                 },
 

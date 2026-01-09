@@ -104,15 +104,27 @@ class ResultController extends Controller
     /**
      * Display ALL detections (for RFID debug/testing)
      * Returns all results regardless of status or validity
+     * If since_id provided, only returns detections newer than that ID
      */
     public function allDetections(Request $request): JsonResponse
     {
         $query = Result::with(['entrant.category', 'wave', 'race', 'reader'])
-            ->orderBy('created_at', 'desc');
+            ->orderBy('id', 'desc');
 
-        // Limit to recent detections (last 500 by default)
-        $limit = $request->input('limit', 500);
-        $query->limit($limit);
+        // If since_id provided, only get newer detections (for live updates)
+        if ($request->has('since_id') && $request->since_id) {
+            $query->where('id', '>', $request->since_id);
+        } else {
+            // Initial load - don't load anything by default (limit=0)
+            // User can manually load historical data if needed
+            $limit = $request->input('limit', 0);
+            if ($limit > 0) {
+                $query->limit($limit);
+            } else {
+                // Return empty array if no limit specified
+                return response()->json([]);
+            }
+        }
 
         $detections = $query->get();
 
