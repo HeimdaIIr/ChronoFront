@@ -15,6 +15,7 @@ Route::get('/results', [ChronoFrontController::class, 'results'])->name('results
 Route::get('/categories', [ChronoFrontController::class, 'categories'])->name('categories');
 Route::get('/events/{id}/readers', [ChronoFrontController::class, 'readers'])->name('events.readers');
 Route::get('/screens/speaker', [ChronoFrontController::class, 'speakerScreen'])->name('screens.speaker');
+Route::get('/rfidlive', [ChronoFrontController::class, 'rfidlive'])->name('rfidlive');
 
 // Database export/import
 Route::get('/database/export', [DatabaseController::class, 'export'])->name('database.export');

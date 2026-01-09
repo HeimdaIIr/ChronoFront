@@ -102,6 +102,24 @@ class ResultController extends Controller
     }
 
     /**
+     * Display ALL detections (for RFID debug/testing)
+     * Returns all results regardless of status or validity
+     */
+    public function allDetections(Request $request): JsonResponse
+    {
+        $query = Result::with(['entrant.category', 'wave', 'race', 'reader'])
+            ->orderBy('created_at', 'desc');
+
+        // Limit to recent detections (last 500 by default)
+        $limit = $request->input('limit', 500);
+        $query->limit($limit);
+
+        $detections = $query->get();
+
+        return response()->json($detections);
+    }
+
+    /**
      * Display results for a specific race
      */
     public function byRace(int $raceId): JsonResponse

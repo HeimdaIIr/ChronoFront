@@ -53,6 +53,7 @@ Route::apiResource('entrants', EntrantController::class);
 Route::get('results', [ResultController::class, 'index']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
+Route::get('results/all-detections', [ResultController::class, 'allDetections']);
 Route::get('results/race/{raceId}', [ResultController::class, 'byRace']);
 Route::post('results/time', [ResultController::class, 'addTime']);
 Route::post('results/manual-batch', [ResultController::class, 'storeManualBatch']);
