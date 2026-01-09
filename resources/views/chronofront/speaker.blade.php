@@ -88,7 +88,7 @@
         /* Grid layout for results */
         .results-grid {
             display: grid;
-            grid-template-columns: 5% 4% 4% 20% 6% 3% 10% 15% 8% 10% 15%;
+            grid-template-columns: 6% 5% 7% 18% 6% 4% 15% 17% 10% 12%;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -109,10 +109,27 @@
             border-bottom: 2px solid #FFD700;
             display: flex;
             align-items: center;
-            justify-content: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* Header alignment - match cell alignment */
+        .grid-header-cell:nth-child(1),
+        .grid-header-cell:nth-child(2),
+        .grid-header-cell:nth-child(3),
+        .grid-header-cell:nth-child(5),
+        .grid-header-cell:nth-child(6),
+        .grid-header-cell:nth-child(9),
+        .grid-header-cell:nth-child(10) {
+            justify-content: center;
+        }
+
+        .grid-header-cell:nth-child(4),
+        .grid-header-cell:nth-child(7),
+        .grid-header-cell:nth-child(8) {
+            justify-content: flex-start;
+            padding-left: 0.5rem;
         }
 
         /* Body container */
@@ -126,7 +143,7 @@
         /* Body rows */
         .grid-row {
             display: grid;
-            grid-template-columns: 5% 4% 4% 20% 6% 3% 10% 15% 8% 10% 15%;
+            grid-template-columns: 6% 5% 7% 18% 6% 4% 15% 17% 10% 12%;
             width: 100%;
             background: #0a0a0a;
             transition: all 0.2s;
@@ -233,6 +250,7 @@
             font-weight: 600;
             white-space: normal;
             word-wrap: break-word;
+            padding-left: 0.5rem;
         }
 
         .col-category {
@@ -252,6 +270,7 @@
             font-weight: 600;
             white-space: normal;
             word-wrap: break-word;
+            padding-left: 0.5rem;
         }
 
         .col-club {
@@ -259,6 +278,7 @@
             font-style: italic;
             white-space: normal;
             word-wrap: break-word;
+            padding-left: 0.5rem;
         }
 
         .col-speed {
@@ -347,7 +367,6 @@
                         <div class="grid-header-cell">Club</div>
                         <div class="grid-header-cell">Vitesse</div>
                         <div class="grid-header-cell">Temps</div>
-                        <div class="grid-header-cell" x-show="hasIntermediates">Intermédiaires</div>
                     </div>
 
                     <!-- Body -->
@@ -364,13 +383,6 @@
                                 <div class="grid-cell col-club" x-text="result.club || '-'"></div>
                                 <div class="grid-cell col-speed" x-text="result.speed ? result.speed + ' km/h' : '-'"></div>
                                 <div class="grid-cell col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></div>
-                                <div class="grid-cell col-intermediate" x-show="hasIntermediates">
-                                    <template x-for="inter in result.intermediates" :key="inter.checkpoint">
-                                        <span style="margin-right: 1rem;">
-                                            <span x-text="inter.checkpoint"></span>: <span x-text="inter.time"></span>
-                                        </span>
-                                    </template>
-                                </div>
                             </div>
                         </template>
                     </div>
