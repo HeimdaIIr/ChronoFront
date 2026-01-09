@@ -820,6 +820,197 @@ body {
     font-weight: 500;
     cursor: pointer;
 }
+
+/* Responsive pour écrans ≤ 1440px (laptops standards) */
+@media (max-width: 1440px) {
+    .chrono-sidebar {
+        width: 60px;
+    }
+
+    .sidebar-icon {
+        width: 60px;
+        height: 45px;
+        font-size: 1.3rem;
+    }
+
+    .chrono-topbar {
+        height: 55px;
+        padding: 0 1.5rem;
+    }
+
+    .event-title {
+        font-size: 1.2rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 340px;
+        height: calc(100vh - 55px);
+    }
+
+    .main-clock {
+        font-size: 5.5rem;
+        padding: 1.5rem 0 1rem;
+    }
+
+    .filters-bar {
+        padding: 1rem 1.5rem;
+        gap: 0.75rem;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 38px;
+        font-size: 0.85rem;
+    }
+
+    .filter-select {
+        min-width: 120px;
+        padding: 0 0.75rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.75rem 1rem;
+        font-size: 0.7rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 0.9rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.5rem;
+    }
+
+    .bib-value {
+        font-size: 2rem;
+    }
+
+    .runner-name {
+        font-size: 1.2rem;
+    }
+}
+
+/* Responsive pour écrans ≤ 1280px (petits laptops) */
+@media (max-width: 1280px) {
+    .chrono-sidebar {
+        width: 55px;
+    }
+
+    .sidebar-icon {
+        width: 55px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .chrono-topbar {
+        height: 50px;
+        padding: 0 1rem;
+        gap: 0.75rem;
+    }
+
+    .event-title {
+        font-size: 1.1rem;
+        margin-right: 1rem;
+    }
+
+    .topbar-right {
+        gap: 1rem;
+    }
+
+    .icon-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 300px;
+        height: calc(100vh - 50px);
+    }
+
+    .main-clock {
+        font-size: 4.5rem;
+        padding: 1rem 0 0.75rem;
+    }
+
+    .readers-status {
+        gap: 1.5rem;
+        padding: 0.75rem 0 1rem;
+        font-size: 0.85rem;
+    }
+
+    .filters-bar {
+        padding: 0.85rem 1rem;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        min-width: 200px;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 36px;
+        font-size: 0.8rem;
+    }
+
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        padding: 0 1rem;
+    }
+
+    .filter-select {
+        min-width: 100px;
+        padding: 0 0.6rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.6rem 0.85rem;
+        font-size: 0.65rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 0.75rem 0.85rem;
+        font-size: 0.8rem;
+    }
+
+    .cat-tag {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.25rem;
+    }
+
+    .bib-value {
+        font-size: 1.75rem;
+    }
+
+    .runner-name {
+        font-size: 1.1rem;
+    }
+
+    .checkpoint-time {
+        font-size: 1.15rem;
+    }
+
+    .alert-bar {
+        left: 55px;
+        padding: 1rem 1.5rem;
+    }
+}
 </style>
 @endsection
 
