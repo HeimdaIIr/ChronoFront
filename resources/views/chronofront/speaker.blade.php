@@ -79,14 +79,25 @@
 
         /* Results table */
         .results-container {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
+            height: calc(100vh - 90px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .results-table {
             width: 100%;
+            height: 100%;
             border-collapse: collapse;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results-table thead {
+            flex-shrink: 0;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
 
         .results-table thead th {
@@ -96,12 +107,20 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             border-bottom: 2px solid #FFD700;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+        }
+
+        .results-table tbody {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .results-table tbody tr {
+            flex: 1;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
             background: #0a0a0a;
             transition: all 0.2s;
         }
@@ -122,44 +141,47 @@
         /* Dynamic sizing based on line count */
         /* 5 LIGNES (XL) */
         .size-large .results-table thead th {
-            padding: 1rem;
+            padding: 1.2rem 1rem;
             font-size: 2.5rem;
-            line-height: 1.2;
+            line-height: 1;
         }
 
         .size-large .results-table tbody td {
-            padding: 1rem;
+            padding: 0.8rem 1rem;
             font-size: 2rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1;
+            vertical-align: middle;
         }
 
         /* 10 LIGNES (M) */
         .size-medium .results-table thead th {
-            padding: 0.8rem;
+            padding: 1rem 0.8rem;
             font-size: 1.8rem;
-            line-height: 1.2;
+            line-height: 1;
         }
 
         .size-medium .results-table tbody td {
-            padding: 0.8rem;
+            padding: 0.5rem 0.8rem;
             font-size: 1.4rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1;
+            vertical-align: middle;
         }
 
         /* 20 LIGNES (S) */
         .size-small .results-table thead th {
-            padding: 0.5rem;
+            padding: 0.6rem 0.5rem;
             font-size: 1.2rem;
-            line-height: 1.2;
+            line-height: 1;
         }
 
         .size-small .results-table tbody td {
-            padding: 0.5rem;
+            padding: 0.3rem 0.5rem;
             font-size: 1rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1;
+            vertical-align: middle;
         }
 
         /* Column specific styles */
