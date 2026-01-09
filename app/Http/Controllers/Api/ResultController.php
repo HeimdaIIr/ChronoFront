@@ -783,6 +783,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -791,6 +798,8 @@ class ResultController extends Controller
             'resultsByCategory' => $resultsByCategory,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
         ];
 
         // Generate PDF
@@ -863,6 +872,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -871,6 +887,8 @@ class ResultController extends Controller
             'resultsByCategory' => $resultsByCategory,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
         ];
 
         // Generate PDF in LANDSCAPE mode
@@ -1061,6 +1079,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap && !empty($lapsByEntrant)) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $lapsByEntrant->map->count()->max();
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -1071,6 +1096,8 @@ class ResultController extends Controller
             'genderCategoryResults' => $genderCategoryResults,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
             'config' => [
                 'topScratch' => $topScratch,
                 'topGender' => $topGender,
