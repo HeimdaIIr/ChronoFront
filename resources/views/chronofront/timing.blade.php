@@ -821,6 +821,80 @@ body {
     cursor: pointer;
 }
 
+/* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
+@media (max-width: 1920px) {
+    .chrono-sidebar {
+        width: 60px;
+    }
+
+    .sidebar-icon {
+        width: 60px;
+        height: 45px;
+        font-size: 1.3rem;
+    }
+
+    .chrono-topbar {
+        height: 60px;
+        padding: 0 2rem;
+    }
+
+    .event-title {
+        font-size: 1.3rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 360px;
+        height: calc(100vh - 60px);
+    }
+
+    .main-clock {
+        font-size: 6rem;
+        padding: 1.75rem 0 1.25rem;
+    }
+
+    .filters-bar {
+        padding: 1.2rem 2rem;
+        gap: 0.85rem;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 40px;
+        font-size: 0.9rem;
+    }
+
+    .filter-select {
+        min-width: 130px;
+        padding: 0 0.85rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.85rem 1.2rem;
+        font-size: 0.72rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 1rem 1.2rem;
+        font-size: 0.88rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.75rem;
+    }
+
+    .bib-value {
+        font-size: 2.2rem;
+    }
+
+    .runner-name {
+        font-size: 1.3rem;
+    }
+}
+
 /* Responsive pour écrans ≤ 1440px (laptops standards) */
 @media (max-width: 1440px) {
     .chrono-sidebar {

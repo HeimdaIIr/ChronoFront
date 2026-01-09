@@ -127,6 +127,40 @@
             opacity: 0.9;
         }
 
+        /* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
+        @media (max-width: 1920px) {
+            .main-content {
+                padding: 24px;
+            }
+
+            .stats-card {
+                padding: 18px;
+            }
+
+            .stats-card h3 {
+                font-size: 2.2rem;
+            }
+
+            .card-header {
+                padding: 18px;
+                font-size: 1.05rem;
+            }
+
+            .table {
+                font-size: 0.92rem;
+            }
+
+            .btn {
+                font-size: 0.9rem;
+                padding: 9px 20px;
+            }
+
+            .sidebar .nav-link {
+                padding: 11px 18px;
+                font-size: 0.95rem;
+            }
+        }
+
         /* Responsive pour écrans ≤ 1440px */
         @media (max-width: 1440px) {
             .main-content {
