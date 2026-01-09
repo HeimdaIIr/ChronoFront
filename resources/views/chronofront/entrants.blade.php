@@ -78,7 +78,7 @@
         <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
-                    <h3 x-text="entrants.length"></h3>
+                    <h3 x-text="totalEntrantsCount"></h3>
                     <p class="mb-0">Total participants</p>
                 </div>
             </div>
@@ -307,6 +307,7 @@ function entrantsManager() {
     return {
         entrants: [],
         filteredEntrants: [],
+        totalEntrantsCount: 0,
         events: [],
         races: [],
         filteredRaces: [],
@@ -447,6 +448,15 @@ function entrantsManager() {
                     this.entrants = response.data.filter(e => raceIds.includes(e.race_id));
                 } else {
                     this.entrants = response.data;
+                }
+
+                // Charger le nombre total de participants de l'événement sélectionné
+                if (this.selectedEventFilter) {
+                    const raceIds = this.filteredRaces.map(r => r.id);
+                    const allEntrantsResponse = await axios.get('/entrants');
+                    this.totalEntrantsCount = allEntrantsResponse.data.filter(e => raceIds.includes(e.race_id)).length;
+                } else {
+                    this.totalEntrantsCount = this.entrants.length;
                 }
 
                 this.filterEntrants();

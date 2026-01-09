@@ -600,7 +600,7 @@ function resultsManager() {
                 const response = await axios.get(`/results/race/${this.selectedRace}`);
                 this.results = response.data;
                 this.filterResults();
-                this.calculateStats();
+                await this.calculateStats();
             } catch (error) {
                 console.error('Erreur lors du chargement des résultats', error);
             } finally {
@@ -641,11 +641,20 @@ function resultsManager() {
             }
         },
 
-        calculateStats() {
+        async calculateStats() {
             const validResults = this.results.filter(r => r.status === 'V' && r.calculated_time);
 
-            this.stats.total = this.results.length;
-            this.stats.finished = validResults.length;
+            // Charger le nombre de participants du race sélectionné
+            try {
+                const entrantsResponse = await axios.get(`/entrants?race_id=${this.selectedRace}`);
+                this.stats.total = entrantsResponse.data.length;
+            } catch (error) {
+                console.error('Erreur lors du chargement des participants', error);
+                this.stats.total = 0;
+            }
+
+            // Arrivés = nombre de détections (résultats)
+            this.stats.finished = this.results.length;
 
             if (validResults.length > 0) {
                 const totalTime = validResults.reduce((sum, r) => sum + (r.calculated_time || 0), 0);
