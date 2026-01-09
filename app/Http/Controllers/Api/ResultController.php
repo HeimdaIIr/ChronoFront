@@ -368,12 +368,8 @@ class ResultController extends Controller
 
             foreach ($validated['detections'] as $index => $detection) {
                 try {
-                    // Find entrant by RFID tag
-                    $query = Entrant::where('rfid_tag', $detection['rfid_tag']);
-                    if (isset($validated['race_id'])) {
-                        $query->where('race_id', $validated['race_id']);
-                    }
-                    $entrant = $query->first();
+                    // Find entrant by RFID tag (search across ALL races, not just the selected one)
+                    $entrant = Entrant::where('rfid_tag', $detection['rfid_tag'])->first();
 
                     if (!$entrant) {
                         $errors[] = [
