@@ -130,34 +130,60 @@
         /* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
         @media (max-width: 1920px) {
             .main-content {
-                padding: 24px;
+                padding: 18px;
             }
 
             .stats-card {
-                padding: 18px;
+                padding: 14px;
             }
 
             .stats-card h3 {
-                font-size: 2.2rem;
+                font-size: 1.9rem;
+            }
+
+            .stats-card p {
+                font-size: 0.9rem;
             }
 
             .card-header {
-                padding: 18px;
-                font-size: 1.05rem;
+                padding: 14px;
+                font-size: 0.95rem;
+            }
+
+            .card {
+                margin-bottom: 15px;
             }
 
             .table {
-                font-size: 0.92rem;
+                font-size: 0.85rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.6rem;
             }
 
             .btn {
-                font-size: 0.9rem;
-                padding: 9px 20px;
+                font-size: 0.85rem;
+                padding: 7px 16px;
             }
 
             .sidebar .nav-link {
-                padding: 11px 18px;
-                font-size: 0.95rem;
+                padding: 9px 15px;
+                font-size: 0.88rem;
+            }
+
+            .sidebar .nav-link i {
+                width: 20px;
+                margin-right: 8px;
+            }
+
+            .sidebar h4 {
+                font-size: 1.1rem;
+            }
+
+            .badge {
+                font-size: 0.75rem;
             }
         }
 

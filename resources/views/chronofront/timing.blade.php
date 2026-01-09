@@ -824,37 +824,64 @@ body {
 /* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
 @media (max-width: 1920px) {
     .chrono-sidebar {
-        width: 60px;
+        width: 55px;
     }
 
     .sidebar-icon {
-        width: 60px;
-        height: 45px;
-        font-size: 1.3rem;
+        width: 55px;
+        height: 40px;
+        font-size: 1.2rem;
     }
 
     .chrono-topbar {
-        height: 60px;
-        padding: 0 2rem;
+        height: 50px;
+        padding: 0 1.5rem;
     }
 
     .event-title {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
+    }
+
+    .event-status {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .topbar-right {
+        gap: 1rem;
+    }
+
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
     }
 
     .chrono-content {
-        grid-template-columns: 1fr 360px;
-        height: calc(100vh - 60px);
+        grid-template-columns: 1fr 320px;
+        height: calc(100vh - 50px);
     }
 
     .main-clock {
-        font-size: 6rem;
-        padding: 1.75rem 0 1.25rem;
+        font-size: 4.5rem;
+        padding: 1.25rem 0 0.85rem;
+    }
+
+    .readers-status {
+        gap: 1.5rem;
+        padding: 0.6rem 0 0.85rem;
+        font-size: 0.85rem;
     }
 
     .filters-bar {
-        padding: 1.2rem 2rem;
-        gap: 0.85rem;
+        padding: 0.9rem 1.5rem;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        min-width: 180px;
+        flex: 1;
     }
 
     .search-box input,
@@ -862,36 +889,65 @@ body {
     .btn-filter,
     .btn-manual-time,
     .btn-import-csv {
-        height: 40px;
-        font-size: 0.9rem;
+        height: 35px;
+        font-size: 0.82rem;
+    }
+
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        padding: 0 1.1rem;
     }
 
     .filter-select {
-        min-width: 130px;
-        padding: 0 0.85rem;
+        min-width: 110px;
+        padding: 0 0.7rem;
     }
 
     .chrono-table thead th {
-        padding: 0.85rem 1.2rem;
-        font-size: 0.72rem;
+        padding: 0.7rem 0.9rem;
+        font-size: 0.68rem;
     }
 
     .chrono-table tbody td {
-        padding: 1rem 1.2rem;
-        font-size: 0.88rem;
+        padding: 0.75rem 0.9rem;
+        font-size: 0.82rem;
+    }
+
+    .chrono-table tbody td strong {
+        font-size: 0.9rem;
+    }
+
+    .cat-tag {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
     }
 
     .detail-header,
     .detail-body {
-        padding: 1.75rem;
+        padding: 1.4rem;
     }
 
     .bib-value {
-        font-size: 2.2rem;
+        font-size: 1.9rem;
     }
 
     .runner-name {
-        font-size: 1.3rem;
+        font-size: 1.15rem;
+    }
+
+    .checkpoint-time {
+        font-size: 1.1rem;
+    }
+
+    .timeline-dot {
+        width: 20px;
+        height: 20px;
+    }
+
+    .alert-bar {
+        left: 55px;
+        padding: 0.9rem 1.5rem;
     }
 }
 
