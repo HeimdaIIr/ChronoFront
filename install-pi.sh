@@ -51,13 +51,15 @@ if [[ ! "$READER_NUMBER" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-DOMAIN="${READER_NUMBER}.course"
+DOMAIN="${READER_NUMBER}.course.ats-sport.com"
+SHORT_DOMAIN="${READER_NUMBER}.course"
 INSTALL_DIR="/var/www/chronofront"
 DB_PATH="${INSTALL_DIR}/database/database.sqlite"
 
 log_info "Configuration:"
 log_info "  - Reader Number: ${READER_NUMBER}"
-log_info "  - Domain: ${DOMAIN}"
+log_info "  - Full Domain: ${DOMAIN}"
+log_info "  - Short Domain: ${SHORT_DOMAIN}"
 log_info "  - Install Directory: ${INSTALL_DIR}"
 echo ""
 
@@ -165,8 +167,8 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
-    # Accept any numeric.course domain
-    server_name ~^(?<reader_num>\d+)\.course$ ${DOMAIN};
+    # Accept multiple domain formats for compatibility
+    server_name ${DOMAIN} ${SHORT_DOMAIN} *.course.ats-sport.com *.course localhost;
 
     root ${INSTALL_DIR}/public;
     index index.php index.html;
@@ -214,19 +216,25 @@ systemctl restart nginx
 systemctl enable nginx
 log_success "Nginx configured"
 
-# Step 12: Configure dnsmasq for .course domain
+# Step 12: Configure dnsmasq for DNS resolution
 log_info "Step 12: Configuring DNS (dnsmasq)..."
 
 # Backup original dnsmasq config
-cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
+cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup 2>/dev/null || true
 
 cat >> /etc/dnsmasq.conf << EOF
 
-# ChronoFront - Resolve *.course to localhost
-address=/course/127.0.0.1
+# ChronoFront - Resolve *.course.ats-sport.com to localhost
+address=/course.ats-sport.com/127.0.0.1
+address=/course.ats-sport.com/192.168.4.1
 
-# Also resolve to WiFi AP IP (if hostapd is configured)
+# Also resolve short *.course format
+address=/course/127.0.0.1
 address=/course/192.168.4.1
+
+# Specific reader resolution
+address=/${DOMAIN}/127.0.0.1
+address=/${DOMAIN}/192.168.4.1
 EOF
 
 systemctl restart dnsmasq
@@ -303,7 +311,8 @@ echo ""
 log_success "=== Installation completed successfully! ==="
 echo ""
 log_info "ChronoFront is now accessible at:"
-log_info "  - http://${DOMAIN}"
+log_info "  - http://${DOMAIN} (full domain)"
+log_info "  - http://${SHORT_DOMAIN} (short domain)"
 log_info "  - http://localhost"
 log_info "  - http://$(hostname -I | awk '{print $1}')"
 echo ""
@@ -314,4 +323,6 @@ log_info "  3. Configure your RFID readers"
 echo ""
 log_warning "IMPORTANT: For WiFi Access Point functionality,"
 log_warning "you need to configure hostapd separately."
+echo ""
+log_info "RFID readers should send to: http://${DOMAIN}/api/raspberry"
 echo ""
