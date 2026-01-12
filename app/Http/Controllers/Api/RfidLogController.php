@@ -47,7 +47,9 @@ class RfidLogController extends Controller
             set_time_limit(0);
             ignore_user_abort(false);
 
-            $lastId = 0;
+            // Start from the latest ID to avoid sending history
+            $allLogs = Cache::get('rfid_raw_logs', []);
+            $lastId = count($allLogs) > 0 ? max(array_column($allLogs, 'id')) : 0;
 
             // Send headers
             echo "retry: 1000\n\n";
