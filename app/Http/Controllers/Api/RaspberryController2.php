@@ -42,6 +42,7 @@ class RaspberryController2 extends Controller
 
         if (!$readerSerial) {
             Log::warning('RFID request missing Serial header');
+            RfidLogController::logRequest($request, 400);
             return response()->json([
                 'error' => 'Missing Serial header'
             ], 400);
@@ -55,15 +56,19 @@ class RaspberryController2 extends Controller
                 'serial' => $readerSerial,
             ]);
 
-            // Return success but indicate reader not configured
-            // This allows /rfidlive to still receive and display the detection
-            return response()->json([
+            // Log raw request for /rfidlive
+            $responseData = [
                 'success' => true,
                 'message' => 'Detection received but reader not configured',
                 'serial' => $readerSerial,
                 'raw_data' => $request->json()->all(),
                 'logged_for_rfidlive' => true
-            ], 200);
+            ];
+            RfidLogController::logRequest($request, 200, $responseData);
+
+            // Return success but indicate reader not configured
+            // This allows /rfidlive to still receive and display the detection
+            return response()->json($responseData, 200);
         }
 
         Log::info('Reader found and active', [
@@ -303,14 +308,19 @@ class RaspberryController2 extends Controller
             'total_detections' => count($detections),
         ]);
 
-        return response()->json([
+        $responseData = [
             'success' => true,
             'reader' => $readerSerial,
             'location' => $reader->location,
             'processed' => $processed,
             'skipped' => $skipped,
             'results' => $results
-        ]);
+        ];
+
+        // Log raw request for /rfidlive
+        RfidLogController::logRequest($request, 200, $responseData);
+
+        return response()->json($responseData);
     }
 
     /**
