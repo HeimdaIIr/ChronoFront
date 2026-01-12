@@ -43,6 +43,10 @@ class RfidLogController extends Controller
     public function liveStream(Request $request)
     {
         $response = new StreamedResponse(function() {
+            // Disable time limit for SSE
+            set_time_limit(0);
+            ignore_user_abort(false);
+
             $lastId = 0;
 
             // Send headers
