@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RfidLogController extends Controller
 {
@@ -34,6 +35,68 @@ class RfidLogController extends Controller
             'logs' => array_values($newLogs),
             'count' => count($newLogs)
         ]);
+    }
+
+    /**
+     * SSE endpoint for live streaming RFID detections
+     */
+    public function liveStream(Request $request)
+    {
+        $response = new StreamedResponse(function() {
+            $lastId = 0;
+
+            // Send headers
+            echo "retry: 1000\n\n";
+            ob_flush();
+            flush();
+
+            // Keep connection alive and send new detections
+            while (true) {
+                // Get all logs
+                $allLogs = Cache::get('rfid_raw_logs', []);
+
+                // Find new logs
+                $newLogs = array_filter($allLogs, function($log) use ($lastId) {
+                    return $log['id'] > $lastId;
+                });
+
+                // Send new logs
+                foreach ($newLogs as $log) {
+                    $data = [
+                        'id' => $log['id'],
+                        'timestamp' => $log['timestamp'],
+                        'serial' => $log['serial'],
+                        'data' => $log['data'],
+                        'status' => $log['status']
+                    ];
+
+                    echo "event: detection\n";
+                    echo "data: " . json_encode($data) . "\n\n";
+
+                    if ($log['id'] > $lastId) {
+                        $lastId = $log['id'];
+                    }
+
+                    ob_flush();
+                    flush();
+                }
+
+                // Check if client disconnected
+                if (connection_aborted()) {
+                    break;
+                }
+
+                // Sleep for 100ms (10 checks per second = very responsive)
+                usleep(100000);
+            }
+        });
+
+        $response->headers->set('Content-Type', 'text/event-stream');
+        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('Connection', 'keep-alive');
+        $response->headers->set('X-Accel-Buffering', 'no');
+
+        return $response;
     }
 
     /**
