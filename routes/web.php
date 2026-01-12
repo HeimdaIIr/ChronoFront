@@ -17,6 +17,17 @@ Route::get('/events/{id}/readers', [ChronoFrontController::class, 'readers'])->n
 Route::get('/screens/speaker', [ChronoFrontController::class, 'speakerScreen'])->name('screens.speaker');
 Route::get('/rfidlive', [ChronoFrontController::class, 'rfidlive'])->name('rfidlive');
 
+// RFID Live - Alternative interfaces
+Route::get('/rfidlive-simple', function () {
+    return view('chronofront.rfidlive-simple');
+});
+Route::get('/rfidlive-instant', function () {
+    return view('chronofront.rfidlive-instant');
+});
+Route::get('/rfidlive-ultra', function () {
+    return view('chronofront.rfidlive-ultra');
+});
+
 // Database export/import
 Route::get('/database/export', [DatabaseController::class, 'export'])->name('database.export');
 Route::post('/database/import', [DatabaseController::class, 'import'])->name('database.import');
