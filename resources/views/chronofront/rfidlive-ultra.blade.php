@@ -99,71 +99,79 @@
         let logs = [];
         let count = 0;
         let paused = false;
-        let eventSource = null;
+        let lastId = 0;
         let rateCounter = 0;
         let lastRateUpdate = Date.now();
+        let pollingInterval = null;
 
-        function connect() {
-            if (eventSource) eventSource.close();
+        function poll() {
+            if (paused) return;
 
-            // Use dedicated SSE server (port 8001) to avoid blocking main server
-            const sseUrl = '{{ env("SSE_SERVER_URL", "http://localhost:8000") }}/api/rfid/live-stream';
-            console.log('🔌 SSE Connection URL:', sseUrl);
-            eventSource = new EventSource(sseUrl);
+            fetch(`/api/rfid/raw-logs?since=${lastId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Connection réussie
+                    document.getElementById('status').className = 'status on';
+                    document.getElementById('statusText').textContent = 'Connecté';
 
-            eventSource.onopen = () => {
-                document.getElementById('status').className = 'status on';
-                document.getElementById('statusText').textContent = 'Connecté';
-            };
+                    if (data.success && data.logs && data.logs.length > 0) {
+                        // Process new logs (newest first already from API)
+                        data.logs.forEach(log => {
+                            // Extract tag
+                            let tag = 'N/A';
+                            try {
+                                const body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+                                if (Array.isArray(body) && body[0]) tag = body[0].serial || tag;
+                                else if (body.serial) tag = body.serial;
+                                else if (body.tag) tag = body.tag;
+                            } catch (e) {}
 
-            eventSource.onerror = () => {
-                document.getElementById('status').className = 'status off';
-                document.getElementById('statusText').textContent = 'Déconnecté';
-                setTimeout(connect, 2000);
-            };
+                            // Extract time (HH:MM:SS.mmm)
+                            const time = new Date().toLocaleTimeString('fr-FR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                fractionalSecondDigits: 3
+                            });
 
-            // Listen for "connected" event from server
-            eventSource.addEventListener('connected', (e) => {
-                console.log('✅ SSE Connected event received:', e.data);
-                document.getElementById('status').className = 'status on';
-                document.getElementById('statusText').textContent = 'Connecté';
-            });
+                            // Add to array (prepend = newest first)
+                            logs.unshift({ tag, time, serial: log.serial || 'N/A' });
 
-            eventSource.addEventListener('detection', (e) => {
-                if (paused) return;
+                            // Update last ID
+                            if (log.id > lastId) lastId = log.id;
 
-                const data = JSON.parse(e.data);
+                            // Update count and rate
+                            count++;
+                            rateCounter++;
+                        });
 
-                // Extract tag
-                let tag = 'N/A';
-                try {
-                    const body = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-                    if (Array.isArray(body) && body[0]) tag = body[0].serial || tag;
-                    else if (body.serial) tag = body.serial;
-                } catch (e) {}
+                        // Strict limit
+                        if (logs.length > MAX_LOGS) logs = logs.slice(0, MAX_LOGS);
 
-                // Extract time (HH:MM:SS.mmm)
-                const time = new Date().toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    fractionalSecondDigits: 3
+                        // Update count display
+                        document.getElementById('count').textContent = count;
+
+                        // Render
+                        render();
+                    }
+                })
+                .catch(error => {
+                    console.error('Polling error:', error);
+                    document.getElementById('status').className = 'status off';
+                    document.getElementById('statusText').textContent = 'Déconnecté';
                 });
+        }
 
-                // Add to array (prepend = newest first)
-                logs.unshift({ tag, time, serial: data.serial || 'N/A' });
+        function startPolling() {
+            console.log('🔌 Starting polling (500ms interval)');
+            document.getElementById('status').className = 'status on';
+            document.getElementById('statusText').textContent = 'Connecté';
 
-                // Strict limit
-                if (logs.length > MAX_LOGS) logs = logs.slice(0, MAX_LOGS);
+            // Poll every 500ms (faster than original 1s)
+            pollingInterval = setInterval(poll, 500);
 
-                // Update count and rate
-                count++;
-                rateCounter++;
-                document.getElementById('count').textContent = count;
-
-                // Render
-                render();
-            });
+            // First poll immediately
+            poll();
         }
 
         function render() {
@@ -198,12 +206,12 @@
             lastRateUpdate = now;
         }, 1000);
 
-        // Connect on load
-        connect();
+        // Start polling on load
+        startPolling();
 
         // Cleanup on unload
         window.addEventListener('beforeunload', () => {
-            if (eventSource) eventSource.close();
+            if (pollingInterval) clearInterval(pollingInterval);
         });
     </script>
 </body>
