@@ -25,14 +25,14 @@ sleep 1
 
 # Start Main Server (port 8000) in background
 echo "[1] Starting Main Server on port 8000..."
-php artisan serve --host=0.0.0.0 --port=8000 > /dev/null 2>&1 &
+php -d output_buffering=Off artisan serve --host=0.0.0.0 --port=8000 > /dev/null 2>&1 &
 MAIN_PID=$!
 
 sleep 2
 
 # Start SSE Server (port 8001) in background
 echo "[2] Starting SSE Server on port 8001..."
-php artisan serve --host=0.0.0.0 --port=8001 > /dev/null 2>&1 &
+php -d output_buffering=Off artisan serve --host=0.0.0.0 --port=8001 > /dev/null 2>&1 &
 SSE_PID=$!
 
 sleep 2

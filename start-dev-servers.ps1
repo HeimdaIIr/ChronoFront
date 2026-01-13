@@ -24,13 +24,13 @@ Start-Sleep -Seconds 1
 
 # Start Main Server (port 8000)
 Write-Host "[1] Starting Main Server on port 8000..." -ForegroundColor Green
-$mainServer = Start-Process -FilePath "php" -ArgumentList "artisan", "serve", "--host=0.0.0.0", "--port=8000" -PassThru -WindowStyle Normal
+$mainServer = Start-Process -FilePath "php" -ArgumentList "-d", "output_buffering=Off", "artisan", "serve", "--host=0.0.0.0", "--port=8000" -PassThru -WindowStyle Normal
 
 Start-Sleep -Seconds 2
 
 # Start SSE Server (port 8001)
 Write-Host "[2] Starting SSE Server on port 8001..." -ForegroundColor Green
-$sseServer = Start-Process -FilePath "php" -ArgumentList "artisan", "serve", "--host=0.0.0.0", "--port=8001" -PassThru -WindowStyle Normal
+$sseServer = Start-Process -FilePath "php" -ArgumentList "-d", "output_buffering=Off", "artisan", "serve", "--host=0.0.0.0", "--port=8001" -PassThru -WindowStyle Normal
 
 Start-Sleep -Seconds 2
 
