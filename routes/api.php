@@ -94,6 +94,14 @@ Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']);
 
 // RFID Debug - Accepts EVERYTHING and logs it
 Route::any('rfid/debug', function (Request $request) {
+    // Try to parse JSON, but don't fail if it's not valid JSON
+    $bodyJson = null;
+    try {
+        $bodyJson = $request->json()->all();
+    } catch (\Exception $e) {
+        $bodyJson = ['error' => 'Not valid JSON', 'message' => $e->getMessage()];
+    }
+
     $debugData = [
         'timestamp' => now()->format('Y-m-d H:i:s.u'),
         'method' => $request->method(),
@@ -102,7 +110,7 @@ Route::any('rfid/debug', function (Request $request) {
         'headers' => $request->headers->all(),
         'query_params' => $request->query(),
         'body_raw' => $request->getContent(),
-        'body_json' => $request->json()->all(),
+        'body_json' => $bodyJson,
         'all_input' => $request->all(),
     ];
 
