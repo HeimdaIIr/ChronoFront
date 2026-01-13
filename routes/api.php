@@ -86,6 +86,45 @@ Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-
 Route::post('rfid/detections', [RaspberryController::class, 'store']);
 Route::put('rfid/detections', [RaspberryController::class, 'store']);
 
+// RFID Live - SSE and Raw Logs
+use App\Http\Controllers\Api\RfidLogController;
+Route::get('rfid/raw-logs', [RfidLogController::class, 'getRawLogs']);
+Route::get('rfid/live-stream', [RfidLogController::class, 'liveStream']);
+Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']);
+
+// RFID Debug - Accepts EVERYTHING and logs it
+Route::any('rfid/debug', function (Request $request) {
+    $debugData = [
+        'timestamp' => now()->format('Y-m-d H:i:s.u'),
+        'method' => $request->method(),
+        'url' => $request->fullUrl(),
+        'ip' => $request->ip(),
+        'headers' => $request->headers->all(),
+        'query_params' => $request->query(),
+        'body_raw' => $request->getContent(),
+        'body_json' => $request->json()->all(),
+        'all_input' => $request->all(),
+    ];
+
+    // Log to Laravel log
+    \Log::info('RFID DEBUG REQUEST', $debugData);
+
+    // Log to RFID cache for display
+    \App\Http\Controllers\Api\RfidLogController::logRequest($request, 200, $debugData);
+
+    // Return detailed response
+    return response()->json([
+        'success' => true,
+        'message' => 'Debug data logged successfully',
+        'received' => $debugData,
+        'instructions' => [
+            'check_rfidlive' => 'Open http://localhost:8000/rfidlive-ultra to see this request',
+            'check_logs' => 'Check storage/logs/laravel.log for details',
+            'reader_config' => 'Now configure your real endpoint: /api/raspberry'
+        ]
+    ], 200);
+});
+
 // Health check
 Route::get('health', function () {
     try {
