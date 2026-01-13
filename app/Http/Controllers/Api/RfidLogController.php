@@ -49,7 +49,10 @@ class RfidLogController extends Controller
     public function liveStream(Request $request)
     {
         $response = new StreamedResponse(function() {
-            set_time_limit(0);
+            // For php artisan serve (mono-thread): timeout after 30s to free server
+            // Browser will auto-reconnect thanks to EventSource
+            $maxDuration = 30;
+            set_time_limit($maxDuration + 5);
             ignore_user_abort(false);
 
             // Start from the latest ID to avoid sending history
@@ -67,8 +70,16 @@ class RfidLogController extends Controller
             ob_flush();
             flush();
 
+            $startTime = time();
+
             // Keep connection alive and send new detections
             while (true) {
+                // Auto-close after 30s to free server (php artisan serve is mono-thread)
+                if ((time() - $startTime) >= $maxDuration) {
+                    // Close gracefully - browser will reconnect automatically
+                    break;
+                }
+
                 // Get all logs
                 $allLogs = Cache::get('rfid_raw_logs', []);
 
