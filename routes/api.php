@@ -133,6 +133,27 @@ Route::any('rfid/debug', function (Request $request) {
     ], 200);
 });
 
+// SSE Test endpoint - Ultra simple
+Route::get('sse-test', function () {
+    return response()->stream(function () {
+        echo "retry: 1000\n\n";
+        echo "data: Hello from SSE!\n\n";
+        ob_flush();
+        flush();
+
+        for ($i = 1; $i <= 5; $i++) {
+            sleep(1);
+            echo "data: Message $i\n\n";
+            ob_flush();
+            flush();
+        }
+    }, 200, [
+        'Content-Type' => 'text/event-stream',
+        'Cache-Control' => 'no-cache',
+        'X-Accel-Buffering' => 'no',
+    ]);
+});
+
 // Health check
 Route::get('health', function () {
     try {
