@@ -108,6 +108,7 @@
 
             // Use dedicated SSE server (port 8001) to avoid blocking main server
             const sseUrl = '{{ env("SSE_SERVER_URL", "http://localhost:8000") }}/api/rfid/live-stream';
+            console.log('🔌 SSE Connection URL:', sseUrl);
             eventSource = new EventSource(sseUrl);
 
             eventSource.onopen = () => {
