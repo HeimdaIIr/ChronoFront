@@ -132,6 +132,7 @@ Route::withoutMiddleware(['throttle'])->group(function () {
             'reader_config' => 'Now configure your real endpoint: /api/raspberry'
         ]
     ], 200);
+    });
 });
 
 // SSE Test endpoint - Ultra simple
