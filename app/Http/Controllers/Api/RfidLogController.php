@@ -40,20 +40,16 @@ class RfidLogController extends Controller
     /**
      * SSE endpoint for live streaming RFID detections
      *
-     * IMPORTANT: php artisan serve is single-threaded and will be blocked by SSE.
-     * Use Apache/Nginx with PHP-FPM in production for proper multi-threading.
+     * SOLUTION for php artisan serve: Run TWO servers
+     * - Port 8000: Main app (php artisan serve)
+     * - Port 8001: SSE only (php artisan serve --port=8001)
      *
-     * For local dev with php artisan serve, this connection auto-closes after 30s
-     * and reconnects automatically.
+     * Frontend will connect to port 8001 for SSE, port 8000 for everything else.
      */
     public function liveStream(Request $request)
     {
         $response = new StreamedResponse(function() {
-            // For php artisan serve: limit to 30s to avoid blocking the server
-            // For Apache/Nginx: unlimited (set via environment)
-            $maxDuration = env('SSE_MAX_DURATION', 30);
-
-            set_time_limit($maxDuration > 0 ? $maxDuration + 5 : 0);
+            set_time_limit(0);
             ignore_user_abort(false);
 
             // Start from the latest ID to avoid sending history
@@ -65,20 +61,8 @@ class RfidLogController extends Controller
             ob_flush();
             flush();
 
-            $startTime = time();
-
             // Keep connection alive and send new detections
             while (true) {
-                // Auto-close after maxDuration to free the server (dev mode)
-                if ($maxDuration > 0 && (time() - $startTime) >= $maxDuration) {
-                    // Send close event so client reconnects
-                    echo "event: close\n";
-                    echo "data: Connection timeout - reconnecting...\n\n";
-                    ob_flush();
-                    flush();
-                    break;
-                }
-
                 // Get all logs
                 $allLogs = Cache::get('rfid_raw_logs', []);
 

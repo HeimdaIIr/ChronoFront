@@ -115,8 +115,9 @@
                 eventSource.close();
             }
 
-            // Connect to SSE endpoint
-            eventSource = new EventSource('/api/rfid/live-stream');
+            // Connect to SSE endpoint (dedicated server on port 8001)
+            const sseUrl = '{{ env("SSE_SERVER_URL", "http://localhost:8000") }}/api/rfid/live-stream';
+            eventSource = new EventSource(sseUrl);
 
             eventSource.onopen = function() {
                 document.getElementById('status').textContent = '● Connecté';
