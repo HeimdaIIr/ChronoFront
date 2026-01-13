@@ -61,6 +61,12 @@ class RfidLogController extends Controller
             ob_flush();
             flush();
 
+            // Send initial "connected" event to trigger onopen in browser
+            echo "event: connected\n";
+            echo "data: {\"status\":\"connected\",\"timestamp\":\"" . now()->toIso8601String() . "\"}\n\n";
+            ob_flush();
+            flush();
+
             // Keep connection alive and send new detections
             while (true) {
                 // Get all logs
