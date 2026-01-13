@@ -122,6 +122,13 @@
                 setTimeout(connect, 2000);
             };
 
+            // Listen for "connected" event from server
+            eventSource.addEventListener('connected', (e) => {
+                console.log('✅ SSE Connected event received:', e.data);
+                document.getElementById('status').className = 'status on';
+                document.getElementById('statusText').textContent = 'Connecté';
+            });
+
             eventSource.addEventListener('detection', (e) => {
                 if (paused) return;
 

@@ -135,6 +135,13 @@
                 }, 2000);
             };
 
+            // Listen for "connected" event from server
+            eventSource.addEventListener('connected', function(e) {
+                console.log('✅ SSE Connected event received:', e.data);
+                document.getElementById('status').textContent = '● Connecté';
+                document.getElementById('status').className = 'status connected';
+            });
+
             eventSource.addEventListener('detection', function(e) {
                 try {
                     const data = JSON.parse(e.data);
