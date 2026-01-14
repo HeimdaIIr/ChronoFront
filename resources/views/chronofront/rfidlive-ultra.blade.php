@@ -107,14 +107,20 @@
         function poll() {
             if (paused) return;
 
+            console.log(`📡 Polling since ID: ${lastId}`);
+
             fetch(`/api/rfid/raw-logs?since=${lastId}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('✅ Poll response:', data);
+
                     // Connection réussie
                     document.getElementById('status').className = 'status on';
                     document.getElementById('statusText').textContent = 'Connecté';
 
                     if (data.success && data.logs && data.logs.length > 0) {
+                        console.log(`🔔 ${data.logs.length} new detections received`);
+
                         // Process new logs (newest first already from API)
                         data.logs.forEach(log => {
                             // Extract tag from the request body
@@ -170,11 +176,14 @@
                         document.getElementById('count').textContent = count;
 
                         // Render
+                        console.log(`🎨 Rendering ${logs.length} logs in UI`);
                         render();
+                    } else {
+                        console.log('⏸ No new logs');
                     }
                 })
                 .catch(error => {
-                    console.error('Polling error:', error);
+                    console.error('❌ Polling error:', error);
                     document.getElementById('status').className = 'status off';
                     document.getElementById('statusText').textContent = 'Déconnecté';
                 });
