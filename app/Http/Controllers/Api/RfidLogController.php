@@ -139,23 +139,31 @@ class RfidLogController extends Controller
         $data = $request->getContent();
         $currentTime = now();
 
-        // DEDUPLICATION: Check if identical request was logged in last 2 seconds
-        // This prevents duplicate detections from appearing in rfidlive-ultra
+        // Log EVERY incoming request for debugging
+        \Log::info('📥 RFID request received', [
+            'serial' => $serial,
+            'data_preview' => substr($data, 0, 100),
+            'status' => $status,
+            'current_cache_size' => count($allLogs)
+        ]);
+
+        // DEDUPLICATION: Check if identical request was logged in last 0.5 seconds
+        // Reduced from 2s to 0.5s to allow rapid continuous scanning
         foreach ($allLogs as $existingLog) {
             $logTime = \Carbon\Carbon::parse($existingLog['timestamp']);
             $secondsAgo = $currentTime->diffInSeconds($logTime);
 
-            // If log is older than 2 seconds, stop checking (logs are ordered newest first)
-            if ($secondsAgo > 2) {
+            // If log is older than 0.5 seconds, stop checking (logs are ordered newest first)
+            if ($secondsAgo > 0.5) {
                 break;
             }
 
-            // Check if it's a duplicate (same serial, same data, within 2 seconds)
+            // Check if it's a duplicate (same serial, same data, within 0.5 seconds)
             if ($existingLog['serial'] === $serial &&
                 $existingLog['data'] === $data &&
                 $existingLog['status'] === $status) {
                 // Duplicate detected - don't add it again
-                \Log::info('RFID duplicate detection blocked', [
+                \Log::info('🚫 RFID duplicate detection blocked', [
                     'serial' => $serial,
                     'seconds_since_last' => $secondsAgo,
                     'existing_log_id' => $existingLog['id']
@@ -188,6 +196,13 @@ class RfidLogController extends Controller
 
         // Store in cache for 1 hour
         Cache::put('rfid_raw_logs', $allLogs, 3600);
+
+        // Log successful addition
+        \Log::info('✅ RFID detection added to cache', [
+            'new_id' => $newId,
+            'serial' => $serial,
+            'cache_size_after' => count($allLogs)
+        ]);
     }
 
     /**

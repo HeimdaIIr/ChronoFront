@@ -163,8 +163,9 @@
                                 console.error('❌ Error parsing log data:', e, log.data);
                             }
 
-                            // Extract time (HH:MM:SS.mmm)
-                            const time = new Date().toLocaleTimeString('fr-FR', {
+                            // Extract time from server timestamp
+                            const timestamp = new Date(log.timestamp);
+                            const time = timestamp.toLocaleTimeString('fr-FR', {
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 second: '2-digit',
@@ -228,12 +229,24 @@
         }
 
         function clearAll() {
+            // Clear server cache
+            fetch('/api/rfid/clear-logs', { method: 'POST' })
+                .then(() => {
+                    console.log('🗑️ Server cache cleared');
+                })
+                .catch(error => {
+                    console.error('❌ Error clearing server cache:', error);
+                });
+
+            // Reset client state
             logs = [];
             count = 0;
             rateCounter = 0;
+            lastId = 0; // IMPORTANT: Reset lastId to reload from start
             document.getElementById('count').textContent = '0';
             document.getElementById('rate').textContent = '0';
             render();
+            console.log('🗑️ Client state cleared, lastId reset to 0');
         }
 
         // Update rate every second
