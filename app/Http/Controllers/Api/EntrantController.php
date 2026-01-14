@@ -130,12 +130,12 @@ class EntrantController extends Controller
     }
 
     /**
-     * Import entrants from CSV file
+     * Import entrants from CSV or Excel file
      */
     public function import(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'file' => 'required|file|mimes:csv,txt',
+            'file' => 'required|file|mimes:csv,txt,xls,xlsx',
             'event_id' => 'required|integer',
         ]);
 
@@ -150,7 +150,14 @@ class EntrantController extends Controller
 
         $file = $request->file('file');
         $eventId = $request->input('event_id');
+        $extension = strtolower($file->getClientOriginalExtension());
 
+        // Detect if it's an Excel file
+        if (in_array($extension, ['xls', 'xlsx'])) {
+            return $this->importFromExcel($file, $eventId);
+        }
+
+        // Otherwise, proceed with CSV import
         // Lire le contenu brut du fichier
         $content = file_get_contents($file->getRealPath());
 
@@ -455,6 +462,281 @@ class EntrantController extends Controller
                 'message' => 'Erreur lors de la suppression',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Import entrants from Excel file (XLS/XLSX)
+     */
+    private function importFromExcel($file, int $eventId): JsonResponse
+    {
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+
+            // First row is headers
+            $headers = array_map('strtolower', array_shift($rows));
+
+            $imported = 0;
+            $errors = [];
+            $racesCache = [];
+            $wavesCache = [];
+
+            DB::beginTransaction();
+
+            foreach ($rows as $index => $row) {
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
+                // Combine headers with row data
+                $rowCount = count($row);
+                $headerCount = count($headers);
+
+                if ($rowCount < $headerCount) {
+                    $row = array_pad($row, $headerCount, '');
+                } elseif ($rowCount > $headerCount) {
+                    $row = array_slice($row, 0, $headerCount);
+                }
+
+                $data = array_combine($headers, $row);
+
+                // Use the same mapping logic as CSV import
+                $firstname = $data['prenom'] ?? $data['firstname'] ?? '';
+                $lastname = $data['nom'] ?? $data['lastname'] ?? '';
+                $gender = strtoupper($data['sexe'] ?? $data['gender'] ?? '');
+                $birthDate = $data['naissance'] ?? $data['birth_date'] ?? null;
+                $parcours = $data['parcours'] ?? $data['race'] ?? null;
+                $vague = $data['vague'] ?? $data['wave'] ?? null;
+                $cat = $data['cat'] ?? $data['category'] ?? null;
+                $club = $data['club'] ?? null;
+                $bibNumber = $data['dossard'] ?? $data['bib'] ?? null;
+                $startTime = $data['top'] ?? null;
+
+                // Skip if missing required fields
+                if (empty($firstname) || empty($lastname) || empty($parcours)) {
+                    $errors[] = "Ligne " . ($index + 2) . ": Données manquantes (nom, prénom ou parcours)";
+                    continue;
+                }
+
+                // Process the row (same logic as CSV)
+                $result = $this->processEntrantRow([
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
+                    'gender' => $gender,
+                    'birthDate' => $birthDate,
+                    'parcours' => $parcours,
+                    'vague' => $vague,
+                    'cat' => $cat,
+                    'club' => $club,
+                    'bibNumber' => $bibNumber,
+                    'startTime' => $startTime,
+                    'eventId' => $eventId,
+                ], $racesCache, $wavesCache);
+
+                if ($result['success']) {
+                    $imported++;
+                } else {
+                    $errors[] = "Ligne " . ($index + 2) . ": " . $result['error'];
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => "Import Excel réussi",
+                'imported' => $imported,
+                'total_rows' => count($rows),
+                'races_created' => count($racesCache),
+                'waves_created' => count($wavesCache),
+                'errors' => $errors
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Import Excel échoué',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process a single entrant row (shared between CSV and Excel import)
+     */
+    private function processEntrantRow(array $data, array &$racesCache, array &$wavesCache): array
+    {
+        try {
+            $eventId = $data['eventId'];
+            $firstname = $data['firstname'];
+            $lastname = $data['lastname'];
+            $parcours = $data['parcours'];
+            $vague = $data['vague'];
+            $cat = $data['cat'];
+            $club = $data['club'];
+            $bibNumber = $data['bibNumber'];
+            $startTime = $data['startTime'];
+            $birthDate = $data['birthDate'];
+            $gender = $data['gender'];
+
+            // Find or create Race
+            $raceKey = strtolower(trim($parcours));
+            if (!isset($racesCache[$raceKey])) {
+                $race = Race::where('event_id', $eventId)
+                    ->where('name', trim($parcours))
+                    ->first();
+
+                if (!$race) {
+                    $race = Race::create([
+                        'event_id' => $eventId,
+                        'name' => trim($parcours),
+                        'type' => '1_passage',
+                    ]);
+                }
+                $racesCache[$raceKey] = $race;
+            } else {
+                $race = $racesCache[$raceKey];
+            }
+
+            // Find or create Wave
+            $waveId = null;
+            if (!empty($vague)) {
+                $vagueValue = trim($vague);
+                $waveKey = $race->id . '_' . $vagueValue;
+
+                $waveNumber = null;
+                if (is_numeric($vagueValue)) {
+                    $waveNumber = (int)$vagueValue;
+                } elseif (preg_match('/(\d+)/', $vagueValue, $matches)) {
+                    $waveNumber = (int)$matches[1];
+                }
+
+                if (!isset($wavesCache[$waveKey])) {
+                    if ($waveNumber) {
+                        $wave = Wave::where('race_id', $race->id)
+                            ->where('wave_number', $waveNumber)
+                            ->first();
+                    }
+
+                    if (!isset($wave)) {
+                        $wave = Wave::where('race_id', $race->id)
+                            ->where('name', $vagueValue)
+                            ->first();
+                    }
+
+                    if (!$wave) {
+                        $waveData = [
+                            'race_id' => $race->id,
+                            'name' => $vagueValue,
+                        ];
+
+                        if ($waveNumber) {
+                            $waveData['wave_number'] = $waveNumber;
+                        }
+
+                        $wave = Wave::create($waveData);
+                    }
+                    $wavesCache[$waveKey] = $wave;
+                } else {
+                    $wave = $wavesCache[$waveKey];
+                }
+                $waveId = $wave->id;
+            }
+
+            // Parse birth date
+            $parsedBirthDate = null;
+            if ($birthDate) {
+                try {
+                    if (preg_match('#^(\d{2})/(\d{2})/(\d{4})$#', $birthDate, $matches)) {
+                        $parsedBirthDate = $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+                    } else {
+                        $parsedBirthDate = \Carbon\Carbon::parse($birthDate)->format('Y-m-d');
+                    }
+                } catch (\Exception $e) {
+                    $parsedBirthDate = null;
+                }
+            }
+
+            // Parse start time
+            $parsedStartTime = null;
+            if ($startTime) {
+                try {
+                    if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($startTime), $matches)) {
+                        $hour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $minute = $matches[2];
+                        $second = $matches[3] ?? '00';
+                        $parsedStartTime = "{$hour}:{$minute}:{$second}";
+                    }
+                } catch (\Exception $e) {
+                    $parsedStartTime = null;
+                }
+            }
+
+            // Generate RFID tag
+            $rfidTag = null;
+            if ($bibNumber) {
+                $rfidTag = '2000' . str_pad($bibNumber, 4, '0', STR_PAD_LEFT);
+            }
+
+            // Normalize gender
+            $gender = $this->normalizeGender($gender);
+
+            // Prepare entrant data
+            $entrantData = [
+                'firstname' => trim($firstname),
+                'lastname' => trim($lastname),
+                'gender' => $gender,
+                'birth_date' => $parsedBirthDate,
+                'bib_number' => $bibNumber,
+                'rfid_tag' => $rfidTag,
+                'club' => $club,
+                'event_id' => $eventId,
+                'race_id' => $race->id,
+                'wave_id' => $waveId,
+                'start_time' => $parsedStartTime,
+            ];
+
+            // Check if entrant exists
+            $entrant = null;
+            if (!empty($bibNumber)) {
+                $entrant = Entrant::where('event_id', $eventId)
+                    ->where('bib_number', $bibNumber)
+                    ->first();
+            }
+
+            if ($entrant) {
+                $entrant->update($entrantData);
+            } else {
+                $entrant = Entrant::create($entrantData);
+            }
+
+            // Handle category
+            if (!empty($cat)) {
+                $catName = strtoupper(trim($cat));
+                $category = Category::firstOrCreate(
+                    ['name' => $catName],
+                    [
+                        'description' => "Catégorie importée: {$catName}",
+                        'gender' => 'A',
+                        'age_min' => 0,
+                        'age_max' => 999
+                    ]
+                );
+                $entrant->category_id = $category->id;
+                $entrant->save();
+            } else {
+                if ($entrant->birth_date && $entrant->gender) {
+                    $entrant->assignCategory();
+                }
+            }
+
+            return ['success' => true];
+
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 

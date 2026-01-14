@@ -50,17 +50,17 @@
 
                         <!-- File Input -->
                         <div class="mb-3">
-                            <label for="csvFile" class="form-label">Fichier CSV <span class="text-danger">*</span></label>
+                            <label for="csvFile" class="form-label">Fichier CSV / Excel <span class="text-danger">*</span></label>
                             <input
                                 type="file"
                                 class="form-control"
                                 id="csvFile"
-                                accept=".csv,.txt"
+                                accept=".csv,.txt,.xls,.xlsx"
                                 @change="handleFileSelect"
                                 required
                                 :disabled="uploading"
                             >
-                            <div class="form-text">Format accepté : .csv (max 10MB)</div>
+                            <div class="form-text">Formats acceptés : CSV (.csv, .txt) ou Excel (.xls, .xlsx) - max 10MB</div>
                         </div>
 
                         <!-- File Info -->
