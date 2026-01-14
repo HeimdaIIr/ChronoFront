@@ -56,8 +56,14 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        // Standard API rate limit (increased for RFID polling at 500ms = 120 req/min)
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+            return Limit::perMinute(1000)->by(optional($request->user())->id ?: $request->ip());
+        });
+
+        // Unlimited rate limiter for high-frequency RFID endpoints
+        RateLimiter::for('unlimited', function (Request $request) {
+            return Limit::none();
         });
     }
 }
