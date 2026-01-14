@@ -303,12 +303,15 @@ class ReaderController extends Controller
                     'date_test' => now(),
                 ]);
 
-                $status = match($httpCode) {
-                    200 => ' (Authenticated ✓)',
-                    401 => ' (Auth required)',
-                    403 => ' (Blocked by proxy)',
-                    default => ''
-                };
+                // Determine status message based on HTTP code (PHP 7.3 compatible)
+                $status = '';
+                if ($httpCode === 200) {
+                    $status = ' (Authenticated ✓)';
+                } elseif ($httpCode === 401) {
+                    $status = ' (Auth required)';
+                } elseif ($httpCode === 403) {
+                    $status = ' (Blocked by proxy)';
+                }
 
                 return response()->json([
                     'success' => true,
