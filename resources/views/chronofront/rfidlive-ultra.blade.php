@@ -128,26 +128,39 @@
                             let tags = []; // Collect all tags from the request
 
                             try {
-                                const body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+                                // Parse the JSON string
+                                let body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+
+                                // Handle double encapsulation: {"data":{"serial":"[20000005]",...}}
+                                if (body.data && typeof body.data === 'object') {
+                                    body = body.data;
+                                } else if (body.data && typeof body.data === 'string') {
+                                    body = JSON.parse(body.data);
+                                }
+
+                                // Extract serial(s) and remove brackets []
+                                const cleanSerial = (s) => s ? s.replace(/[\[\]]/g, '') : null;
 
                                 if (Array.isArray(body)) {
                                     // Body is array: [{"serial":"2000042","timestamp":...}]
                                     body.forEach(item => {
-                                        if (item.serial) tags.push(item.serial);
+                                        if (item.serial) tags.push(cleanSerial(item.serial));
                                     });
                                 } else if (body.serial) {
-                                    // Body is object: {"serial":"2000042",...}
-                                    tags.push(body.serial);
+                                    // Body is object: {"serial":"[2000042]",...}
+                                    tags.push(cleanSerial(body.serial));
                                 } else if (body.tag) {
-                                    tags.push(body.tag);
+                                    tags.push(cleanSerial(body.tag));
                                 }
 
                                 // Use first tag or join multiple tags
                                 if (tags.length > 0) {
                                     tag = tags.length === 1 ? tags[0] : tags.join(', ');
                                 }
+
+                                console.log(`🏷️  Parsed tag: ${tag} from`, body);
                             } catch (e) {
-                                console.error('Error parsing log data:', e, log.data);
+                                console.error('❌ Error parsing log data:', e, log.data);
                             }
 
                             // Extract time (HH:MM:SS.mmm)
