@@ -135,19 +135,48 @@ class RfidLogController extends Controller
     {
         $allLogs = Cache::get('rfid_raw_logs', []);
 
+        $serial = $request->header('Serial');
+        $data = $request->getContent();
+        $currentTime = now();
+
+        // DEDUPLICATION: Check if identical request was logged in last 2 seconds
+        // This prevents duplicate detections from appearing in rfidlive-ultra
+        foreach ($allLogs as $existingLog) {
+            $logTime = \Carbon\Carbon::parse($existingLog['timestamp']);
+            $secondsAgo = $currentTime->diffInSeconds($logTime);
+
+            // If log is older than 2 seconds, stop checking (logs are ordered newest first)
+            if ($secondsAgo > 2) {
+                break;
+            }
+
+            // Check if it's a duplicate (same serial, same data, within 2 seconds)
+            if ($existingLog['serial'] === $serial &&
+                $existingLog['data'] === $data &&
+                $existingLog['status'] === $status) {
+                // Duplicate detected - don't add it again
+                \Log::info('RFID duplicate detection blocked', [
+                    'serial' => $serial,
+                    'seconds_since_last' => $secondsAgo,
+                    'existing_log_id' => $existingLog['id']
+                ]);
+                return; // Exit without adding
+            }
+        }
+
         // Generate unique ID
         $lastId = count($allLogs) > 0 ? max(array_column($allLogs, 'id')) : 0;
         $newId = $lastId + 1;
 
         $log = [
             'id' => $newId,
-            'timestamp' => now()->format('Y-m-d H:i:s'),
+            'timestamp' => $currentTime->format('Y-m-d H:i:s'),
             'method' => $request->method(),
             'url' => $request->fullUrl(),
-            'serial' => $request->header('Serial'),
+            'serial' => $serial,
             'ip' => $request->ip(),
             'status' => $status,
-            'data' => $request->getContent(),
+            'data' => $data,
             'response' => $responseData,
         ];
 

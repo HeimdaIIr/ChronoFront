@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Http\Controllers\Api\RfidLogController;
 
 class RaspberryController extends Controller
 {
@@ -39,6 +40,10 @@ class RaspberryController extends Controller
 
         if (!$readerSerial) {
             Log::warning('RFID request missing Serial header');
+
+            // Log to RFID raw logs for debugging
+            RfidLogController::logRequest($request, 400);
+
             return response()->json([
                 'error' => 'Missing Serial header'
             ], 400);
@@ -51,10 +56,16 @@ class RaspberryController extends Controller
             Log::error('Reader not found or not active', [
                 'serial' => $readerSerial,
             ]);
-            return response()->json([
+
+            $errorResponse = [
                 'error' => 'Reader not configured or not active',
                 'serial' => $readerSerial
-            ], 404);
+            ];
+
+            // Log to RFID raw logs for debugging
+            RfidLogController::logRequest($request, 404, $errorResponse);
+
+            return response()->json($errorResponse, 404);
         }
 
         Log::info('Reader found and active', [
@@ -294,14 +305,19 @@ class RaspberryController extends Controller
             'total_detections' => count($detections),
         ]);
 
-        return response()->json([
+        $responseData = [
             'success' => true,
             'reader' => $readerSerial,
             'location' => $reader->location,
             'processed' => $processed,
             'skipped' => $skipped,
             'results' => $results
-        ]);
+        ];
+
+        // Log to RFID raw logs for /rfidlive-ultra display
+        RfidLogController::logRequest($request, 200, $responseData);
+
+        return response()->json($responseData);
     }
 
     /**
