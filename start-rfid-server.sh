@@ -86,25 +86,36 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Vérifier le pare-feu (macOS)
+# Vérifier le pare-feu (macOS) - optionnel
 if [ "$IP" != "localhost" ]; then
-    echo "🛡️  Vérification du pare-feu..."
-    FW_STATUS=$(sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>&1)
+    echo "🛡️  Vérification du pare-feu (optionnel)..."
+    echo -e "${BLUE}   Pour vérifier le pare-feu, un mot de passe admin sera demandé${NC}"
+    echo ""
+    read -p "Voulez-vous vérifier le pare-feu ? (o/N) " -n 1 -r
+    echo ""
 
-    if echo "$FW_STATUS" | grep -q "enabled"; then
-        echo -e "${YELLOW}⚠️  Pare-feu activé - peut bloquer les connexions réseau${NC}"
-        echo ""
-        read -p "Voulez-vous désactiver le pare-feu temporairement ? (o/N) " -n 1 -r
-        echo ""
+    if [[ $REPLY =~ ^[Oo]$ ]]; then
+        FW_STATUS=$(sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>&1)
 
-        if [[ $REPLY =~ ^[Oo]$ ]]; then
-            sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-            echo -e "${GREEN}✅ Pare-feu désactivé${NC}"
+        if echo "$FW_STATUS" | grep -q "enabled"; then
+            echo -e "${YELLOW}⚠️  Pare-feu activé - peut bloquer les connexions réseau${NC}"
+            echo ""
+            read -p "Voulez-vous désactiver le pare-feu temporairement ? (o/N) " -n 1 -r
+            echo ""
+
+            if [[ $REPLY =~ ^[Oo]$ ]]; then
+                sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+                echo -e "${GREEN}✅ Pare-feu désactivé${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Le lecteur RFID risque de ne pas pouvoir se connecter${NC}"
+            fi
         else
-            echo -e "${YELLOW}⚠️  Le lecteur RFID risque de ne pas pouvoir se connecter${NC}"
+            echo -e "${GREEN}✅ Pare-feu désactivé${NC}"
         fi
     else
-        echo -e "${GREEN}✅ Pare-feu désactivé${NC}"
+        echo -e "${BLUE}ℹ️  Vérification du pare-feu ignorée${NC}"
+        echo -e "${YELLOW}   Si le lecteur ne peut pas se connecter, désactivez le pare-feu manuellement${NC}"
+        echo -e "${YELLOW}   Ou relancez le script et choisissez 'o' pour vérifier${NC}"
     fi
     echo ""
 fi
