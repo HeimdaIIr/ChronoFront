@@ -117,14 +117,32 @@
                     if (data.success && data.logs && data.logs.length > 0) {
                         // Process new logs (newest first already from API)
                         data.logs.forEach(log => {
-                            // Extract tag
+                            // Extract tag from the request body
                             let tag = 'N/A';
+                            let tags = []; // Collect all tags from the request
+
                             try {
                                 const body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
-                                if (Array.isArray(body) && body[0]) tag = body[0].serial || tag;
-                                else if (body.serial) tag = body.serial;
-                                else if (body.tag) tag = body.tag;
-                            } catch (e) {}
+
+                                if (Array.isArray(body)) {
+                                    // Body is array: [{"serial":"2000042","timestamp":...}]
+                                    body.forEach(item => {
+                                        if (item.serial) tags.push(item.serial);
+                                    });
+                                } else if (body.serial) {
+                                    // Body is object: {"serial":"2000042",...}
+                                    tags.push(body.serial);
+                                } else if (body.tag) {
+                                    tags.push(body.tag);
+                                }
+
+                                // Use first tag or join multiple tags
+                                if (tags.length > 0) {
+                                    tag = tags.length === 1 ? tags[0] : tags.join(', ');
+                                }
+                            } catch (e) {
+                                console.error('Error parsing log data:', e, log.data);
+                            }
 
                             // Extract time (HH:MM:SS.mmm)
                             const time = new Date().toLocaleTimeString('fr-FR', {

@@ -88,13 +88,14 @@ Route::put('rfid/detections', [RaspberryController::class, 'store']);
 
 // RFID Live - SSE and Raw Logs (NO RATE LIMITING for polling)
 use App\Http\Controllers\Api\RfidLogController;
-Route::withoutMiddleware(['throttle'])->group(function () {
-    Route::get('rfid/raw-logs', [RfidLogController::class, 'getRawLogs']);
-    Route::get('rfid/live-stream', [RfidLogController::class, 'liveStream']);
-    Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']);
 
-    // RFID Debug - Accepts EVERYTHING and logs it
-    Route::any('rfid/debug', function (Request $request) {
+// RFID endpoints WITHOUT throttle middleware (for high-frequency polling)
+Route::get('rfid/raw-logs', [RfidLogController::class, 'getRawLogs'])->withoutMiddleware('throttle');
+Route::get('rfid/live-stream', [RfidLogController::class, 'liveStream'])->withoutMiddleware('throttle');
+Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs'])->withoutMiddleware('throttle');
+
+// RFID Debug - Accepts EVERYTHING and logs it
+Route::any('rfid/debug', function (Request $request) {
         // Try to parse JSON, but don't fail if it's not valid JSON
         $bodyJson = null;
         try {
@@ -132,8 +133,7 @@ Route::withoutMiddleware(['throttle'])->group(function () {
             'reader_config' => 'Now configure your real endpoint: /api/raspberry'
         ]
     ], 200);
-    });
-});
+})->withoutMiddleware('throttle');
 
 // SSE Test endpoint - Ultra simple
 Route::get('sse-test', function () {
