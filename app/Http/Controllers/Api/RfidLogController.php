@@ -163,17 +163,6 @@ class RfidLogController extends Controller
             // If parsing fails, continue anyway
         }
 
-        // Log EVERY incoming request for debugging
-        \Log::info('📥 RFID request received', [
-            'serial' => $serial,
-            'tag_number' => $tagNumber,
-            'data_preview' => substr($data, 0, 200),
-            'status' => $status,
-            'current_cache_size' => count($allLogs)
-        ]);
-
-        // NO DEDUPLICATION - This is a RAW debug tool, show EVERYTHING
-
         // Generate unique ID
         $lastId = count($allLogs) > 0 ? max(array_column($allLogs, 'id')) : 0;
         $newId = $lastId + 1;
@@ -193,18 +182,18 @@ class RfidLogController extends Controller
         // Add to beginning of array
         array_unshift($allLogs, $log);
 
-        // Keep only last 500 logs (increased from 100 to handle large scans)
+        // Keep only last 500 logs
         $allLogs = array_slice($allLogs, 0, 500);
 
-        // Store in cache for 1 hour
-        Cache::put('rfid_raw_logs', $allLogs, 3600);
+        // Store in cache (NO expiration - persist until manually cleared)
+        Cache::forever('rfid_raw_logs', $allLogs);
 
-        // Log successful addition
-        \Log::info('✅ RFID detection added to cache', [
-            'new_id' => $newId,
-            'tag' => $tagNumber,
-            'cache_size_after' => count($allLogs)
-        ]);
+        // Display in terminal (error_log shows in php artisan serve output)
+        error_log(sprintf("📥 RFID #%d | Tag: %s | Cache: %d items",
+            $newId,
+            $tagNumber ?: 'N/A',
+            count($allLogs)
+        ));
     }
 
     /**
