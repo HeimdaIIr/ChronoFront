@@ -95,7 +95,7 @@
     <div class="log-container" id="logs"></div>
 
     <script>
-        const MAX_LOGS = 50; // Limite stricte pour performance
+        const MAX_LOGS = 100; // Display limit (server keeps 500 in cache)
         let logs = [];
         let count = 0;
         let paused = false;

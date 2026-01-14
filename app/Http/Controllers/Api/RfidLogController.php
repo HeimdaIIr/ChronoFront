@@ -139,36 +139,80 @@ class RfidLogController extends Controller
         $data = $request->getContent();
         $currentTime = now();
 
+        // Extract tag number from the data for smart deduplication
+        $tagNumber = null;
+        try {
+            $body = json_decode($data, true);
+
+            // Handle double encapsulation: {"data":{"serial":"[20000005]",...}}
+            if (isset($body['data'])) {
+                if (is_string($body['data'])) {
+                    $body = json_decode($body['data'], true);
+                } else {
+                    $body = $body['data'];
+                }
+            }
+
+            // Extract and clean tag number (remove brackets)
+            if (isset($body['serial'])) {
+                $tagNumber = preg_replace('/[\[\]]/', '', $body['serial']);
+            } elseif (isset($body['tag'])) {
+                $tagNumber = preg_replace('/[\[\]]/', '', $body['tag']);
+            }
+        } catch (\Exception $e) {
+            // If parsing fails, use raw data for comparison
+        }
+
         // Log EVERY incoming request for debugging
         \Log::info('📥 RFID request received', [
             'serial' => $serial,
+            'tag_number' => $tagNumber,
             'data_preview' => substr($data, 0, 100),
             'status' => $status,
             'current_cache_size' => count($allLogs)
         ]);
 
-        // DEDUPLICATION: Check if identical request was logged in last 0.5 seconds
-        // Reduced from 2s to 0.5s to allow rapid continuous scanning
-        foreach ($allLogs as $existingLog) {
-            $logTime = \Carbon\Carbon::parse($existingLog['timestamp']);
-            $secondsAgo = $currentTime->diffInSeconds($logTime);
+        // SMART DEDUPLICATION: Check if same TAG was logged in last 1 second
+        // This allows rapid scanning of different tags while blocking true duplicates
+        if ($tagNumber) {
+            foreach ($allLogs as $existingLog) {
+                $logTime = \Carbon\Carbon::parse($existingLog['timestamp']);
+                $secondsAgo = $currentTime->diffInSeconds($logTime);
 
-            // If log is older than 0.5 seconds, stop checking (logs are ordered newest first)
-            if ($secondsAgo > 0.5) {
-                break;
-            }
+                // If log is older than 1 second, stop checking
+                if ($secondsAgo > 1) {
+                    break;
+                }
 
-            // Check if it's a duplicate (same serial, same data, within 0.5 seconds)
-            if ($existingLog['serial'] === $serial &&
-                $existingLog['data'] === $data &&
-                $existingLog['status'] === $status) {
-                // Duplicate detected - don't add it again
-                \Log::info('🚫 RFID duplicate detection blocked', [
-                    'serial' => $serial,
-                    'seconds_since_last' => $secondsAgo,
-                    'existing_log_id' => $existingLog['id']
-                ]);
-                return; // Exit without adding
+                // Extract tag from existing log
+                $existingTag = null;
+                try {
+                    $existingBody = json_decode($existingLog['data'], true);
+                    if (isset($existingBody['data'])) {
+                        if (is_string($existingBody['data'])) {
+                            $existingBody = json_decode($existingBody['data'], true);
+                        } else {
+                            $existingBody = $existingBody['data'];
+                        }
+                    }
+                    if (isset($existingBody['serial'])) {
+                        $existingTag = preg_replace('/[\[\]]/', '', $existingBody['serial']);
+                    } elseif (isset($existingBody['tag'])) {
+                        $existingTag = preg_replace('/[\[\]]/', '', $existingBody['tag']);
+                    }
+                } catch (\Exception $e) {
+                    // Skip if can't parse
+                }
+
+                // Check if it's the SAME TAG within 1 second
+                if ($existingTag && $existingTag === $tagNumber) {
+                    \Log::info('🚫 Duplicate TAG blocked', [
+                        'tag' => $tagNumber,
+                        'seconds_since_last' => $secondsAgo,
+                        'existing_log_id' => $existingLog['id']
+                    ]);
+                    return; // Exit without adding
+                }
             }
         }
 
@@ -191,8 +235,8 @@ class RfidLogController extends Controller
         // Add to beginning of array
         array_unshift($allLogs, $log);
 
-        // Keep only last 100 logs
-        $allLogs = array_slice($allLogs, 0, 100);
+        // Keep only last 500 logs (increased from 100 to handle large scans)
+        $allLogs = array_slice($allLogs, 0, 500);
 
         // Store in cache for 1 hour
         Cache::put('rfid_raw_logs', $allLogs, 3600);
@@ -200,7 +244,7 @@ class RfidLogController extends Controller
         // Log successful addition
         \Log::info('✅ RFID detection added to cache', [
             'new_id' => $newId,
-            'serial' => $serial,
+            'tag' => $tagNumber,
             'cache_size_after' => count($allLogs)
         ]);
     }
