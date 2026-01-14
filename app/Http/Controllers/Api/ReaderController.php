@@ -374,12 +374,12 @@ class ReaderController extends Controller
             'target_method' => 'PUT',
             'serial' => $reader->serial,
             'event_id' => $reader->event_id,
-            'event_name' => $reader->event?->name,
+            'event_name' => $reader->event ? $reader->event->name : null,
             'race_id' => $reader->race_id,
             'location' => $reader->location,
             'anti_rebounce_seconds' => $reader->anti_rebounce_seconds ?? 5,
-            'date_min' => $reader->date_min?->toIso8601String(),
-            'date_max' => $reader->date_max?->toIso8601String(),
+            'date_min' => $reader->date_min ? $reader->date_min->toIso8601String() : null,
+            'date_max' => $reader->date_max ? $reader->date_max->toIso8601String() : null,
             'configured_at' => now()->toIso8601String(),
         ]);
     }
