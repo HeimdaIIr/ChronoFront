@@ -139,7 +139,7 @@ class RfidLogController extends Controller
         $data = $request->getContent();
         $currentTime = now();
 
-        // Extract tag number from the data for smart deduplication
+        // Extract tag number for display purposes only (NO deduplication)
         $tagNumber = null;
         try {
             $body = json_decode($data, true);
@@ -160,61 +160,19 @@ class RfidLogController extends Controller
                 $tagNumber = preg_replace('/[\[\]]/', '', $body['tag']);
             }
         } catch (\Exception $e) {
-            // If parsing fails, use raw data for comparison
+            // If parsing fails, continue anyway
         }
 
         // Log EVERY incoming request for debugging
         \Log::info('📥 RFID request received', [
             'serial' => $serial,
             'tag_number' => $tagNumber,
-            'data_preview' => substr($data, 0, 100),
+            'data_preview' => substr($data, 0, 200),
             'status' => $status,
             'current_cache_size' => count($allLogs)
         ]);
 
-        // SMART DEDUPLICATION: Check if same TAG was logged in last 1 second
-        // This allows rapid scanning of different tags while blocking true duplicates
-        if ($tagNumber) {
-            foreach ($allLogs as $existingLog) {
-                $logTime = \Carbon\Carbon::parse($existingLog['timestamp']);
-                $secondsAgo = $currentTime->diffInSeconds($logTime);
-
-                // If log is older than 1 second, stop checking
-                if ($secondsAgo > 1) {
-                    break;
-                }
-
-                // Extract tag from existing log
-                $existingTag = null;
-                try {
-                    $existingBody = json_decode($existingLog['data'], true);
-                    if (isset($existingBody['data'])) {
-                        if (is_string($existingBody['data'])) {
-                            $existingBody = json_decode($existingBody['data'], true);
-                        } else {
-                            $existingBody = $existingBody['data'];
-                        }
-                    }
-                    if (isset($existingBody['serial'])) {
-                        $existingTag = preg_replace('/[\[\]]/', '', $existingBody['serial']);
-                    } elseif (isset($existingBody['tag'])) {
-                        $existingTag = preg_replace('/[\[\]]/', '', $existingBody['tag']);
-                    }
-                } catch (\Exception $e) {
-                    // Skip if can't parse
-                }
-
-                // Check if it's the SAME TAG within 1 second
-                if ($existingTag && $existingTag === $tagNumber) {
-                    \Log::info('🚫 Duplicate TAG blocked', [
-                        'tag' => $tagNumber,
-                        'seconds_since_last' => $secondsAgo,
-                        'existing_log_id' => $existingLog['id']
-                    ]);
-                    return; // Exit without adding
-                }
-            }
-        }
+        // NO DEDUPLICATION - This is a RAW debug tool, show EVERYTHING
 
         // Generate unique ID
         $lastId = count($allLogs) > 0 ? max(array_column($allLogs, 'id')) : 0;
