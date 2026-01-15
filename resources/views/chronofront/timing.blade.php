@@ -153,32 +153,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-.readers-status {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    padding: 1rem 0 1.5rem;
-}
-
-.reader-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.reader-item span {
-    color: #a1a1aa;
-}
-
-.reader-item strong {
-    color: #22c55e;
-}
-
-.reader-item.warning strong {
-    color: #f59e0b;
-}
-
 /* Filters */
 .filters-bar {
     display: flex;
@@ -867,12 +841,6 @@ body {
         padding: 1rem 0 0.7rem;
     }
 
-    .readers-status {
-        gap: 1.2rem;
-        padding: 0.5rem 0 0.7rem;
-        font-size: 0.75rem;
-    }
-
     .filters-bar {
         padding: 0.7rem 1.2rem;
         gap: 0.5rem;
@@ -1068,12 +1036,6 @@ body {
         padding: 1rem 0 0.75rem;
     }
 
-    .readers-status {
-        gap: 1.5rem;
-        padding: 0.75rem 0 1rem;
-        font-size: 0.85rem;
-    }
-
     .filters-bar {
         padding: 0.85rem 1rem;
         gap: 0.6rem;
@@ -1223,18 +1185,6 @@ body {
                     <div style="text-align: center; padding-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;" x-show="selectedRaceId && getSelectedRace()?.start_time">
                         <span>Départ: </span>
                         <span x-text="formatTime(getSelectedRace()?.start_time)"></span>
-                    </div>
-
-                    <div class="readers-status" x-show="readers.length > 0">
-                        <template x-for="reader in readers" :key="reader.id">
-                            <div class="reader-item" :class="{ 'warning': !reader.is_online }">
-                                <span x-text="reader.location || reader.name"></span>:
-                                <strong x-text="reader.is_online ? 'OK' : 'Hors ligne'"></strong>
-                            </div>
-                        </template>
-                    </div>
-                    <div x-show="readers.length === 0" class="text-center py-3 text-muted" style="font-size: 0.9rem;">
-                        Aucun lecteur configuré
                     </div>
                 </div>
 

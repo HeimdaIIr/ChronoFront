@@ -215,17 +215,6 @@
 
                     <!-- Tab: RFID Readers -->
                     <div x-show="editTab === 'readers'">
-                        <!-- Info Box -->
-                        <div class="alert alert-info mb-4">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Calcul automatique IP :</strong> ChronoFront supporte 3 types de réseaux :
-                            <ul class="mb-0 mt-2">
-                                <li><strong>Local</strong> (192.168.10.X) : <code>192.168.10.{150+XX}</code> où XX = 2 derniers chiffres du serial</li>
-                                <li><strong>VPN ATS Sport</strong> (10.8.0.X) : <code>10.8.0.{serial}</code> - Exemple: Serial 120 → 10.8.0.120</li>
-                                <li><strong>Custom</strong> : IP personnalisée saisie manuellement</li>
-                            </ul>
-                        </div>
-
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0"><i class="bi bi-list"></i> Lecteurs configurés</h6>
                             <div>
@@ -261,12 +250,9 @@
                                 <thead>
                                     <tr>
                                         <th>Série</th>
-                                        <th>Réseau</th>
-                                        <th>IP</th>
                                         <th>Localisation</th>
                                         <th>Distance (km)</th>
                                         <th>Anti-rebond (s)</th>
-                                        <th>Statut</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -274,32 +260,9 @@
                                     <template x-for="reader in sortedReaders" :key="reader.id">
                                         <tr>
                                             <td><strong x-text="reader.serial"></strong></td>
-                                            <td>
-                                                <span class="badge badge-sm" :class="{
-                                                    'bg-primary': reader.network_type === 'local',
-                                                    'bg-success': reader.network_type === 'vpn',
-                                                    'bg-warning': reader.network_type === 'custom'
-                                                }" x-text="getNetworkTypeLabel(reader.network_type || 'local')"></span>
-                                            </td>
-                                            <td><code x-text="reader.calculated_ip || calculateReaderIP(reader)"></code></td>
                                             <td><span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span></td>
                                             <td x-text="reader.distance_from_start + ' km'"></td>
                                             <td x-text="reader.anti_rebounce_seconds || '3'"></td>
-                                            <td>
-                                                <template x-if="!reader.date_test">
-                                                    <span class="badge bg-secondary badge-sm">Jamais connecté</span>
-                                                </template>
-                                                <template x-if="reader.date_test && reader.is_online">
-                                                    <span class="badge bg-success badge-sm">
-                                                        <i class="bi bi-check-circle"></i> En ligne
-                                                    </span>
-                                                </template>
-                                                <template x-if="reader.date_test && !reader.is_online">
-                                                    <span class="badge bg-danger badge-sm">
-                                                        <i class="bi bi-x-circle"></i> Hors ligne
-                                                    </span>
-                                                </template>
-                                            </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
                                                     <button class="btn btn-outline-primary" @click="editReader(reader)" title="Modifier">
@@ -341,36 +304,10 @@
                 <div class="modal-body">
                     <form @submit.prevent="saveReader">
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-12 mb-3">
                                 <label class="form-label">Numéro de série *</label>
                                 <input type="text" class="form-control" x-model="currentReader.serial"
-                                       @input="updateCalculatedReaderIP()" required placeholder="Ex: 107, 112, 120">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Type de réseau *</label>
-                                <select class="form-select" x-model="currentReader.network_type"
-                                        @change="updateCalculatedReaderIP()" required>
-                                    <option value="local">Local (192.168.10.X)</option>
-                                    <option value="vpn">VPN ATS Sport (10.8.0.X)</option>
-                                    <option value="custom">IP Personnalisée</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">IP Calculée</label>
-                                <input type="text" class="form-control" :value="calculatedReaderIP" readonly
-                                       :class="{'text-muted': currentReader.network_type !== 'custom'}">
-                            </div>
-                        </div>
-
-                        <!-- Custom IP field -->
-                        <div class="row" x-show="currentReader.network_type === 'custom'">
-                            <div class="col-12 mb-3">
-                                <label class="form-label">IP Personnalisée *</label>
-                                <input type="text" class="form-control" x-model="currentReader.custom_ip"
-                                       @input="updateCalculatedReaderIP()"
-                                       :required="currentReader.network_type === 'custom'"
-                                       placeholder="Ex: 10.8.0.120, 192.168.1.50">
-                                <small class="text-muted">Saisissez l'adresse IP complète du lecteur</small>
+                                       required placeholder="Ex: 107, 112, 120">
                             </div>
                         </div>
 
@@ -465,7 +402,6 @@ function eventsManager() {
         readerEditMode: false,
         savingReader: false,
         currentReader: {},
-        calculatedReaderIP: '',
 
         init() {
             this.loadEvents();
@@ -612,48 +548,10 @@ function eventsManager() {
             });
         },
 
-        calculateReaderIP(reader) {
-            if (typeof reader === 'string' || typeof reader === 'number') {
-                const serial = reader;
-                if (!serial) return 'N/A';
-                const lastTwoDigits = String(serial).slice(-2);
-                const ipSuffix = 150 + parseInt(lastTwoDigits);
-                return `192.168.10.${ipSuffix}`;
-            }
-
-            const networkType = reader.network_type || 'local';
-            const serial = reader.serial;
-
-            if (!serial) return 'N/A';
-
-            switch (networkType) {
-                case 'vpn':
-                    return `10.8.0.${serial}`;
-                case 'custom':
-                    return reader.custom_ip || 'Non définie';
-                case 'local':
-                default:
-                    const lastTwoDigits = String(serial).slice(-2);
-                    const ipSuffix = 150 + parseInt(lastTwoDigits);
-                    return `192.168.10.${ipSuffix}`;
-            }
-        },
-
-        getNetworkTypeLabel(type) {
-            const labels = {
-                'local': 'Local',
-                'vpn': 'VPN',
-                'custom': 'Custom'
-            };
-            return labels[type] || type;
-        },
-
         openReaderModal() {
             this.readerEditMode = false;
             this.currentReader = {
                 serial: '',
-                network_type: 'local',
-                custom_ip: '',
                 location: '',
                 distance_from_start: 0,
                 anti_rebounce_seconds: 3,
@@ -661,25 +559,18 @@ function eventsManager() {
                 race_id: '',
                 is_active: true
             };
-            this.calculatedReaderIP = '';
             this.showReaderModal = true;
         },
 
         editReader(reader) {
             this.readerEditMode = true;
             this.currentReader = { ...reader };
-            this.updateCalculatedReaderIP();
             this.showReaderModal = true;
         },
 
         closeReaderModal() {
             this.showReaderModal = false;
             this.currentReader = {};
-            this.calculatedReaderIP = '';
-        },
-
-        updateCalculatedReaderIP() {
-            this.calculatedReaderIP = this.calculateReaderIP(this.currentReader);
         },
 
         async saveReader() {
