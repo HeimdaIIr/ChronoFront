@@ -377,8 +377,22 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Localisation *</label>
-                                <input type="text" class="form-control" x-model="currentReader.location"
-                                       required placeholder="Ex: DEPART, KM5, ARRIVEE">
+                                <select class="form-select" x-model="currentReader.location" required>
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="DEPART">DEPART</option>
+                                    <option value="Inter1">Inter1</option>
+                                    <option value="Inter2">Inter2</option>
+                                    <option value="Inter3">Inter3</option>
+                                    <option value="Inter4">Inter4</option>
+                                    <option value="Inter5">Inter5</option>
+                                    <option value="Inter6">Inter6</option>
+                                    <option value="Inter7">Inter7</option>
+                                    <option value="Inter8">Inter8</option>
+                                    <option value="Inter9">Inter9</option>
+                                    <option value="Inter10">Inter10</option>
+                                    <option value="ARRIVEE">ARRIVEE</option>
+                                </select>
+                                <small class="text-muted">Type de checkpoint pour le routage automatique des détections</small>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Distance depuis départ (km) *</label>
