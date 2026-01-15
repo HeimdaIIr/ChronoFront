@@ -1269,13 +1269,13 @@ body {
                             <option :value="checkpoint" x-text="checkpoint"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="lapFilter" @change="filterResults" style="min-width: 100px;">
+                    <select class="filter-select" x-model="lapFilter" @change="filterResults" style="min-width: 100px;" x-show="shouldShowLapColumn()">
                         <option value="">Tous tours</option>
                         <template x-for="lap in [...new Set(results.map(r => r.lap_number).filter(l => l))].sort((a,b) => a - b)" :key="lap">
                             <option :value="lap" x-text="'Tour ' + lap"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6; min-width: 140px;">
+                    <select class="filter-select" x-model="sortBy" @change="sortResults" :style="shouldShowLapColumn() ? 'border-left: 2px solid #3b82f6; min-width: 140px;' : 'min-width: 140px;'">
                         <option value="recent">Tri: Plus récent</option>
                         <option value="position">Tri: Position</option>
                         <option value="time">Tri: Temps</option>
@@ -1299,7 +1299,7 @@ body {
                                 <th>Parcours</th>
                                 <th>SAS</th>
                                 <th>Lecteur</th>
-                                <th>Tour</th>
+                                <th x-show="shouldShowLapColumn()">Tour</th>
                                 <th>Temps</th>
                                 <th>Vit</th>
                                 <th>Détection</th>
@@ -1316,7 +1316,7 @@ body {
                                     <td x-text="result.race?.name || '-'"></td>
                                     <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
-                                    <td><strong x-text="result.lap_number || '-'"></strong></td>
+                                    <td x-show="shouldShowLapColumn()"><strong x-text="result.lap_number || '-'"></strong></td>
                                     <td><strong x-text="getDisplayTime(result)"></strong></td>
                                     <td x-text="getLapSpeed(result)"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
@@ -2481,6 +2481,11 @@ function chronoApp() {
             // NFD normalization: decompose accented characters
             // Then remove diacritics (combining marks)
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        },
+
+        shouldShowLapColumn() {
+            // Show lap column only if at least one race has type 'n_laps' or 'infinite_loop'
+            return this.races.some(race => race.type === 'n_laps' || race.type === 'infinite_loop');
         },
 
         async filterResults() {
