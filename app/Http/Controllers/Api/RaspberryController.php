@@ -227,7 +227,37 @@ class RaspberryController extends Controller
                 }
             }
 
-            // Create result
+            // ROUTING LOGIC BASED ON READER LOCATION
+            // ========================================
+
+            if ($reader->location === 'DEPART') {
+                // DEPART: Update entrant's individual start time
+                // Keep last detection as start time (useful for time trials)
+                $entrant->start_time = $datetime->format('H:i:s');
+                $entrant->save();
+
+                Log::info("Start time updated", [
+                    'bib' => $bibNumber,
+                    'entrant_id' => $entrant->id,
+                    'start_time' => $entrant->start_time,
+                    'reader' => $reader->serial,
+                    'location' => $reader->location,
+                ]);
+
+                $results[] = [
+                    'bib' => $bibNumber,
+                    'action' => 'start_time_updated',
+                    'time' => $datetime->format('Y-m-d H:i:s'),
+                    'location' => $reader->location,
+                ];
+
+                $processed++;
+
+                // Continue to next detection (no Result created for DEPART)
+                continue;
+            }
+
+            // For ARRIVEE and Inter checkpoints: Create Result
             $result = Result::create([
                 'race_id' => $entrant->race_id,
                 'entrant_id' => $entrant->id,
