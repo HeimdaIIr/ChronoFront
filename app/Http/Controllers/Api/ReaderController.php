@@ -79,6 +79,10 @@ class ReaderController extends Controller
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date|after_or_equal:date_min',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Calculate checkpoint_order based on distance for this event
@@ -134,6 +138,10 @@ class ReaderController extends Controller
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Recalculate checkpoint_order if distance or event changed

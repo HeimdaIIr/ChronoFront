@@ -227,10 +227,20 @@ class RaspberryController extends Controller
                 }
             }
 
-            // ROUTING LOGIC BASED ON READER LOCATION
-            // ========================================
+            // ROUTING LOGIC BASED ON READER LOCATION AND TIME RANGES
+            // =======================================================
 
-            if ($reader->location === 'DEPART') {
+            // Determine effective location based on current time and configured time ranges
+            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime);
+
+            Log::info("Effective location determined", [
+                'bib' => $bibNumber,
+                'configured_location' => $reader->location,
+                'effective_location' => $effectiveLocation,
+                'detection_time' => $datetime->format('H:i:s'),
+            ]);
+
+            if ($effectiveLocation === 'DEPART') {
                 // DEPART: Update entrant's individual start time
                 // Keep last detection as start time (useful for time trials)
                 $entrant->start_time = $datetime->format('H:i:s');
@@ -241,14 +251,14 @@ class RaspberryController extends Controller
                     'entrant_id' => $entrant->id,
                     'start_time' => $entrant->start_time,
                     'reader' => $reader->serial,
-                    'location' => $reader->location,
+                    'location' => $effectiveLocation,
                 ]);
 
                 $results[] = [
                     'bib' => $bibNumber,
                     'action' => 'start_time_updated',
                     'time' => $datetime->format('Y-m-d H:i:s'),
-                    'location' => $reader->location,
+                    'location' => $effectiveLocation,
                 ];
 
                 $processed++;
@@ -265,7 +275,7 @@ class RaspberryController extends Controller
                 'reader_id' => $reader->id,
                 'rfid_tag' => $entrant->rfid_tag,
                 'serial' => $serial,
-                'reader_location' => $reader->location,
+                'reader_location' => $effectiveLocation,
                 'raw_time' => $datetime,
                 'lap_number' => $passageNumber,
                 'is_manual' => false,
@@ -531,6 +541,56 @@ class RaspberryController extends Controller
 
         $logFile = $logDir . '/reader-' . $readerSerial . '-' . date('Ymd') . '.txt';
         file_put_contents($logFile, $content, FILE_APPEND);
+    }
+
+    /**
+     * Determine the effective location based on configured time ranges
+     * If time ranges are configured, use them to override the fixed location
+     * Otherwise, use the reader's configured location
+     */
+    private function determineEffectiveLocation(Reader $reader, Carbon $datetime): string
+    {
+        $currentTime = $datetime->format('H:i:s');
+
+        // Check if reader has time ranges configured
+        $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
+        $hasArrivalRange = $reader->arrival_time_start;
+
+        // If no time ranges configured, use the fixed location
+        if (!$hasDepartRange && !$hasArrivalRange) {
+            return $reader->location;
+        }
+
+        // Check DEPART time range
+        if ($hasDepartRange) {
+            $isInDepartRange = $currentTime >= $reader->depart_time_start
+                            && $currentTime <= $reader->depart_time_end;
+
+            if ($isInDepartRange) {
+                return 'DEPART';
+            }
+        }
+
+        // Check ARRIVEE time range
+        if ($hasArrivalRange) {
+            $isAfterArrivalStart = $currentTime >= $reader->arrival_time_start;
+
+            // If arrival_time_end is set, check if we're before it
+            if ($reader->arrival_time_end) {
+                $isBeforeArrivalEnd = $currentTime <= $reader->arrival_time_end;
+                $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
+            } else {
+                // No end time = active until end of day
+                $isInArrivalRange = $isAfterArrivalStart;
+            }
+
+            if ($isInArrivalRange) {
+                return 'ARRIVEE';
+            }
+        }
+
+        // If no range matches, fall back to the configured location
+        return $reader->location;
     }
 
     /**

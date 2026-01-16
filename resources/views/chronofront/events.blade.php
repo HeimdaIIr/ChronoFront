@@ -252,7 +252,7 @@
                                         <th>Série</th>
                                         <th>Localisation</th>
                                         <th>Distance (km)</th>
-                                        <th>Anti-rebond (s)</th>
+                                        <th>Plages horaires</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -262,7 +262,27 @@
                                             <td><strong x-text="reader.serial"></strong></td>
                                             <td><span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span></td>
                                             <td x-text="reader.distance_from_start + ' km'"></td>
-                                            <td x-text="reader.anti_rebounce_seconds || '3'"></td>
+                                            <td>
+                                                <template x-if="reader.depart_time_start || reader.arrival_time_start">
+                                                    <div style="font-size: 0.85rem;">
+                                                        <div x-show="reader.depart_time_start" class="text-success">
+                                                            <i class="bi bi-flag"></i> DEPART:
+                                                            <strong x-text="reader.depart_time_start?.substring(0,5)"></strong> -
+                                                            <strong x-text="reader.depart_time_end?.substring(0,5)"></strong>
+                                                        </div>
+                                                        <div x-show="reader.arrival_time_start" class="text-primary">
+                                                            <i class="bi bi-flag-fill"></i> ARRIVEE:
+                                                            <strong x-text="reader.arrival_time_start?.substring(0,5)"></strong>
+                                                            <span x-show="reader.arrival_time_end">
+                                                                - <strong x-text="reader.arrival_time_end?.substring(0,5)"></strong>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!reader.depart_time_start && !reader.arrival_time_start">
+                                                    <span class="text-muted small">-</span>
+                                                </template>
+                                            </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
                                                     <button class="btn btn-outline-primary" @click="editReader(reader)" title="Modifier">
@@ -353,6 +373,51 @@
                                         <option :value="race.id" x-text="race.name"></option>
                                     </template>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Time Ranges Configuration -->
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-clock"></i>
+                            <strong>Plages horaires (optionnel)</strong>
+                            <p class="mb-0 mt-1 small">Configurez des plages horaires pour qu'un même lecteur fonctionne en mode DEPART puis ARRIVEE automatiquement. Utile pour les courses avec un seul lecteur.</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag"></i> Mode DEPART - Début
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.depart_time_start"
+                                       placeholder="15:00">
+                                <small class="text-muted">Heure de début du mode DEPART (ex: 15:00)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag"></i> Mode DEPART - Fin
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.depart_time_end"
+                                       placeholder="15:30">
+                                <small class="text-muted">Heure de fin du mode DEPART (ex: 15:30)</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag-fill"></i> Mode ARRIVEE - Début
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.arrival_time_start"
+                                       placeholder="15:30">
+                                <small class="text-muted">Heure de début du mode ARRIVEE (ex: 15:30)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag-fill"></i> Mode ARRIVEE - Fin
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.arrival_time_end"
+                                       placeholder="19:00">
+                                <small class="text-muted">Heure de fin (optionnel, vide = jusqu'à la fin)</small>
                             </div>
                         </div>
 
@@ -557,7 +622,11 @@ function eventsManager() {
                 anti_rebounce_seconds: 3,
                 event_id: this.editingEvent.id,
                 race_id: '',
-                is_active: true
+                is_active: true,
+                depart_time_start: '',
+                depart_time_end: '',
+                arrival_time_start: '',
+                arrival_time_end: ''
             };
             this.showReaderModal = true;
         },
