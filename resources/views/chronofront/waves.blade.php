@@ -146,6 +146,18 @@
                                             <i class="bi bi-people-fill"></i> Assigner participants
                                         </button>
                                     </div>
+                                    <div class="mt-1">
+                                        <button
+                                            class="btn btn-sm w-100"
+                                            :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
+                                            @click="topDepart(wave)"
+                                            title="Enregistrer le TOP départ (heure réelle de départ)"
+                                        >
+                                            <i class="bi bi-stopwatch"></i>
+                                            <span x-show="!wave.real_start_time">TOP départ</span>
+                                            <span x-show="wave.real_start_time" x-text="'TOP: ' + formatTime(wave.real_start_time)"></span>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -395,6 +407,30 @@ function wavesManager() {
             }
         },
 
+        async topDepart(wave) {
+            const confirmMsg = wave.real_start_time
+                ? `Enregistrer un nouveau TOP départ pour "${wave.name}" ?\n\nCela va écraser le TOP départ précédent.`
+                : `Enregistrer le TOP départ pour "${wave.name}" ?\n\nCela va activer la fenêtre de détection DEPART basée sur l'heure réelle.`;
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const response = await axios.post(`/api/waves/${wave.id}/top-depart`);
+                const data = response.data;
+
+                this.successMessage = `TOP départ enregistré pour "${wave.name}" à ${data.wave.real_start_time}`;
+                this.loadWaves();
+
+                // Show window info
+                alert(`✅ TOP départ enregistré !\n\n` +
+                      `Vague: ${data.wave.name}\n` +
+                      `Heure réelle: ${data.wave.real_start_time}\n` +
+                      `Fenêtre DEPART: ${data.wave.depart_window_start} → ${data.wave.depart_window_end}`);
+            } catch (error) {
+                alert('Erreur lors de l\'enregistrement du TOP départ : ' + (error.response?.data?.message || error.message));
+            }
+        },
+
         async deleteWave(wave) {
             if (!confirm(`Êtes-vous sûr de vouloir supprimer la vague "${wave.name}" ?\n\nATTENTION : Les participants de cette vague seront également supprimés.`)) return;
 
@@ -433,6 +469,16 @@ function wavesManager() {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        },
+
+        formatTime(datetime) {
+            if (!datetime) return 'N/A';
+            const date = new Date(datetime);
+            return date.toLocaleString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
