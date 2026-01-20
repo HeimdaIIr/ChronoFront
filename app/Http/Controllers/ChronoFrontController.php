@@ -93,4 +93,12 @@ class ChronoFrontController extends Controller
     {
         return view('chronofront.speaker');
     }
+
+    /**
+     * RFID Live - Debug/test interface for all RFID detections
+     */
+    public function rfidlive()
+    {
+        return view('chronofront.rfidlive');
+    }
 }

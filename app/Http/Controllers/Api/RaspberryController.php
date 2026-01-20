@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Http\Controllers\Api\RfidLogController;
+use App\Models\RfidDetection;
+
+
 
 class RaspberryController extends Controller
 {
@@ -39,6 +43,10 @@ class RaspberryController extends Controller
 
         if (!$readerSerial) {
             Log::warning('RFID request missing Serial header');
+
+            // Log to RFID raw logs for debugging
+            RfidLogController::logRequest($request, 400);
+
             return response()->json([
                 'error' => 'Missing Serial header'
             ], 400);
@@ -51,10 +59,16 @@ class RaspberryController extends Controller
             Log::error('Reader not found or not active', [
                 'serial' => $readerSerial,
             ]);
-            return response()->json([
+
+            $errorResponse = [
                 'error' => 'Reader not configured or not active',
                 'serial' => $readerSerial
-            ], 404);
+            ];
+
+            // Log to RFID raw logs for debugging
+            RfidLogController::logRequest($request, 404, $errorResponse);
+
+            return response()->json($errorResponse, 404);
         }
 
         Log::info('Reader found and active', [
@@ -114,10 +128,24 @@ class RaspberryController extends Controller
                 ->first();
 
             if (!$entrant) {
-                Log::warning("Entrant not found for bib {$bibNumber}");
-                $skipped++;
-                continue;
-            }
+    Log::warning("Entrant not found for bib {$bibNumber}");
+    
+    // Store detection in database
+    $this->storeRfidDetection(
+        $reader, 
+        $serial, 
+        $datetime, 
+        null, 
+        null,
+        'skipped',
+        null,
+        "Entrant not found for bib {$bibNumber}"
+    );
+    
+    $skipped++;
+    continue;
+}
+
 
             // Check anti-rebounce (intelligent mode for multi-lap races)
             $race = $entrant->race;
@@ -155,9 +183,23 @@ class RaspberryController extends Controller
                     'last_detection_time' => $lastTime ? $lastTime->format('Y-m-d H:i:s') : null,
                     'current_detection_time' => $datetime->format('Y-m-d H:i:s'),
                 ]);
+                
+                // Store detection in database
+                $this->storeRfidDetection(
+                    $reader, 
+                    $serial, 
+                    $datetime, 
+                    $entrant, 
+                    $entrant->wave_id,
+                    'skipped',
+                    null,
+                    "Blocked by anti-rebounce ({$effectiveAntiRebounce}s)"
+                );
+                
                 $skipped++;
                 continue;
             }
+
 
             // Check race duration for infinite_loop type
             $race = $entrant->race;
@@ -216,15 +258,127 @@ class RaspberryController extends Controller
                 }
             }
 
-            // Create result
-            $result = Result::create([
-                'race_id' => $entrant->race_id,
+            // ROUTING LOGIC BASED ON READER LOCATION AND TIME RANGES
+            // =======================================================
+
+            // Determine effective location based on current time and configured time ranges
+            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime);
+
+            // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
+            if ($effectiveLocation === null) {
+                Log::info("Detection IGNORED - outside time ranges", [
+                    'bib' => $bibNumber,
+                    'detection_time' => $datetime->format('H:i:s'),
+                    'reader' => $reader->serial,
+                ]);
+                
+                // Store detection in database
+                $this->storeRfidDetection(
+                    $reader, 
+                    $serial, 
+                    $datetime, 
+                    $entrant, 
+                    $entrant->wave_id,
+                    'ignored',
+                    null,
+                    "Outside configured time ranges"
+                );
+                
+                $skipped++;
+                continue; // Skip this detection
+            }
+
+			
+			
+            Log::info("Effective location determined", [
+                'bib' => $bibNumber,
+                'configured_location' => $reader->location,
+                'effective_location' => $effectiveLocation,
+                'detection_time' => $datetime->format('H:i:s'),
+            ]);
+
+            if ($effectiveLocation === 'DEPART') {
+                // DEPART: Update entrant's individual start time
+                // Keep last detection as start time (useful for time trials)
+                $entrant->start_time = $datetime->format('H:i:s');
+                $entrant->save();
+
+                Log::info("Start time updated", [
+                    'bib' => $bibNumber,
+                    'entrant_id' => $entrant->id,
+                    'start_time' => $entrant->start_time,
+                    'reader' => $reader->serial,
+                    'location' => $effectiveLocation,
+                ]);
+
+                $results[] = [
+                    'bib' => $bibNumber,
+                    'action' => 'start_time_updated',
+                    'time' => $datetime->format('Y-m-d H:i:s'),
+                    'location' => $effectiveLocation,
+                ];
+
+                $processed++;
+
+                // Store detection in database
+                $this->storeRfidDetection(
+                    $reader, 
+                    $serial, 
+                    $datetime, 
+                    $entrant, 
+                    $entrant->wave_id,
+                    'start_time_updated',
+                    null,
+                    null
+                );
+
+                // Continue to next detection (no Result created for DEPART)
+                continue;
+            }
+
+
+            // For ARRIVEE and Inter checkpoints: Create Result
+
+            // IMPORTANT: Pour ARRIVEE, ne garder que la PREMIÈRE détection
+            if ($effectiveLocation === 'ARRIVEE') {
+                $existingResult = Result::where('entrant_id', $entrant->id)
+                    ->where('reader_id', $reader->id)
+                    ->where('reader_location', 'ARRIVEE')
+                    ->first();
+                
+                if ($existingResult) {
+                    Log::info("ARRIVEE already recorded - skipping", [
+                        'bib' => $bibNumber,
+                        'entrant_id' => $entrant->id,
+                        'existing_time' => $existingResult->raw_time,
+                        'current_time' => $datetime->format('Y-m-d H:i:s'),
+                    ]);
+                    
+                    // Store detection in database
+                    $this->storeRfidDetection(
+                        $reader, 
+                        $serial, 
+                        $datetime, 
+                        $entrant, 
+                        $entrant->wave_id,
+                        'skipped',
+                        null,
+                        "ARRIVEE already recorded"
+                    );
+                    
+                    $skipped++;
+                    continue; // Skip this detection
+                }
+            }
+
+                $result = Result::create([
+			    'race_id' => $entrant->race_id,
                 'entrant_id' => $entrant->id,
                 'wave_id' => $entrant->wave_id,
                 'reader_id' => $reader->id,
                 'rfid_tag' => $entrant->rfid_tag,
                 'serial' => $serial,
-                'reader_location' => $reader->location,
+                'reader_location' => $effectiveLocation,
                 'raw_time' => $datetime,
                 'lap_number' => $passageNumber,
                 'is_manual' => false,
@@ -234,12 +388,32 @@ class RaspberryController extends Controller
             // Calculate time and speed
             $this->calculateResult($result);
 
-            // Auto-recalculate positions if runner finished all laps
-            if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
-                // For n_laps: recalc when reaching max laps
-                if ($race->type === 'n_laps' && $race->laps > 0 && $passageNumber >= $race->laps) {
+            // Store detection in database
+            $this->storeRfidDetection(
+                $reader, 
+                $serial, 
+                $datetime, 
+                $entrant, 
+                $entrant->wave_id,
+                'result_created',
+                $result->id,
+                null
+            );
+
+            // Auto-recalculate positions after each ARRIVEE detection
+            if ($race) {
+                // For 1_passage: recalc after each ARRIVEE
+                if ($race->type === '1_passage' && $effectiveLocation === 'ARRIVEE') {
                     $this->recalculateRacePositions($race->id);
-                    Log::info("Positions auto-recalculated", [
+                    Log::info("Positions auto-recalculated (1_passage ARRIVEE)", [
+                        'bib' => $bibNumber,
+                        'race_id' => $race->id,
+                    ]);
+                }
+                // For n_laps: recalc when reaching max laps
+                elseif ($race->type === 'n_laps' && $race->laps > 0 && $passageNumber >= $race->laps) {
+                    $this->recalculateRacePositions($race->id);
+                    Log::info("Positions auto-recalculated (n_laps)", [
                         'bib' => $bibNumber,
                         'race_id' => $race->id,
                         'lap_number' => $passageNumber,
@@ -255,6 +429,7 @@ class RaspberryController extends Controller
                     ]);
                 }
             }
+
 
             Log::info("Detection successfully processed", [
                 'bib' => $bibNumber,
@@ -294,14 +469,19 @@ class RaspberryController extends Controller
             'total_detections' => count($detections),
         ]);
 
-        return response()->json([
+        $responseData = [
             'success' => true,
             'reader' => $readerSerial,
             'location' => $reader->location,
             'processed' => $processed,
             'skipped' => $skipped,
             'results' => $results
-        ]);
+        ];
+
+        // Log to RFID raw logs for /rfidlive-ultra display
+        RfidLogController::logRequest($request, 200, $responseData);
+
+        return response()->json($responseData);
     }
 
     /**
@@ -486,6 +666,87 @@ class RaspberryController extends Controller
         $logFile = $logDir . '/reader-' . $readerSerial . '-' . date('Ymd') . '.txt';
         file_put_contents($logFile, $content, FILE_APPEND);
     }
+
+	 /**
+     * Store raw RFID detection in database
+     */
+    private function storeRfidDetection(
+        Reader $reader, 
+        string $serial, 
+        Carbon $datetime, 
+        ?Entrant $entrant = null,
+        ?int $waveId = null,
+        string $actionTaken = null,
+        ?int $createdResultId = null,
+        ?string $errorMessage = null
+    ): RfidDetection {
+        return RfidDetection::create([
+            'reader_id' => $reader->id,
+            'serial' => $serial,
+            'raw_time' => $datetime,
+            'entrant_id' => $entrant ? $entrant->id : null,
+            'wave_id' => $waveId,
+            'processed' => true,
+            'created_result_id' => $createdResultId,
+            'action_taken' => $actionTaken,
+            'error_message' => $errorMessage,
+        ]);
+    }
+
+	
+    /**
+     * Determine the effective location based on configured time ranges
+     * If time ranges are configured, use them to override the fixed location
+     * Otherwise, use the reader's configured location
+     */
+    private function determineEffectiveLocation(Reader $reader, Carbon $datetime): string
+{
+    $currentTime = $datetime->format('H:i:s');
+
+    // Check if reader has time ranges configured
+    $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
+    $hasArrivalRange = $reader->arrival_time_start;
+
+    // If no time ranges configured, use the fixed location
+    if (!$hasDepartRange && !$hasArrivalRange) {
+        return $reader->location;
+    }
+
+    // IMPORTANT: Add :00 seconds to database times for proper comparison
+    $departStart = $reader->depart_time_start ? $reader->depart_time_start . ':00' : null;
+    $departEnd = $reader->depart_time_end ? $reader->depart_time_end . ':00' : null;
+    $arrivalStart = $reader->arrival_time_start ? $reader->arrival_time_start . ':00' : null;
+    $arrivalEnd = $reader->arrival_time_end ? $reader->arrival_time_end . ':00' : null;
+
+    // Check DEPART time range
+    if ($hasDepartRange) {
+        $isInDepartRange = $currentTime >= $departStart && $currentTime <= $departEnd;
+
+        if ($isInDepartRange) {
+            return 'DEPART';
+        }
+    }
+
+    // Check ARRIVEE time range
+    if ($hasArrivalRange) {
+        $isAfterArrivalStart = $currentTime >= $arrivalStart;
+
+        if ($arrivalEnd) {
+            $isBeforeArrivalEnd = $currentTime <= $arrivalEnd;
+            $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
+        } else {
+            $isInArrivalRange = $isAfterArrivalStart;
+        }
+
+        if ($isInArrivalRange) {
+            return 'ARRIVEE';
+        }
+    }
+
+    // If no range matches, fall back to the configured location
+    return null;
+}
+
 
     /**
      * Recalculate positions for a race

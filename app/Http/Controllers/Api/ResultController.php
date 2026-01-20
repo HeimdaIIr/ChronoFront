@@ -102,6 +102,36 @@ class ResultController extends Controller
     }
 
     /**
+     * Display ALL detections (for RFID debug/testing)
+     * Returns all results regardless of status or validity
+     * If since_id provided, only returns detections newer than that ID
+     */
+    public function allDetections(Request $request): JsonResponse
+    {
+        $query = Result::with(['entrant.category', 'wave', 'race', 'reader'])
+            ->orderBy('id', 'desc');
+
+        // If since_id provided, only get newer detections (for live updates)
+        if ($request->has('since_id') && $request->since_id) {
+            $query->where('id', '>', $request->since_id);
+        } else {
+            // Initial load - don't load anything by default (limit=0)
+            // User can manually load historical data if needed
+            $limit = $request->input('limit', 0);
+            if ($limit > 0) {
+                $query->limit($limit);
+            } else {
+                // Return empty array if no limit specified
+                return response()->json([]);
+            }
+        }
+
+        $detections = $query->get();
+
+        return response()->json($detections);
+    }
+
+    /**
      * Display results for a specific race
      */
     public function byRace(int $raceId): JsonResponse
@@ -368,12 +398,8 @@ class ResultController extends Controller
 
             foreach ($validated['detections'] as $index => $detection) {
                 try {
-                    // Find entrant by RFID tag
-                    $query = Entrant::where('rfid_tag', $detection['rfid_tag']);
-                    if (isset($validated['race_id'])) {
-                        $query->where('race_id', $validated['race_id']);
-                    }
-                    $entrant = $query->first();
+                    // Find entrant by RFID tag (search across ALL races, not just the selected one)
+                    $entrant = Entrant::where('rfid_tag', $detection['rfid_tag'])->first();
 
                     if (!$entrant) {
                         $errors[] = [
@@ -783,6 +809,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -791,6 +824,8 @@ class ResultController extends Controller
             'resultsByCategory' => $resultsByCategory,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
         ];
 
         // Generate PDF
@@ -863,6 +898,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -871,6 +913,8 @@ class ResultController extends Controller
             'resultsByCategory' => $resultsByCategory,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
         ];
 
         // Generate PDF in LANDSCAPE mode
@@ -1061,6 +1105,13 @@ class ResultController extends Controller
             });
         }
 
+        // Calculate if this is a multi-lap race and max laps
+        $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
+        $maxLaps = 0;
+        if ($isMultiLap && !empty($lapsByEntrant)) {
+            $maxLaps = $race->laps > 0 ? $race->laps : $lapsByEntrant->map->count()->max();
+        }
+
         // Prepare data for PDF
         $data = [
             'race' => $race,
@@ -1071,6 +1122,8 @@ class ResultController extends Controller
             'genderCategoryResults' => $genderCategoryResults,
             'autoPrint' => $autoPrint,
             'lapsByEntrant' => $lapsByEntrant, // All laps data for multi-lap races
+            'isMultiLap' => $isMultiLap,
+            'maxLaps' => $maxLaps,
             'config' => [
                 'topScratch' => $topScratch,
                 'topGender' => $topGender,

@@ -38,6 +38,9 @@ Route::post('waves/{wave}/start', [WaveController::class, 'start']);
 Route::post('waves/{wave}/end', [WaveController::class, 'end']);
 Route::post('waves/{wave}/assign-all', [WaveController::class, 'assignAllEntrants']);
 Route::apiResource('waves', WaveController::class);
+// TOP départ pour une vague
+Route::post('waves/{wave}/top-depart', [WaveController::class, 'topDepart']);
+
 
 // Categories Routes
 Route::post('categories/init-ffa', [CategoryController::class, 'initFFA']);
@@ -53,6 +56,7 @@ Route::apiResource('entrants', EntrantController::class);
 Route::get('results', [ResultController::class, 'index']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
+Route::get('results/all-detections', [ResultController::class, 'allDetections']);
 Route::get('results/race/{raceId}', [ResultController::class, 'byRace']);
 Route::post('results/time', [ResultController::class, 'addTime']);
 Route::post('results/manual-batch', [ResultController::class, 'storeManualBatch']);
@@ -84,6 +88,76 @@ Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-
 // Alternative endpoint names (aliases)
 Route::post('rfid/detections', [RaspberryController::class, 'store']);
 Route::put('rfid/detections', [RaspberryController::class, 'store']);
+
+// RFID Live - SSE and Raw Logs
+// Rate limit increased to 1000 req/min in RouteServiceProvider (supports 500ms polling = 120 req/min)
+use App\Http\Controllers\Api\RfidLogController;
+
+Route::get('rfid/raw-logs', [RfidLogController::class, 'getRawLogs']);
+Route::get('rfid/live-stream', [RfidLogController::class, 'liveStream']);
+Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']);
+
+// RFID Debug - Accepts EVERYTHING and logs it
+Route::any('rfid/debug', function (Request $request) {
+        // Try to parse JSON, but don't fail if it's not valid JSON
+        $bodyJson = null;
+        try {
+        $bodyJson = $request->json()->all();
+    } catch (\Exception $e) {
+        $bodyJson = ['error' => 'Not valid JSON', 'message' => $e->getMessage()];
+    }
+
+    $debugData = [
+        'timestamp' => now()->format('Y-m-d H:i:s.u'),
+        'method' => $request->method(),
+        'url' => $request->fullUrl(),
+        'ip' => $request->ip(),
+        'headers' => $request->headers->all(),
+        'query_params' => $request->query(),
+        'body_raw' => $request->getContent(),
+        'body_json' => $bodyJson,
+        'all_input' => $request->all(),
+    ];
+
+    // Log to Laravel log
+    \Log::info('RFID DEBUG REQUEST', $debugData);
+
+    // Log to RFID cache for display
+    \App\Http\Controllers\Api\RfidLogController::logRequest($request, 200, $debugData);
+
+    // Return detailed response
+    return response()->json([
+        'success' => true,
+        'message' => 'Debug data logged successfully',
+        'received' => $debugData,
+        'instructions' => [
+            'check_rfidlive' => 'Open http://localhost:8000/rfidlive-ultra to see this request',
+            'check_logs' => 'Check storage/logs/laravel.log for details',
+            'reader_config' => 'Now configure your real endpoint: /api/raspberry'
+        ]
+    ], 200);
+});
+
+// SSE Test endpoint - Ultra simple
+Route::get('sse-test', function () {
+    return response()->stream(function () {
+        echo "retry: 1000\n\n";
+        echo "data: Hello from SSE!\n\n";
+        ob_flush();
+        flush();
+
+        for ($i = 1; $i <= 5; $i++) {
+            sleep(1);
+            echo "data: Message $i\n\n";
+            ob_flush();
+            flush();
+        }
+    }, 200, [
+        'Content-Type' => 'text/event-stream',
+        'Cache-Control' => 'no-cache',
+        'X-Accel-Buffering' => 'no',
+    ]);
+});
 
 // Health check
 Route::get('health', function () {

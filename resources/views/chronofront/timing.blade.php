@@ -153,32 +153,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-.readers-status {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    padding: 1rem 0 1.5rem;
-}
-
-.reader-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.reader-item span {
-    color: #a1a1aa;
-}
-
-.reader-item strong {
-    color: #22c55e;
-}
-
-.reader-item.warning strong {
-    color: #f59e0b;
-}
-
 /* Filters */
 .filters-bar {
     display: flex;
@@ -820,6 +794,315 @@ body {
     font-weight: 500;
     cursor: pointer;
 }
+
+/* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
+@media (max-width: 1920px) {
+    .chrono-sidebar {
+        width: 50px;
+    }
+
+    .sidebar-icon {
+        width: 50px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+
+    .chrono-topbar {
+        height: 45px;
+        padding: 0 1.2rem;
+    }
+
+    .event-title {
+        font-size: 0.95rem;
+    }
+
+    .event-status {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.7rem;
+    }
+
+    .topbar-right {
+        gap: 0.8rem;
+    }
+
+    .icon-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 280px;
+        height: calc(100vh - 45px);
+    }
+
+    .main-clock {
+        font-size: 3.6rem;
+        padding: 1rem 0 0.7rem;
+    }
+
+    .filters-bar {
+        padding: 0.7rem 1.2rem;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        min-width: 150px;
+        flex: 1;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 30px;
+        font-size: 0.7rem;
+    }
+
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        padding: 0 0.9rem;
+    }
+
+    .filter-select {
+        min-width: 95px;
+        padding: 0 0.6rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.55rem 0.7rem;
+        font-size: 0.6rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 0.6rem 0.7rem;
+        font-size: 0.7rem;
+    }
+
+    .chrono-table tbody td strong {
+        font-size: 0.75rem;
+    }
+
+    .cat-tag {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.6rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.1rem;
+    }
+
+    .bib-value {
+        font-size: 1.6rem;
+    }
+
+    .runner-name {
+        font-size: 1rem;
+    }
+
+    .checkpoint-time {
+        font-size: 0.95rem;
+    }
+
+    .timeline-dot {
+        width: 18px;
+        height: 18px;
+    }
+
+    .alert-bar {
+        left: 50px;
+        padding: 0.7rem 1.2rem;
+    }
+}
+
+/* Responsive pour écrans ≤ 1440px (laptops standards) */
+@media (max-width: 1440px) {
+    .chrono-sidebar {
+        width: 60px;
+    }
+
+    .sidebar-icon {
+        width: 60px;
+        height: 45px;
+        font-size: 1.3rem;
+    }
+
+    .chrono-topbar {
+        height: 55px;
+        padding: 0 1.5rem;
+    }
+
+    .event-title {
+        font-size: 1.2rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 340px;
+        height: calc(100vh - 55px);
+    }
+
+    .main-clock {
+        font-size: 5.5rem;
+        padding: 1.5rem 0 1rem;
+    }
+
+    .filters-bar {
+        padding: 1rem 1.5rem;
+        gap: 0.75rem;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 38px;
+        font-size: 0.85rem;
+    }
+
+    .filter-select {
+        min-width: 120px;
+        padding: 0 0.75rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.75rem 1rem;
+        font-size: 0.7rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 0.9rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.5rem;
+    }
+
+    .bib-value {
+        font-size: 2rem;
+    }
+
+    .runner-name {
+        font-size: 1.2rem;
+    }
+}
+
+/* Responsive pour écrans ≤ 1280px (petits laptops) */
+@media (max-width: 1280px) {
+    .chrono-sidebar {
+        width: 55px;
+    }
+
+    .sidebar-icon {
+        width: 55px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .chrono-topbar {
+        height: 50px;
+        padding: 0 1rem;
+        gap: 0.75rem;
+    }
+
+    .event-title {
+        font-size: 1.1rem;
+        margin-right: 1rem;
+    }
+
+    .topbar-right {
+        gap: 1rem;
+    }
+
+    .icon-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+    }
+
+    .chrono-content {
+        grid-template-columns: 1fr 300px;
+        height: calc(100vh - 50px);
+    }
+
+    .main-clock {
+        font-size: 4.5rem;
+        padding: 1rem 0 0.75rem;
+    }
+
+    .filters-bar {
+        padding: 0.85rem 1rem;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        min-width: 200px;
+    }
+
+    .search-box input,
+    .filter-select,
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        height: 36px;
+        font-size: 0.8rem;
+    }
+
+    .btn-filter,
+    .btn-manual-time,
+    .btn-import-csv {
+        padding: 0 1rem;
+    }
+
+    .filter-select {
+        min-width: 100px;
+        padding: 0 0.6rem;
+    }
+
+    .chrono-table thead th {
+        padding: 0.6rem 0.85rem;
+        font-size: 0.65rem;
+    }
+
+    .chrono-table tbody td {
+        padding: 0.75rem 0.85rem;
+        font-size: 0.8rem;
+    }
+
+    .cat-tag {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .detail-header,
+    .detail-body {
+        padding: 1.25rem;
+    }
+
+    .bib-value {
+        font-size: 1.75rem;
+    }
+
+    .runner-name {
+        font-size: 1.1rem;
+    }
+
+    .checkpoint-time {
+        font-size: 1.15rem;
+    }
+
+    .alert-bar {
+        left: 55px;
+        padding: 1rem 1.5rem;
+    }
+}
 </style>
 @endsection
 
@@ -846,14 +1129,28 @@ body {
                 <span class="event-status" x-show="!hasOngoingRaces() && races.length > 0" style="background: #f59e0b;">En attente</span>
             </div>
             <div class="topbar-right">
-                <div class="sync-status" x-show="readers.length > 0 && readers.every(r => r.is_online)">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>Synchro OK</span>
+                <!-- Action buttons -->
+                <button class="btn-filter" @click="showTopDepartModal = true" style="height: 38px;">
+                    <i class="bi bi-flag-fill"></i>
+                    TOP DÉPART
+                </button>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }" style="height: 38px;">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
+                        <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
+                    </button>
+                    <button x-show="manualTimestamps.length > 0"
+                            @click.stop="quickClearManualTimestamps()"
+                            title="Effacer tous les temps"
+                            style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #ef4444; color: white; border: 2px solid #18181b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; padding: 0;">
+                        ×
+                    </button>
                 </div>
-                <div class="sync-status" x-show="readers.length === 0 || readers.some(r => !r.is_online)" style="color: #f59e0b;">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>Lecteurs hors ligne</span>
-                </div>
+                <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6; height: 38px;">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                    IMPORTER HEURES
+                </button>
                 <div class="alert-badge" :class="{ 'no-alerts': getPendingAlertsCount() === 0 }" style="margin-left: 1rem;">
                     <i class="bi bi-bell-fill"></i>
                     <span x-text="getPendingAlertsCount() + ' alerte' + (getPendingAlertsCount() > 1 ? 's' : '')"></span>
@@ -889,18 +1186,6 @@ body {
                         <span>Départ: </span>
                         <span x-text="formatTime(getSelectedRace()?.start_time)"></span>
                     </div>
-
-                    <div class="readers-status" x-show="readers.length > 0">
-                        <template x-for="reader in readers" :key="reader.id">
-                            <div class="reader-item" :class="{ 'warning': !reader.is_online }">
-                                <span x-text="reader.location || reader.name"></span>:
-                                <strong x-text="reader.is_online ? 'OK' : 'Hors ligne'"></strong>
-                            </div>
-                        </template>
-                    </div>
-                    <div x-show="readers.length === 0" class="text-center py-3 text-muted" style="font-size: 0.9rem;">
-                        Aucun lecteur configuré
-                    </div>
                 </div>
 
                 <!-- Filters -->
@@ -934,46 +1219,20 @@ body {
                             <option :value="checkpoint" x-text="checkpoint"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="lapFilter" @change="filterResults" style="min-width: 100px;">
+                    <select class="filter-select" x-model="lapFilter" @change="filterResults" style="min-width: 100px;" x-show="shouldShowLapColumn()">
                         <option value="">Tous tours</option>
                         <template x-for="lap in [...new Set(results.map(r => r.lap_number).filter(l => l))].sort((a,b) => a - b)" :key="lap">
                             <option :value="lap" x-text="'Tour ' + lap"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6; min-width: 140px;">
+                    <select class="filter-select" x-model="sortBy" @change="sortResults" :style="shouldShowLapColumn() ? 'border-left: 2px solid #3b82f6; min-width: 140px;' : 'min-width: 140px;'">
                         <option value="recent">Tri: Plus récent</option>
                         <option value="position">Tri: Position</option>
                         <option value="time">Tri: Temps</option>
                     </select>
-
-                    <!-- Row 2: Action buttons -->
-                    <div style="flex-basis: 100%; height: 0;"></div>
-                    <button class="btn-filter" @click="showTopDepartModal = true">
-                        <i class="bi bi-flag-fill"></i>
-                        TOP DÉPART
-                    </button>
-                    <div style="position: relative; display: inline-block;">
-                        <button class="btn-manual-time" @click="addManualTimestamp" :class="{ 'has-times': manualTimestamps.length > 0 }">
-                            <i class="bi bi-plus-circle-fill"></i>
-                            <span x-show="manualTimestamps.length === 0">TEMPS MANUEL</span>
-                            <span x-show="manualTimestamps.length > 0" x-text="manualTimestamps.length"></span>
-                        </button>
-                        <!-- Quick clear button when times are stored -->
-                        <button x-show="manualTimestamps.length > 0"
-                                @click.stop="quickClearManualTimestamps()"
-                                class="btn-clear-manual"
-                                title="Effacer tous les temps"
-                                style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #ef4444; color: white; border: 2px solid #18181b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; padding: 0;">
-                            ×
-                        </button>
-                    </div>
                     <button class="btn-import-csv" @click="showManualTimesModal = true" x-show="manualTimestamps.length > 0">
                         <i class="bi bi-file-earmark-arrow-up-fill"></i>
                         ATTRIBUER
-                    </button>
-                    <button class="btn-filter" @click="showRfidFileModal = true" style="background: #8b5cf6;">
-                        <i class="bi bi-file-earmark-text-fill"></i>
-                        IMPORTER HEURES
                     </button>
                 </div>
 
@@ -990,7 +1249,7 @@ body {
                                 <th>Parcours</th>
                                 <th>SAS</th>
                                 <th>Lecteur</th>
-                                <th>Tour</th>
+                                <th x-show="shouldShowLapColumn()">Tour</th>
                                 <th>Temps</th>
                                 <th>Vit</th>
                                 <th>Détection</th>
@@ -1007,7 +1266,7 @@ body {
                                     <td x-text="result.race?.name || '-'"></td>
                                     <td x-text="result.wave?.name || '-'"></td>
                                     <td x-text="result.reader_location || '-'"></td>
-                                    <td><strong x-text="result.lap_number || '-'"></strong></td>
+                                    <td x-show="shouldShowLapColumn()"><strong x-text="result.lap_number || '-'"></strong></td>
                                     <td><strong x-text="getDisplayTime(result)"></strong></td>
                                     <td x-text="getLapSpeed(result)"></td>
                                     <td x-text="formatTime(result.raw_time)"></td>
@@ -2172,6 +2431,11 @@ function chronoApp() {
             // NFD normalization: decompose accented characters
             // Then remove diacritics (combining marks)
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        },
+
+        shouldShowLapColumn() {
+            // Show lap column only if at least one race has type 'n_laps' or 'infinite_loop'
+            return this.races.some(race => race.type === 'n_laps' || race.type === 'infinite_loop');
         },
 
         async filterResults() {

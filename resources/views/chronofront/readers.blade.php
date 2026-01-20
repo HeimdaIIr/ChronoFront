@@ -62,13 +62,10 @@
                     <thead>
                         <tr>
                             <th>Numéro Série</th>
-                            <th>Type Réseau</th>
-                            <th>IP Calculée</th>
                             <th>Localisation</th>
                             <th>Distance (km)</th>
                             <th>Ordre</th>
                             <th>Anti-rebond (s)</th>
-                            <th>Statut</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -77,16 +74,6 @@
                             <tr>
                                 <td>
                                     <strong x-text="reader.serial"></strong>
-                                </td>
-                                <td>
-                                    <span class="badge" :class="{
-                                        'bg-primary': reader.network_type === 'local',
-                                        'bg-success': reader.network_type === 'vpn',
-                                        'bg-warning': reader.network_type === 'custom'
-                                    }" x-text="getNetworkTypeLabel(reader.network_type || 'local')"></span>
-                                </td>
-                                <td>
-                                    <code x-text="reader.calculated_ip || calculateIP(reader)"></code>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span>
@@ -98,21 +85,6 @@
                                     <span class="text-muted" x-show="!reader.checkpoint_order">-</span>
                                 </td>
                                 <td x-text="reader.anti_rebounce_seconds || '3'"></td>
-                                <td>
-                                    <template x-if="!reader.date_test">
-                                        <span class="badge bg-secondary">Jamais connecté</span>
-                                    </template>
-                                    <template x-if="reader.date_test && reader.is_online">
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> En ligne
-                                        </span>
-                                    </template>
-                                    <template x-if="reader.date_test && !reader.is_online">
-                                        <span class="badge bg-danger" :title="'Dernière connexion: ' + reader.last_seen">
-                                            <i class="bi bi-x-circle"></i> Hors ligne
-                                        </span>
-                                    </template>
-                                </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <button class="btn btn-outline-primary" @click="editReader(reader)" title="Modifier">

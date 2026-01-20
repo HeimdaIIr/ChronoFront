@@ -31,6 +31,10 @@ class Reader extends Model
         'clone_reader_id',
         'test_terrain',
         'date_test',
+        'depart_time_start',
+        'depart_time_end',
+        'arrival_time_start',
+        'arrival_time_end',
     ];
 
     protected $casts = [

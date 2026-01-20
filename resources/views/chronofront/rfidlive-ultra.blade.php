@@ -95,7 +95,7 @@
     <div class="log-container" id="logs"></div>
 
     <script>
-        const MAX_LOGS = 50; // Limite stricte pour performance
+        const MAX_LOGS = 100; // Display limit (server keeps 500 in cache)
         let logs = [];
         let count = 0;
         let paused = false;
@@ -104,7 +104,7 @@
         let lastRateUpdate = Date.now();
         let pollingInterval = null;
 
-        function poll() {
+                function poll() {
             if (paused) return;
 
             console.log(`📡 Polling since ID: ${lastId}`);
@@ -124,12 +124,30 @@
                         // Process new logs (newest first already from API)
                         data.logs.forEach(log => {
                             // Extract tag from the request body
-                            let tag = 'N/A';
                             let tags = []; // Collect all tags from the request
 
-                            try {
-                                // Parse the JSON string
-                                let body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+                                                        try {
+                                // Parse the JSON string - handle truncated data
+                                let body;
+                                try {
+                                    body = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+                                } catch (parseError) {
+                                    // Data is truncated - try to salvage what we can
+                                    console.warn('⚠️ Truncated JSON, attempting to salvage:', log.data.substring(0, 100));
+                                    
+                                    // Try to extract tags using regex from the partial JSON
+                                    const matches = log.data.matchAll(/"serial":"?\[?(\d+)\]?"?/g);
+                                    for (const match of matches) {
+                                        if (match[1]) tags.push(match[1]);
+                                    }
+                                    
+                                    // Skip the rest of parsing if we found tags
+                                    if (tags.length > 0) {
+                                        console.log(`🏷️  Salvaged ${tags.length} tags from truncated data`);
+                                        throw new Error('SALVAGED'); // Skip to rendering
+                                    }
+                                    throw parseError; // Re-throw if we couldn't salvage
+                                }
 
                                 // Handle double encapsulation: {"data":{"serial":"[20000005]",...}}
                                 if (body.data && typeof body.data === 'object') {
@@ -139,7 +157,7 @@
                                 }
 
                                 // Extract serial(s) and remove brackets []
-                                const cleanSerial = (s) => s ? s.replace(/[\[\]]/g, '') : null;
+                                const cleanSerial = (s) => s ? s.replace(/[\[\]]/g, '').trim() : null;
 
                                 if (Array.isArray(body)) {
                                     // Body is array: [{"serial":"2000042","timestamp":...}]
@@ -148,38 +166,50 @@
                                     });
                                 } else if (body.serial) {
                                     // Body is object: {"serial":"[2000042]",...}
-                                    tags.push(cleanSerial(body.serial));
+                                    const serial = cleanSerial(body.serial);
+                                    // Check if serial contains multiple comma-separated tags
+                                    if (serial && serial.includes(',')) {
+                                        tags = serial.split(',').map(t => t.trim()).filter(t => t);
+                                    } else if (serial) {
+                                        tags.push(serial);
+                                    }
                                 } else if (body.tag) {
                                     tags.push(cleanSerial(body.tag));
                                 }
 
-                                // Use first tag or join multiple tags
-                                if (tags.length > 0) {
-                                    tag = tags.length === 1 ? tags[0] : tags.join(', ');
-                                }
-
-                                console.log(`🏷️  Parsed tag: ${tag} from`, body);
+                                console.log(`🏷️  Parsed tags: ${tags.join(', ')} from`, body);
                             } catch (e) {
-                                console.error('❌ Error parsing log data:', e, log.data);
+                                if (e.message !== 'SALVAGED') {
+                                    console.error('❌ Error parsing log data:', e, log.data ? log.data.substring(0, 200) : 'no  data');
+                                }
                             }
 
-                            // Extract time (HH:MM:SS.mmm)
-                            const time = new Date().toLocaleTimeString('fr-FR', {
+
+                            // Extract time from server timestamp
+                            const timestamp = new Date(log.timestamp);
+                            const time = timestamp.toLocaleTimeString('fr-FR', {
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 second: '2-digit',
                                 fractionalSecondDigits: 3
                             });
 
-                            // Add to array (prepend = newest first)
-                            logs.unshift({ tag, time, serial: log.serial || 'N/A' });
+                            // Create ONE entry per tag (instead of grouping all tags together)
+                            if (tags.length > 0) {
+                                tags.forEach(tag => {
+                                    logs.unshift({ tag, time, serial: log.serial || 'N/A' });
+                                    count++;
+                                    rateCounter++;
+                                });
+                            } else {
+                                // No tags found - still show the log entry
+                                logs.unshift({ tag: 'N/A', time, serial: log.serial || 'N/A' });
+                                count++;
+                                rateCounter++;
+                            }
 
                             // Update last ID
                             if (log.id > lastId) lastId = log.id;
-
-                            // Update count and rate
-                            count++;
-                            rateCounter++;
                         });
 
                         // Strict limit
@@ -201,6 +231,7 @@
                     document.getElementById('statusText').textContent = 'Déconnecté';
                 });
         }
+
 
         function startPolling() {
             console.log('🔌 Starting polling (500ms interval)');
@@ -228,12 +259,24 @@
         }
 
         function clearAll() {
+            // Clear server cache
+            fetch('/api/rfid/clear-logs', { method: 'POST' })
+                .then(() => {
+                    console.log('🗑️ Server cache cleared');
+                })
+                .catch(error => {
+                    console.error('❌ Error clearing server cache:', error);
+                });
+
+            // Reset client state
             logs = [];
             count = 0;
             rateCounter = 0;
+            lastId = 0; // IMPORTANT: Reset lastId to reload from start
             document.getElementById('count').textContent = '0';
             document.getElementById('rate').textContent = '0';
             render();
+            console.log('🗑️ Client state cleared, lastId reset to 0');
         }
 
         // Update rate every second

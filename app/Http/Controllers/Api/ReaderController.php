@@ -73,12 +73,16 @@ class ReaderController extends Controller
             'http_password' => 'nullable|string|max:255',
             'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
-            'location' => 'required|string|max:100',
+            'location' => 'required|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
             'distance_from_start' => 'required|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date|after_or_equal:date_min',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Calculate checkpoint_order based on distance for this event
@@ -128,12 +132,16 @@ class ReaderController extends Controller
             'http_password' => 'nullable|string|max:255',
             'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
-            'location' => 'sometimes|string|max:100',
+            'location' => 'sometimes|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
             'distance_from_start' => 'sometimes|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Recalculate checkpoint_order if distance or event changed
@@ -303,12 +311,15 @@ class ReaderController extends Controller
                     'date_test' => now(),
                 ]);
 
-                $status = match($httpCode) {
-                    200 => ' (Authenticated ✓)',
-                    401 => ' (Auth required)',
-                    403 => ' (Blocked by proxy)',
-                    default => ''
-                };
+                // Determine status message based on HTTP code (PHP 7.3 compatible)
+                $status = '';
+                if ($httpCode === 200) {
+                    $status = ' (Authenticated ✓)';
+                } elseif ($httpCode === 401) {
+                    $status = ' (Auth required)';
+                } elseif ($httpCode === 403) {
+                    $status = ' (Blocked by proxy)';
+                }
 
                 return response()->json([
                     'success' => true,
@@ -371,12 +382,12 @@ class ReaderController extends Controller
             'target_method' => 'PUT',
             'serial' => $reader->serial,
             'event_id' => $reader->event_id,
-            'event_name' => $reader->event?->name,
+            'event_name' => $reader->event ? $reader->event->name : null,
             'race_id' => $reader->race_id,
             'location' => $reader->location,
             'anti_rebounce_seconds' => $reader->anti_rebounce_seconds ?? 5,
-            'date_min' => $reader->date_min?->toIso8601String(),
-            'date_max' => $reader->date_max?->toIso8601String(),
+            'date_min' => $reader->date_min ? $reader->date_min->toIso8601String() : null,
+            'date_max' => $reader->date_max ? $reader->date_max->toIso8601String() : null,
             'configured_at' => now()->toIso8601String(),
         ]);
     }

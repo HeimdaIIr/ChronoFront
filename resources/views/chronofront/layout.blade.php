@@ -126,6 +126,120 @@
             margin: 0;
             opacity: 0.9;
         }
+
+        /* Responsive pour écrans ≤ 1920px (laptops 15" Full HD) */
+        @media (max-width: 1920px) {
+            .main-content {
+                padding: 14px;
+            }
+
+            .stats-card {
+                padding: 11px;
+            }
+
+            .stats-card h3 {
+                font-size: 1.5rem;
+            }
+
+            .stats-card p {
+                font-size: 0.75rem;
+            }
+
+            .card-header {
+                padding: 11px;
+                font-size: 0.8rem;
+            }
+
+            .card {
+                margin-bottom: 12px;
+            }
+
+            .table {
+                font-size: 0.72rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.5rem;
+            }
+
+            .btn {
+                font-size: 0.72rem;
+                padding: 6px 13px;
+            }
+
+            .sidebar .nav-link {
+                padding: 7px 12px;
+                font-size: 0.75rem;
+            }
+
+            .sidebar .nav-link i {
+                width: 18px;
+                margin-right: 6px;
+            }
+
+            .sidebar h4 {
+                font-size: 0.95rem;
+            }
+
+            .badge {
+                font-size: 0.65rem;
+            }
+        }
+
+        /* Responsive pour écrans ≤ 1440px */
+        @media (max-width: 1440px) {
+            .main-content {
+                padding: 20px;
+            }
+
+            .stats-card h3 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 15px;
+                font-size: 1rem;
+            }
+
+            .table {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Responsive pour écrans ≤ 1280px */
+        @media (max-width: 1280px) {
+            .main-content {
+                padding: 15px;
+            }
+
+            .stats-card {
+                padding: 15px;
+            }
+
+            .stats-card h3 {
+                font-size: 1.75rem;
+            }
+
+            .card-header {
+                padding: 12px;
+                font-size: 0.95rem;
+            }
+
+            .table {
+                font-size: 0.85rem;
+            }
+
+            .btn {
+                font-size: 0.85rem;
+                padding: 8px 16px;
+            }
+
+            .sidebar .nav-link {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 
     @yield('styles')

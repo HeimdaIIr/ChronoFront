@@ -152,6 +152,37 @@ class WaveController extends Controller
             'wave' => $wave
         ]);
     }
+	
+	/**
+ * Enregistrer le TOP départ pour une vague
+ * Cela active la fenêtre de détection DEPART basée sur l'heure réelle
+ */
+public function topDepart(Request $request, Wave $wave)
+{
+    // Enregistrer l'heure actuelle comme TOP départ
+    $wave->real_start_time = now();
+    $wave->save();
+
+    Log::info("TOP départ clicked for wave", [
+        'wave_id' => $wave->id,
+        'wave_name' => $wave->name,
+        'real_start_time' => $wave->real_start_time,
+        'window_minutes' => $wave->depart_window_minutes,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'TOP départ enregistré',
+        'wave' => [
+            'id' => $wave->id,
+            'name' => $wave->name,
+            'real_start_time' => $wave->real_start_time->format('Y-m-d H:i:s'),
+            'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+            'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+        ],
+    ]);
+}
+
 
     /**
      * Assign all entrants of a race to this wave
