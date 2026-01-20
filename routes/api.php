@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ResultController;
 use App\Http\Controllers\Api\RaspberryController;
 use App\Http\Controllers\Api\ReaderController;
+use App\Http\Controllers\Api\RfidLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,6 +87,12 @@ Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-
 // Alternative endpoint names (aliases)
 Route::post('rfid/detections', [RaspberryController::class, 'store']);
 Route::put('rfid/detections', [RaspberryController::class, 'store']);
+
+// RFID Live Ultra - Raw logs for monitoring
+Route::get('rfid/raw-logs', [RfidLogController::class, 'rawLogs']);
+Route::get('rfid/raw-logs/all', [RfidLogController::class, 'allRawLogs']);
+Route::get('rfid/raw-logs/stats', [RfidLogController::class, 'stats']);
+Route::delete('rfid/raw-logs', [RfidLogController::class, 'clearLogs']);
 
 // Health check
 Route::get('health', function () {
