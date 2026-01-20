@@ -30,13 +30,13 @@ class RfidLogController extends Controller
             $lastId = !empty($logs) ? max(array_column($logs, 'id')) : 0;
             $newId = $lastId + 1;
 
-            // Extract reader serial/ID from request or response
-            $readerSerial = null;
-            if ($responseData && isset($responseData['reader_id'])) {
-                $readerSerial = $responseData['reader_id'];
-            } elseif ($request->has('reader_id')) {
-                $readerSerial = $request->input('reader_id');
-            }
+            // Extract reader serial from HTTP header (sent by Raspberry Pi reader)
+            $readerSerial = $request->header('Serial');
+
+            // Get raw JSON body for rfidlive-ultra parsing
+            // The JavaScript expects either a JSON string or an object
+            $bodyContent = $request->getContent();
+            $bodyData = $bodyContent ? json_decode($bodyContent, true) : $request->all();
 
             // Create log entry (matching structure expected by rfidlive-ultra)
             $logEntry = [
@@ -47,8 +47,8 @@ class RfidLogController extends Controller
                 'url' => $request->fullUrl(),
                 'ip' => $request->ip(),
                 'status_code' => $statusCode,
-                'data' => $request->all(), // rfidlive-ultra expects 'data' not 'request_body'
-                'serial' => $readerSerial, // Reader serial for display
+                'data' => $bodyData ?: $bodyContent, // rfidlive-ultra expects 'data' as parsed JSON or string
+                'serial' => $readerSerial, // Reader serial from HTTP header
                 'response_data' => $responseData,
                 'user_agent' => $request->userAgent(),
             ];
