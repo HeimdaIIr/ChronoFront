@@ -698,63 +698,67 @@ class RaspberryController extends Controller
 
 	
     /**
-     * Determine effective location based on wave TOP départ or time ranges
+     * Determine effective location based on reader mode
      *
-     * WAVE-BASED LOGIC (priority):
-     * - If entrant has a wave with real_start_time set (TOP départ clicked):
-     *   → Use ±depart_window_minutes around real_start_time for DEPART
-     *   → Everything after window = ARRIVEE
-     *
-     * FALLBACK (legacy time ranges):
-     * - If no wave or no real_start_time: use reader time ranges
+     * 4 MODES:
+     * 1. single_reader_simple: Plages horaires uniquement (pas de vagues)
+     * 2. single_reader_waves: Vagues + TOP départ avec fenêtre ±X min
+     * 3. multi_reader: Multi lecteurs, chaque lecteur = checkpoint fixe
+     * 4. multi_reader_waves: Multi lecteurs + vagues, départ groupé (heure exacte)
      */
     private function determineEffectiveLocation(Reader $reader, Carbon $datetime, ?Entrant $entrant = null): ?string
     {
-        // PRIORITY 1: Wave-based TOP départ system
-        // =========================================
-        if ($entrant && $entrant->wave_id) {
-            $wave = $entrant->wave;
+        $readerMode = $reader->mode ?? 'multi_reader'; // Default if not set
 
-            // If TOP départ is ENABLED and was clicked for this wave (real_start_time is set)
-            if ($wave && $wave->use_top_depart !== false && $wave->real_start_time) {
-                $realStartTime = Carbon::parse($wave->real_start_time);
-                $windowMinutes = $wave->depart_window_minutes ?? 5;
+        Log::debug("Determining location with reader mode", [
+            'reader_id' => $reader->id,
+            'reader_mode' => $readerMode,
+            'reader_location' => $reader->location,
+            'has_entrant' => $entrant !== null,
+            'has_wave' => $entrant && $entrant->wave_id ? true : false,
+        ]);
 
-                $departWindowStart = $realStartTime->copy()->subMinutes($windowMinutes);
-                $departWindowEnd = $realStartTime->copy()->addMinutes($windowMinutes);
+        switch ($readerMode) {
+            case 'single_reader_simple':
+                // MODE 1: Plages horaires uniquement, pas de vagues
+                return $this->determineByTimeRanges($reader, $datetime);
 
-                Log::info("Wave-based TOP départ evaluation", [
-                    'wave_id' => $wave->id,
-                    'wave_name' => $wave->name,
-                    'real_start_time' => $realStartTime->format('Y-m-d H:i:s'),
-                    'window_minutes' => $windowMinutes,
-                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
-                    'window_end' => $departWindowEnd->format('Y-m-d H:i:s'),
-                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
-                ]);
-
-                // Detection within DEPART window?
-                if ($datetime >= $departWindowStart && $datetime <= $departWindowEnd) {
-                    return 'DEPART';
+            case 'single_reader_waves':
+                // MODE 2: Vagues + TOP départ avec fenêtre ±X min
+                if ($entrant && $entrant->wave_id) {
+                    $wave = $entrant->wave;
+                    if ($wave && $wave->real_start_time) {
+                        return $this->determineByWaveWindow($wave, $datetime);
+                    }
                 }
+                // Fallback sur plages horaires si pas de TOP départ configuré
+                return $this->determineByTimeRanges($reader, $datetime);
 
-                // After DEPART window = ARRIVEE
-                if ($datetime > $departWindowEnd) {
-                    return 'ARRIVEE';
-                }
+            case 'multi_reader':
+                // MODE 3: Multi lecteurs sans vagues, chaque lecteur = checkpoint fixe
+                return $reader->location; // DEPART, INTER1, ARRIVEE, etc.
 
-                // Before window = IGNORE (détection trop tôt, probablement erreur)
-                Log::warning("Detection BEFORE wave DEPART window - ignoring", [
-                    'wave_id' => $wave->id,
-                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
-                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+            case 'multi_reader_waves':
+                // MODE 4: Multi lecteurs avec vagues, départ groupé
+                // Chaque lecteur retourne toujours sa location fixe
+                // Pour le lecteur DEPART: on n'enregistre PAS de start_time individuel
+                // On utilisera real_start_time de la vague pour tous les coureurs
+                return $reader->location;
+
+            default:
+                // Fallback: comportement multi_reader par défaut
+                Log::warning("Unknown reader mode, falling back to multi_reader", [
+                    'reader_mode' => $readerMode,
                 ]);
-                return null;
-            }
+                return $reader->location;
         }
+    }
 
-        // PRIORITY 2: Reader-based time ranges (legacy/fallback)
-        // =======================================================
+    /**
+     * Determine location by reader time ranges (Mode 1: single_reader_simple)
+     */
+    private function determineByTimeRanges(Reader $reader, Carbon $datetime): ?string
+    {
         $currentTime = $datetime->format('H:i:s');
 
         // Check if reader has time ranges configured
@@ -799,6 +803,47 @@ class RaspberryController extends Controller
         }
 
         // If time ranges ARE configured but none matches = we're in a "gap" → IGNORE detection
+        return null;
+    }
+
+    /**
+     * Determine location by wave window (Mode 2: single_reader_waves)
+     * Uses ±depart_window_minutes around real_start_time
+     */
+    private function determineByWaveWindow($wave, Carbon $datetime): ?string
+    {
+        $realStartTime = Carbon::parse($wave->real_start_time);
+        $windowMinutes = $wave->depart_window_minutes ?? 5;
+
+        $departWindowStart = $realStartTime->copy()->subMinutes($windowMinutes);
+        $departWindowEnd = $realStartTime->copy()->addMinutes($windowMinutes);
+
+        Log::info("Wave-based TOP départ evaluation (Mode 2)", [
+            'wave_id' => $wave->id,
+            'wave_name' => $wave->name,
+            'real_start_time' => $realStartTime->format('Y-m-d H:i:s'),
+            'window_minutes' => $windowMinutes,
+            'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+            'window_end' => $departWindowEnd->format('Y-m-d H:i:s'),
+            'detection_time' => $datetime->format('Y-m-d H:i:s'),
+        ]);
+
+        // Detection within DEPART window?
+        if ($datetime >= $departWindowStart && $datetime <= $departWindowEnd) {
+            return 'DEPART';
+        }
+
+        // After DEPART window = ARRIVEE
+        if ($datetime > $departWindowEnd) {
+            return 'ARRIVEE';
+        }
+
+        // Before window = IGNORE (détection trop tôt, probablement erreur)
+        Log::warning("Detection BEFORE wave DEPART window - ignoring", [
+            'wave_id' => $wave->id,
+            'detection_time' => $datetime->format('Y-m-d H:i:s'),
+            'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+        ]);
         return null;
     }
 

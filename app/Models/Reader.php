@@ -20,6 +20,7 @@ class Reader extends Model
         'event_id',
         'race_id',
         'location',
+        'mode',
         'distance_from_start',
         'checkpoint_order',
         'anti_rebounce_seconds',

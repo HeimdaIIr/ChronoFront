@@ -19,7 +19,6 @@ class Wave extends Model
         'is_started',
         'real_start_time',
         'depart_window_minutes',
-        'use_top_depart',
     ];
 
     protected $casts = [
@@ -27,7 +26,6 @@ class Wave extends Model
         'end_time' => 'datetime',
         'real_start_time' => 'datetime',
         'is_started' => 'boolean',
-        'use_top_depart' => 'boolean',
     ];
 
     /**

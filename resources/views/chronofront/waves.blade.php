@@ -140,71 +140,55 @@
 
                                     <!-- TOP Départ Configuration -->
                                     <div class="mt-2 p-2 border rounded" style="background: #f8f9fa;">
-                                        <!-- Toggle TOP Départ -->
-                                        <div class="form-check form-switch mb-2">
+                                        <div class="small mb-2">
+                                            <strong>Configuration TOP départ</strong>
+                                        </div>
+
+                                        <!-- Fenêtre de détection (Mode 2: single_reader_waves) -->
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1">Fenêtre détection (min)</label>
                                             <input
-                                                class="form-check-input"
-                                                type="checkbox"
-                                                :id="'use-top-depart-' + wave.id"
-                                                :checked="wave.use_top_depart !== false"
-                                                @change="toggleTopDepart(wave, $event.target.checked)"
+                                                type="number"
+                                                class="form-control form-control-sm"
+                                                :value="wave.depart_window_minutes || 5"
+                                                @change="updateWindow(wave, $event.target.value)"
+                                                min="1"
+                                                max="60"
+                                                title="Fenêtre de détection DÉPART (±X minutes autour du TOP) - Utilisée en mode single_reader_waves"
                                             >
-                                            <label class="form-check-label small" :for="'use-top-depart-' + wave.id">
-                                                <strong>TOP départ actif</strong>
-                                            </label>
-                                        </div>
-
-                                        <!-- Configuration (visible si TOP départ actif) -->
-                                        <div x-show="wave.use_top_depart !== false">
-                                            <!-- Fenêtre de détection -->
-                                            <div class="mb-2">
-                                                <label class="form-label small mb-1">Fenêtre détection (min)</label>
-                                                <input
-                                                    type="number"
-                                                    class="form-control form-control-sm"
-                                                    :value="wave.depart_window_minutes || 5"
-                                                    @change="updateWindow(wave, $event.target.value)"
-                                                    min="1"
-                                                    max="60"
-                                                    title="Fenêtre de détection DÉPART (±X minutes autour du TOP)"
-                                                >
-                                            </div>
-
-                                            <!-- Heure réelle (éditable) -->
-                                            <div class="mb-2" x-show="wave.real_start_time">
-                                                <label class="form-label small mb-1">Heure réelle</label>
-                                                <input
-                                                    type="datetime-local"
-                                                    class="form-control form-control-sm"
-                                                    :value="wave.real_start_time ? wave.real_start_time.slice(0,16) : ''"
-                                                    @change="updateRealStartTime(wave, $event.target.value)"
-                                                    step="1"
-                                                    title="Modifier manuellement l'heure de départ"
-                                                >
-                                            </div>
-
-                                            <!-- Bouton TOP Départ -->
-                                            <button
-                                                class="btn btn-sm w-100"
-                                                :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
-                                                @click="topDepart(wave)"
-                                                title="Enregistrer le TOP départ maintenant"
-                                            >
-                                                <i class="bi bi-stopwatch"></i>
-                                                <span x-show="!wave.real_start_time">TOP départ (NOW)</span>
-                                                <span x-show="wave.real_start_time">✓ TOP enregistré</span>
-                                            </button>
-
-                                            <!-- Info fenêtre calculée -->
-                                            <div class="small text-muted mt-1" x-show="wave.real_start_time" style="font-size: 0.75rem;">
-                                                <span x-text="getWindowInfo(wave)"></span>
+                                            <div class="form-text" style="font-size: 0.7rem;">
+                                                Utilisée uniquement en mode <em>single_reader_waves</em>
                                             </div>
                                         </div>
 
-                                        <!-- Message si désactivé -->
-                                        <div x-show="wave.use_top_depart === false" class="small text-muted">
-                                            TOP départ désactivé<br>
-                                            <small>Utilisation des plages horaires lecteur</small>
+                                        <!-- Heure réelle (éditable) -->
+                                        <div class="mb-2" x-show="wave.real_start_time">
+                                            <label class="form-label small mb-1">Heure réelle</label>
+                                            <input
+                                                type="datetime-local"
+                                                class="form-control form-control-sm"
+                                                :value="wave.real_start_time ? wave.real_start_time.slice(0,16) : ''"
+                                                @change="updateRealStartTime(wave, $event.target.value)"
+                                                step="1"
+                                                title="Modifier manuellement l'heure de départ"
+                                            >
+                                        </div>
+
+                                        <!-- Bouton TOP Départ -->
+                                        <button
+                                            class="btn btn-sm w-100"
+                                            :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
+                                            @click="topDepart(wave)"
+                                            title="Enregistrer le TOP départ maintenant"
+                                        >
+                                            <i class="bi bi-stopwatch"></i>
+                                            <span x-show="!wave.real_start_time">TOP départ (NOW)</span>
+                                            <span x-show="wave.real_start_time">✓ TOP enregistré</span>
+                                        </button>
+
+                                        <!-- Info fenêtre calculée -->
+                                        <div class="small text-muted mt-1" x-show="wave.real_start_time" style="font-size: 0.75rem;">
+                                            <span x-text="getWindowInfo(wave)"></span>
                                         </div>
                                     </div>
                                 </td>
@@ -477,21 +461,6 @@ function wavesManager() {
                       `Fenêtre DEPART: ${data.wave.depart_window_start} → ${data.wave.depart_window_end}`);
             } catch (error) {
                 alert('Erreur lors de l\'enregistrement du TOP départ : ' + (error.response?.data?.message || error.message));
-            }
-        },
-
-        async toggleTopDepart(wave, enabled) {
-            try {
-                await axios.patch(`/waves/${wave.id}`, {
-                    use_top_depart: enabled
-                });
-                wave.use_top_depart = enabled;
-                this.successMessage = enabled
-                    ? `TOP départ activé pour "${wave.name}"`
-                    : `TOP départ désactivé pour "${wave.name}" (utilisation des plages horaires lecteur)`;
-            } catch (error) {
-                alert('Erreur lors de la modification : ' + (error.response?.data?.message || error.message));
-                this.loadWaves(); // Reload to reset state
             }
         },
 

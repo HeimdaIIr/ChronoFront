@@ -75,7 +75,6 @@ class WaveController extends Controller
         $validated = $request->validate([
             'wave_number' => 'sometimes|integer|min:1',
             'name' => 'sometimes|string|max:100',
-            'use_top_depart' => 'sometimes|boolean',
             'depart_window_minutes' => 'sometimes|integer|min:1|max:60',
         ]);
 

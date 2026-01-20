@@ -15,9 +15,10 @@ class AddModeToReadersTable extends Migration
     {
         Schema::table('readers', function (Blueprint $table) {
             $table->enum('mode', [
-                'single_reader_waves',    // Un lecteur départ/arrivée avec vagues et TOP départ
-                'single_reader_simple',   // Un lecteur départ/arrivée avec plages horaires
-                'multi_reader'            // Plusieurs lecteurs (chaque lecteur = checkpoint)
+                'single_reader_simple',   // Un lecteur départ/arrivée avec plages horaires (pas de vagues)
+                'single_reader_waves',    // Un lecteur départ/arrivée avec vagues et TOP départ (fenêtre ±X min)
+                'multi_reader',           // Plusieurs lecteurs (chaque lecteur = checkpoint, pas de vagues)
+                'multi_reader_waves'      // Plusieurs lecteurs avec vagues (départ groupé, heure exacte)
             ])->default('multi_reader')->after('location')
                 ->comment('Mode de fonctionnement du système de chronométrage');
         });
