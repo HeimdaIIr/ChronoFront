@@ -30,7 +30,15 @@ class RfidLogController extends Controller
             $lastId = !empty($logs) ? max(array_column($logs, 'id')) : 0;
             $newId = $lastId + 1;
 
-            // Create log entry
+            // Extract reader serial/ID from request or response
+            $readerSerial = null;
+            if ($responseData && isset($responseData['reader_id'])) {
+                $readerSerial = $responseData['reader_id'];
+            } elseif ($request->has('reader_id')) {
+                $readerSerial = $request->input('reader_id');
+            }
+
+            // Create log entry (matching structure expected by rfidlive-ultra)
             $logEntry = [
                 'id' => $newId,
                 'timestamp' => Carbon::now()->toIso8601String(),
@@ -39,7 +47,8 @@ class RfidLogController extends Controller
                 'url' => $request->fullUrl(),
                 'ip' => $request->ip(),
                 'status_code' => $statusCode,
-                'request_body' => $request->all(),
+                'data' => $request->all(), // rfidlive-ultra expects 'data' not 'request_body'
+                'serial' => $readerSerial, // Reader serial for display
                 'response_data' => $responseData,
                 'user_agent' => $request->userAgent(),
             ];
