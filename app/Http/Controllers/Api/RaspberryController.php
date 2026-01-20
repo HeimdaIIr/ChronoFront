@@ -479,8 +479,10 @@ class RaspberryController extends Controller
             'results' => $results
         ];
 
-        // Log to RFID raw logs for /rfidlive-ultra display
-        RfidLogController::logRequest($request, 200, $responseData);
+        // Log to RFID raw logs for /rfidlive-ultra display (only if there were detections)
+        if (count($detections) > 0) {
+            RfidLogController::logRequest($request, 200, $responseData);
+        }
 
         return response()->json($responseData);
     }
