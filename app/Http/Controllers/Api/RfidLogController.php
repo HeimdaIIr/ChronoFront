@@ -30,13 +30,23 @@ class RfidLogController extends Controller
             $lastId = !empty($logs) ? max(array_column($logs, 'id')) : 0;
             $newId = $lastId + 1;
 
-            // Extract reader serial from HTTP header (sent by Raspberry Pi reader)
+            // Extract reader serial from HTTP header or response data
             $readerSerial = $request->header('Serial');
 
-            // Get raw JSON body for rfidlive-ultra parsing
-            // The JavaScript expects either a JSON string or an object
-            $bodyContent = $request->getContent();
-            $bodyData = $bodyContent ? json_decode($bodyContent, true) : $request->all();
+            // If header is not available, try to get it from response data
+            if (!$readerSerial && $responseData && isset($responseData['reader'])) {
+                $readerSerial = $responseData['reader'];
+            }
+
+            // Get JSON body for rfidlive-ultra parsing
+            // Use json() instead of getContent() because the stream may already be consumed by RaspberryController
+            $jsonData = $request->json();
+            $bodyData = $jsonData ? $jsonData->all() : [];
+
+            // Fallback to all() if json is empty (for non-JSON requests)
+            if (empty($bodyData)) {
+                $bodyData = $request->all();
+            }
 
             // Create log entry (matching structure expected by rfidlive-ultra)
             $logEntry = [
@@ -47,8 +57,8 @@ class RfidLogController extends Controller
                 'url' => $request->fullUrl(),
                 'ip' => $request->ip(),
                 'status_code' => $statusCode,
-                'data' => $bodyData ?: $bodyContent, // rfidlive-ultra expects 'data' as parsed JSON or string
-                'serial' => $readerSerial, // Reader serial from HTTP header
+                'data' => $bodyData, // rfidlive-ultra expects 'data' as parsed JSON array
+                'serial' => $readerSerial, // Reader serial from HTTP header or response
                 'response_data' => $responseData,
                 'user_agent' => $request->userAgent(),
             ];
