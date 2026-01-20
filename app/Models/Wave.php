@@ -17,12 +17,17 @@ class Wave extends Model
         'start_time',
         'end_time',
         'is_started',
+        'real_start_time',
+        'depart_window_minutes',
+        'use_top_depart',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'real_start_time' => 'datetime',
         'is_started' => 'boolean',
+        'use_top_depart' => 'boolean',
     ];
 
     /**

@@ -39,6 +39,7 @@ Route::post('waves/{wave}/start', [WaveController::class, 'start']);
 Route::post('waves/{wave}/end', [WaveController::class, 'end']);
 Route::post('waves/{wave}/assign-all', [WaveController::class, 'assignAllEntrants']);
 Route::post('waves/{wave}/top-depart', [WaveController::class, 'topDepart']);
+Route::post('waves/{wave}/update-real-start-time', [WaveController::class, 'updateRealStartTime']);
 Route::apiResource('waves', WaveController::class);
 
 // Categories Routes

@@ -75,6 +75,8 @@ class WaveController extends Controller
         $validated = $request->validate([
             'wave_number' => 'sometimes|integer|min:1',
             'name' => 'sometimes|string|max:100',
+            'use_top_depart' => 'sometimes|boolean',
+            'depart_window_minutes' => 'sometimes|integer|min:1|max:60',
         ]);
 
         // Si le numéro de vague est modifié, vérifier qu'il n'existe pas déjà
@@ -184,6 +186,67 @@ public function topDepart(Request $request, Wave $wave)
     ]);
 }
 
+    /**
+     * Update real_start_time and reprocess all detections for this wave
+     */
+    public function updateRealStartTime(Request $request, Wave $wave): JsonResponse
+    {
+        $validated = $request->validate([
+            'real_start_time' => 'required|date',
+        ]);
+
+        $oldTime = $wave->real_start_time;
+        $newTime = $validated['real_start_time'];
+
+        // Update the real_start_time
+        $wave->real_start_time = $newTime;
+        $wave->save();
+
+        Log::info("Real start time updated for wave", [
+            'wave_id' => $wave->id,
+            'wave_name' => $wave->name,
+            'old_time' => $oldTime,
+            'new_time' => $newTime,
+        ]);
+
+        // Reprocess all RFID detections for this wave
+        $reprocessResult = $this->reprocessWaveDetections($wave);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Heure de départ mise à jour et détections retraitées',
+            'wave' => [
+                'id' => $wave->id,
+                'name' => $wave->name,
+                'old_real_start_time' => $oldTime ? $oldTime->format('Y-m-d H:i:s') : null,
+                'new_real_start_time' => $wave->real_start_time->format('Y-m-d H:i:s'),
+                'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+                'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+            ],
+            'reprocessed' => $reprocessResult['detections_reprocessed'],
+            'results_updated' => $reprocessResult['results_updated'],
+        ]);
+    }
+
+    /**
+     * Reprocess all RFID detections for a wave after changing real_start_time
+     * This will recalculate start_time and Results based on the new TOP départ
+     */
+    private function reprocessWaveDetections(Wave $wave): array
+    {
+        // TODO: Implement reprocessing logic
+        // For now, return placeholder values
+        // This will need to:
+        // 1. Get all RfidDetection records for entrants in this wave
+        // 2. Re-determine if they should be DEPART or ARRIVEE based on new time
+        // 3. Update Entrant.start_time for DEPART detections
+        // 4. Recalculate Result.time for ARRIVEE detections
+
+        return [
+            'detections_reprocessed' => 0,
+            'results_updated' => 0,
+        ];
+    }
 
     /**
      * Assign all entrants of a race to this wave

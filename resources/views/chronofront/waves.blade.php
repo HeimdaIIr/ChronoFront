@@ -137,26 +137,75 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
-                                    <div>
-                                        <button
-                                            class="btn btn-warning btn-sm w-100"
-                                            @click="assignAllEntrants(wave)"
-                                            title="Assigner tous les participants de ce parcours à cette vague"
-                                        >
-                                            <i class="bi bi-people-fill"></i> Assigner participants
-                                        </button>
-                                    </div>
-                                    <div class="mt-1">
-                                        <button
-                                            class="btn btn-sm w-100"
-                                            :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
-                                            @click="topDepart(wave)"
-                                            title="Enregistrer le TOP départ (heure réelle de départ)"
-                                        >
-                                            <i class="bi bi-stopwatch"></i>
-                                            <span x-show="!wave.real_start_time">TOP départ</span>
-                                            <span x-show="wave.real_start_time" x-text="'TOP: ' + formatTime(wave.real_start_time)"></span>
-                                        </button>
+
+                                    <!-- TOP Départ Configuration -->
+                                    <div class="mt-2 p-2 border rounded" style="background: #f8f9fa;">
+                                        <!-- Toggle TOP Départ -->
+                                        <div class="form-check form-switch mb-2">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                :id="'use-top-depart-' + wave.id"
+                                                :checked="wave.use_top_depart !== false"
+                                                @change="toggleTopDepart(wave, $event.target.checked)"
+                                            >
+                                            <label class="form-check-label small" :for="'use-top-depart-' + wave.id">
+                                                <strong>TOP départ actif</strong>
+                                            </label>
+                                        </div>
+
+                                        <!-- Configuration (visible si TOP départ actif) -->
+                                        <div x-show="wave.use_top_depart !== false">
+                                            <!-- Fenêtre de détection -->
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1">Fenêtre détection (min)</label>
+                                                <input
+                                                    type="number"
+                                                    class="form-control form-control-sm"
+                                                    :value="wave.depart_window_minutes || 5"
+                                                    @change="updateWindow(wave, $event.target.value)"
+                                                    min="1"
+                                                    max="60"
+                                                    title="Fenêtre de détection DÉPART (±X minutes autour du TOP)"
+                                                >
+                                            </div>
+
+                                            <!-- Heure réelle (éditable) -->
+                                            <div class="mb-2" x-show="wave.real_start_time">
+                                                <label class="form-label small mb-1">Heure réelle</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    class="form-control form-control-sm"
+                                                    :value="wave.real_start_time ? wave.real_start_time.slice(0,16) : ''"
+                                                    @change="updateRealStartTime(wave, $event.target.value)"
+                                                    step="1"
+                                                    title="Modifier manuellement l'heure de départ"
+                                                >
+                                            </div>
+
+                                            <!-- Bouton TOP Départ -->
+                                            <button
+                                                class="btn btn-sm w-100"
+                                                :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
+                                                @click="topDepart(wave)"
+                                                title="Enregistrer le TOP départ maintenant"
+                                            >
+                                                <i class="bi bi-stopwatch"></i>
+                                                <span x-show="!wave.real_start_time">TOP départ (NOW)</span>
+                                                <span x-show="wave.real_start_time">✓ TOP enregistré</span>
+                                            </button>
+
+                                            <!-- Info fenêtre calculée -->
+                                            <div class="small text-muted mt-1" x-show="wave.real_start_time" style="font-size: 0.75rem;">
+                                                <span x-text="getWindowInfo(wave)"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Message si désactivé -->
+                                        <div x-show="wave.use_top_depart === false" class="small text-muted">
+                                            TOP départ désactivé<br>
+                                            <small>Utilisation des plages horaires lecteur</small>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -431,6 +480,82 @@ function wavesManager() {
             }
         },
 
+        async toggleTopDepart(wave, enabled) {
+            try {
+                await axios.patch(`/waves/${wave.id}`, {
+                    use_top_depart: enabled
+                });
+                wave.use_top_depart = enabled;
+                this.successMessage = enabled
+                    ? `TOP départ activé pour "${wave.name}"`
+                    : `TOP départ désactivé pour "${wave.name}" (utilisation des plages horaires lecteur)`;
+            } catch (error) {
+                alert('Erreur lors de la modification : ' + (error.response?.data?.message || error.message));
+                this.loadWaves(); // Reload to reset state
+            }
+        },
+
+        async updateWindow(wave, minutes) {
+            const value = parseInt(minutes);
+            if (value < 1 || value > 60) {
+                alert('La fenêtre doit être entre 1 et 60 minutes');
+                return;
+            }
+
+            try {
+                await axios.patch(`/waves/${wave.id}`, {
+                    depart_window_minutes: value
+                });
+                wave.depart_window_minutes = value;
+                this.successMessage = `Fenêtre de détection mise à jour : ±${value} minutes`;
+            } catch (error) {
+                alert('Erreur lors de la modification : ' + (error.response?.data?.message || error.message));
+            }
+        },
+
+        async updateRealStartTime(wave, datetime) {
+            if (!datetime) return;
+
+            const confirmMsg = `Modifier l'heure de départ pour "${wave.name}" ?\n\n` +
+                `Nouvelle heure : ${new Date(datetime).toLocaleString('fr-FR')}\n\n` +
+                `⚠️ ATTENTION : Cela va recalculer TOUS les résultats de cette vague !`;
+
+            if (!confirm(confirmMsg)) {
+                this.loadWaves(); // Reset input
+                return;
+            }
+
+            try {
+                const response = await axios.post(`/waves/${wave.id}/update-real-start-time`, {
+                    real_start_time: datetime
+                });
+
+                this.successMessage = `Heure de départ mise à jour : ${response.data.reprocessed} détection(s) retraitée(s)`;
+                this.loadWaves();
+
+                alert(`✅ Heure mise à jour !\n\n` +
+                      `Détections retraitées : ${response.data.reprocessed}\n` +
+                      `Résultats recalculés : ${response.data.results_updated || 0}`);
+            } catch (error) {
+                alert('Erreur lors de la modification : ' + (error.response?.data?.message || error.message));
+                this.loadWaves();
+            }
+        },
+
+        getWindowInfo(wave) {
+            if (!wave.real_start_time || !wave.depart_window_minutes) return '';
+
+            const startTime = new Date(wave.real_start_time);
+            const windowMin = wave.depart_window_minutes;
+
+            const windowStart = new Date(startTime.getTime() - windowMin * 60000);
+            const windowEnd = new Date(startTime.getTime() + windowMin * 60000);
+
+            const formatTime = (d) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+            return `Fenêtre DÉPART: ${formatTime(windowStart)} → ${formatTime(windowEnd)}`;
+        },
+
         async deleteWave(wave) {
             if (!confirm(`Êtes-vous sûr de vouloir supprimer la vague "${wave.name}" ?\n\nATTENTION : Les participants de cette vague seront également supprimés.`)) return;
 
@@ -440,25 +565,6 @@ function wavesManager() {
                 this.loadWaves();
             } catch (error) {
                 alert('Erreur lors de la suppression : ' + (error.response?.data?.message || error.message));
-            }
-        },
-
-        async assignAllEntrants(wave) {
-            const raceName = wave.race?.name || 'ce parcours';
-            if (!confirm(`Assigner TOUS les participants de l'épreuve "${raceName}" (qui n'ont pas encore de vague) à la vague "${wave.name}" ?\n\nCette action ne peut pas être annulée.`)) return;
-
-            try {
-                const response = await axios.post(`/waves/${wave.id}/assign-all`);
-                this.successMessage = response.data.message;
-
-                // Afficher info sur participants déjà assignés ailleurs
-                if (response.data.already_assigned_elsewhere > 0) {
-                    this.successMessage += `\n\nNote : ${response.data.already_assigned_elsewhere} participant(s) étaient déjà assignés à d'autres vagues.`;
-                }
-
-                this.loadWaves();
-            } catch (error) {
-                alert('Erreur lors de l\'assignation : ' + (error.response?.data?.message || error.message));
             }
         },
 

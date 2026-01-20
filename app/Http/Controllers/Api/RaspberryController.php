@@ -715,8 +715,8 @@ class RaspberryController extends Controller
         if ($entrant && $entrant->wave_id) {
             $wave = $entrant->wave;
 
-            // If TOP départ was clicked for this wave (real_start_time is set)
-            if ($wave && $wave->real_start_time) {
+            // If TOP départ is ENABLED and was clicked for this wave (real_start_time is set)
+            if ($wave && $wave->use_top_depart !== false && $wave->real_start_time) {
                 $realStartTime = Carbon::parse($wave->real_start_time);
                 $windowMinutes = $wave->depart_window_minutes ?? 5;
 
