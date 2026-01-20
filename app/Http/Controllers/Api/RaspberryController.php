@@ -261,8 +261,8 @@ class RaspberryController extends Controller
             // ROUTING LOGIC BASED ON READER LOCATION AND TIME RANGES
             // =======================================================
 
-            // Determine effective location based on current time and configured time ranges
-            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime);
+            // Determine effective location based on wave TOP départ or time ranges
+            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime, $entrant);
 
             // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
             if ($effectiveLocation === null) {
@@ -295,6 +295,7 @@ class RaspberryController extends Controller
                 'configured_location' => $reader->location,
                 'effective_location' => $effectiveLocation,
                 'detection_time' => $datetime->format('H:i:s'),
+                'wave_id' => $entrant->wave_id,
             ]);
 
             if ($effectiveLocation === 'DEPART') {
@@ -695,57 +696,109 @@ class RaspberryController extends Controller
 
 	
     /**
-     * Determine the effective location based on configured time ranges
-     * If time ranges are configured, use them to override the fixed location
-     * Otherwise, use the reader's configured location
+     * Determine effective location based on wave TOP départ or time ranges
+     *
+     * WAVE-BASED LOGIC (priority):
+     * - If entrant has a wave with real_start_time set (TOP départ clicked):
+     *   → Use ±depart_window_minutes around real_start_time for DEPART
+     *   → Everything after window = ARRIVEE
+     *
+     * FALLBACK (legacy time ranges):
+     * - If no wave or no real_start_time: use reader time ranges
      */
-    private function determineEffectiveLocation(Reader $reader, Carbon $datetime): string
-{
-    $currentTime = $datetime->format('H:i:s');
+    private function determineEffectiveLocation(Reader $reader, Carbon $datetime, ?Entrant $entrant = null): ?string
+    {
+        // PRIORITY 1: Wave-based TOP départ system
+        // =========================================
+        if ($entrant && $entrant->wave_id) {
+            $wave = $entrant->wave;
 
-    // Check if reader has time ranges configured
-    $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
-    $hasArrivalRange = $reader->arrival_time_start;
+            // If TOP départ was clicked for this wave (real_start_time is set)
+            if ($wave && $wave->real_start_time) {
+                $realStartTime = Carbon::parse($wave->real_start_time);
+                $windowMinutes = $wave->depart_window_minutes ?? 5;
 
-    // If no time ranges configured, use the fixed location
-    if (!$hasDepartRange && !$hasArrivalRange) {
-        return $reader->location;
-    }
+                $departWindowStart = $realStartTime->copy()->subMinutes($windowMinutes);
+                $departWindowEnd = $realStartTime->copy()->addMinutes($windowMinutes);
 
-    // IMPORTANT: Add :00 seconds to database times for proper comparison
-    $departStart = $reader->depart_time_start ? $reader->depart_time_start . ':00' : null;
-    $departEnd = $reader->depart_time_end ? $reader->depart_time_end . ':00' : null;
-    $arrivalStart = $reader->arrival_time_start ? $reader->arrival_time_start . ':00' : null;
-    $arrivalEnd = $reader->arrival_time_end ? $reader->arrival_time_end . ':00' : null;
+                Log::info("Wave-based TOP départ evaluation", [
+                    'wave_id' => $wave->id,
+                    'wave_name' => $wave->name,
+                    'real_start_time' => $realStartTime->format('Y-m-d H:i:s'),
+                    'window_minutes' => $windowMinutes,
+                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+                    'window_end' => $departWindowEnd->format('Y-m-d H:i:s'),
+                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
+                ]);
 
-    // Check DEPART time range
-    if ($hasDepartRange) {
-        $isInDepartRange = $currentTime >= $departStart && $currentTime <= $departEnd;
+                // Detection within DEPART window?
+                if ($datetime >= $departWindowStart && $datetime <= $departWindowEnd) {
+                    return 'DEPART';
+                }
 
-        if ($isInDepartRange) {
-            return 'DEPART';
+                // After DEPART window = ARRIVEE
+                if ($datetime > $departWindowEnd) {
+                    return 'ARRIVEE';
+                }
+
+                // Before window = IGNORE (détection trop tôt, probablement erreur)
+                Log::warning("Detection BEFORE wave DEPART window - ignoring", [
+                    'wave_id' => $wave->id,
+                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
+                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+                ]);
+                return null;
+            }
         }
-    }
 
-    // Check ARRIVEE time range
-    if ($hasArrivalRange) {
-        $isAfterArrivalStart = $currentTime >= $arrivalStart;
+        // PRIORITY 2: Reader-based time ranges (legacy/fallback)
+        // =======================================================
+        $currentTime = $datetime->format('H:i:s');
 
-        if ($arrivalEnd) {
-            $isBeforeArrivalEnd = $currentTime <= $arrivalEnd;
-            $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
-        } else {
-            $isInArrivalRange = $isAfterArrivalStart;
+        // Check if reader has time ranges configured
+        $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
+        $hasArrivalRange = $reader->arrival_time_start;
+
+        // If no time ranges configured, use the fixed location
+        if (!$hasDepartRange && !$hasArrivalRange) {
+            return $reader->location;
         }
 
-        if ($isInArrivalRange) {
-            return 'ARRIVEE';
-        }
-    }
+        // IMPORTANT: Add :00 seconds to database times for proper comparison
+        $departStart = $reader->depart_time_start ? $reader->depart_time_start . ':00' : null;
+        $departEnd = $reader->depart_time_end ? $reader->depart_time_end . ':00' : null;
+        $arrivalStart = $reader->arrival_time_start ? $reader->arrival_time_start . ':00' : null;
+        $arrivalEnd = $reader->arrival_time_end ? $reader->arrival_time_end . ':00' : null;
 
-    // If no range matches, fall back to the configured location
-    return null;
-}
+        // Check DEPART time range
+        if ($hasDepartRange) {
+            $isInDepartRange = $currentTime >= $departStart && $currentTime <= $departEnd;
+
+            if ($isInDepartRange) {
+                return 'DEPART';
+            }
+        }
+
+        // Check ARRIVEE time range
+        if ($hasArrivalRange) {
+            $isAfterArrivalStart = $currentTime >= $arrivalStart;
+
+            if ($arrivalEnd) {
+                $isBeforeArrivalEnd = $currentTime <= $arrivalEnd;
+                $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
+            } else {
+                // No end time = active until end of day
+                $isInArrivalRange = $isAfterArrivalStart;
+            }
+
+            if ($isInArrivalRange) {
+                return 'ARRIVEE';
+            }
+        }
+
+        // If time ranges ARE configured but none matches = we're in a "gap" → IGNORE detection
+        return null;
+    }
 
 
     /**
