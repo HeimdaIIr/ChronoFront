@@ -264,6 +264,7 @@
                                         <th>Réseau</th>
                                         <th>IP</th>
                                         <th>Localisation</th>
+                                        <th>Mode</th>
                                         <th>Distance (km)</th>
                                         <th>Anti-rebond (s)</th>
                                         <th>Statut</th>
@@ -283,6 +284,14 @@
                                             </td>
                                             <td><code x-text="reader.calculated_ip || calculateReaderIP(reader)"></code></td>
                                             <td><span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span></td>
+                                            <td>
+                                                <span class="badge badge-sm" :class="{
+                                                    'bg-info': reader.mode === 'single_reader_simple',
+                                                    'bg-primary': reader.mode === 'single_reader_waves',
+                                                    'bg-success': reader.mode === 'multi_reader',
+                                                    'bg-warning': reader.mode === 'multi_reader_waves'
+                                                }" x-text="getModeLabel(reader.mode || 'multi_reader')" style="font-size: 0.7rem;"></span>
+                                            </td>
                                             <td x-text="reader.distance_from_start + ' km'"></td>
                                             <td x-text="reader.anti_rebounce_seconds || '3'"></td>
                                             <td>
@@ -381,12 +390,24 @@
                                        required placeholder="Ex: DEPART, KM5, ARRIVEE">
                             </div>
                             <div class="col-md-6 mb-3">
+                                <label class="form-label">Mode de chronométrage *</label>
+                                <select class="form-select" x-model="currentReader.mode" required>
+                                    <option value="single_reader_simple">Lecteur unique - Plages horaires</option>
+                                    <option value="single_reader_waves">Lecteur unique - Vagues + TOP départ</option>
+                                    <option value="multi_reader">Multi lecteurs - Checkpoints fixes</option>
+                                    <option value="multi_reader_waves">Multi lecteurs - Vagues + Départ groupé</option>
+                                </select>
+                                <small class="text-muted">Définit comment le lecteur gère les détections</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Distance depuis départ (km) *</label>
                                 <input type="number" step="0.01" class="form-control"
                                        x-model="currentReader.distance_from_start"
                                        required placeholder="Ex: 0, 5, 10, 21">
                             </div>
-                        </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -634,6 +655,16 @@ function eventsManager() {
             return labels[type] || type;
         },
 
+        getModeLabel(mode) {
+            const labels = {
+                'single_reader_simple': 'Simple',
+                'single_reader_waves': 'Vagues',
+                'multi_reader': 'Multi',
+                'multi_reader_waves': 'Multi+Vagues'
+            };
+            return labels[mode] || 'Multi';
+        },
+
         openReaderModal() {
             this.readerEditMode = false;
             this.currentReader = {
@@ -641,6 +672,7 @@ function eventsManager() {
                 network_type: 'local',
                 custom_ip: '',
                 location: '',
+                mode: 'multi_reader',
                 distance_from_start: 0,
                 anti_rebounce_seconds: 3,
                 event_id: this.editingEvent.id,
