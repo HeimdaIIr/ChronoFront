@@ -65,6 +65,7 @@
                             <th>Type Réseau</th>
                             <th>IP Calculée</th>
                             <th>Localisation</th>
+                            <th>Mode</th>
                             <th>Distance (km)</th>
                             <th>Ordre</th>
                             <th>Anti-rebond (s)</th>
@@ -90,6 +91,14 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span>
+                                </td>
+                                <td>
+                                    <span class="badge" :class="{
+                                        'bg-info': reader.mode === 'single_reader_simple',
+                                        'bg-primary': reader.mode === 'single_reader_waves',
+                                        'bg-success': reader.mode === 'multi_reader',
+                                        'bg-warning': reader.mode === 'multi_reader_waves'
+                                    }" x-text="getModeLabel(reader.mode || 'multi_reader')"></span>
                                 </td>
                                 <td x-text="reader.distance_from_start + ' km'"></td>
                                 <td>
@@ -185,6 +194,19 @@
                                 <input type="text" class="form-control" x-model="currentReader.location"
                                        required placeholder="Ex: DEPART, KM5, ARRIVEE">
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Mode de chronométrage *</label>
+                                <select class="form-select" x-model="currentReader.mode" required>
+                                    <option value="single_reader_simple">Lecteur unique - Plages horaires</option>
+                                    <option value="single_reader_waves">Lecteur unique - Vagues + TOP départ</option>
+                                    <option value="multi_reader">Multi lecteurs - Checkpoints fixes</option>
+                                    <option value="multi_reader_waves">Multi lecteurs - Vagues + Départ groupé</option>
+                                </select>
+                                <small class="text-muted">Définit comment le lecteur gère les détections</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Distance depuis départ (km) *</label>
                                 <input type="number" step="0.01" class="form-control"
@@ -324,6 +346,16 @@ function readersManager(eventId) {
             return labels[type] || type;
         },
 
+        getModeLabel(mode) {
+            const labels = {
+                'single_reader_simple': 'Lecteur unique (plages horaires)',
+                'single_reader_waves': 'Lecteur unique (vagues)',
+                'multi_reader': 'Multi lecteurs',
+                'multi_reader_waves': 'Multi lecteurs (vagues)'
+            };
+            return labels[mode] || 'Multi lecteurs';
+        },
+
         openCreateModal() {
             this.editMode = false;
             this.currentReader = {
@@ -331,6 +363,7 @@ function readersManager(eventId) {
                 network_type: 'local', // Default to local
                 custom_ip: '',
                 location: '',
+                mode: 'multi_reader', // Default mode
                 distance_from_start: 0,
                 anti_rebounce_seconds: 3,
                 event_id: this.eventId,
