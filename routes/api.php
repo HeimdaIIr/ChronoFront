@@ -93,6 +93,7 @@ Route::get('rfid/raw-logs', [RfidLogController::class, 'rawLogs']);
 Route::get('rfid/raw-logs/all', [RfidLogController::class, 'allRawLogs']);
 Route::get('rfid/raw-logs/stats', [RfidLogController::class, 'stats']);
 Route::delete('rfid/raw-logs', [RfidLogController::class, 'clearLogs']);
+Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']); // Alias for clear (used by rfidlive-ultra)
 
 // Health check
 Route::get('health', function () {
