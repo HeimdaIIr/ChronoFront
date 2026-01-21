@@ -215,17 +215,6 @@
 
                     <!-- Tab: RFID Readers -->
                     <div x-show="editTab === 'readers'">
-                        <!-- Info Box -->
-                        <div class="alert alert-info mb-4">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Calcul automatique IP :</strong> ChronoFront supporte 3 types de réseaux :
-                            <ul class="mb-0 mt-2">
-                                <li><strong>Local</strong> (192.168.10.X) : <code>192.168.10.{150+XX}</code> où XX = 2 derniers chiffres du serial</li>
-                                <li><strong>VPN ATS Sport</strong> (10.8.0.X) : <code>10.8.0.{serial}</code> - Exemple: Serial 120 → 10.8.0.120</li>
-                                <li><strong>Custom</strong> : IP personnalisée saisie manuellement</li>
-                            </ul>
-                        </div>
-
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0"><i class="bi bi-list"></i> Lecteurs configurés</h6>
                             <div>
@@ -262,10 +251,8 @@
                                     <tr>
                                         <th>Série</th>
                                         <th>Localisation</th>
-                                        <th>Mode</th>
                                         <th>Distance (km)</th>
-                                        <th>Anti-rebond (s)</th>
-                                        <th>Statut</th>
+                                        <th>Plages horaires</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -274,29 +261,26 @@
                                         <tr>
                                             <td><strong x-text="reader.serial"></strong></td>
                                             <td><span class="badge bg-secondary" x-text="reader.location || 'Non défini'"></span></td>
-                                            <td>
-                                                <span class="badge badge-sm" :class="{
-                                                    'bg-info': reader.mode === 'single_reader_simple',
-                                                    'bg-primary': reader.mode === 'single_reader_waves',
-                                                    'bg-success': reader.mode === 'multi_reader',
-                                                    'bg-warning': reader.mode === 'multi_reader_waves'
-                                                }" x-text="getModeLabel(reader.mode || 'multi_reader')" style="font-size: 0.7rem;"></span>
-                                            </td>
                                             <td x-text="reader.distance_from_start + ' km'"></td>
-                                            <td x-text="reader.anti_rebounce_seconds || '3'"></td>
                                             <td>
-                                                <template x-if="!reader.date_test">
-                                                    <span class="badge bg-secondary badge-sm">Jamais connecté</span>
+                                                <template x-if="reader.depart_time_start || reader.arrival_time_start">
+                                                    <div style="font-size: 0.85rem;">
+                                                        <div x-show="reader.depart_time_start" class="text-success">
+                                                            <i class="bi bi-flag"></i> DEPART:
+                                                            <strong x-text="reader.depart_time_start?.substring(0,5)"></strong> -
+                                                            <strong x-text="reader.depart_time_end?.substring(0,5)"></strong>
+                                                        </div>
+                                                        <div x-show="reader.arrival_time_start" class="text-primary">
+                                                            <i class="bi bi-flag-fill"></i> ARRIVEE:
+                                                            <strong x-text="reader.arrival_time_start?.substring(0,5)"></strong>
+                                                            <span x-show="reader.arrival_time_end">
+                                                                - <strong x-text="reader.arrival_time_end?.substring(0,5)"></strong>
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </template>
-                                                <template x-if="reader.date_test && reader.is_online">
-                                                    <span class="badge bg-success badge-sm">
-                                                        <i class="bi bi-check-circle"></i> En ligne
-                                                    </span>
-                                                </template>
-                                                <template x-if="reader.date_test && !reader.is_online">
-                                                    <span class="badge bg-danger badge-sm">
-                                                        <i class="bi bi-x-circle"></i> Hors ligne
-                                                    </span>
+                                                <template x-if="!reader.depart_time_start && !reader.arrival_time_start">
+                                                    <span class="text-muted small">-</span>
                                                 </template>
                                             </td>
                                             <td>
@@ -340,35 +324,40 @@
                 <div class="modal-body">
                     <form @submit.prevent="saveReader">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-12 mb-3">
                                 <label class="form-label">Numéro de série *</label>
                                 <input type="text" class="form-control" x-model="currentReader.serial"
                                        required placeholder="Ex: 107, 112, 120">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Localisation *</label>
-                                <input type="text" class="form-control" x-model="currentReader.location"
-                                       required placeholder="Ex: DEPART, KM5, ARRIVEE">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Mode de chronométrage *</label>
-                                <select class="form-select" x-model="currentReader.mode" required>
-                                    <option value="single_reader_simple">Lecteur unique - Plages horaires</option>
-                                    <option value="single_reader_waves">Lecteur unique - Vagues + TOP départ</option>
-                                    <option value="multi_reader">Multi lecteurs - Checkpoints fixes</option>
-                                    <option value="multi_reader_waves">Multi lecteurs - Vagues + Départ groupé</option>
-                                </select>
-                                <small class="text-muted">Définit comment le lecteur gère les détections</small>
-                            </div>
                         </div>
 
                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Localisation *</label>
+                                <select class="form-select" x-model="currentReader.location" required>
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="DEPART">DEPART</option>
+                                    <option value="Inter1">Inter1</option>
+                                    <option value="Inter2">Inter2</option>
+                                    <option value="Inter3">Inter3</option>
+                                    <option value="Inter4">Inter4</option>
+                                    <option value="Inter5">Inter5</option>
+                                    <option value="Inter6">Inter6</option>
+                                    <option value="Inter7">Inter7</option>
+                                    <option value="Inter8">Inter8</option>
+                                    <option value="Inter9">Inter9</option>
+                                    <option value="Inter10">Inter10</option>
+                                    <option value="ARRIVEE">ARRIVEE</option>
+                                </select>
+                                <small class="text-muted">Type de checkpoint pour le routage automatique des détections</small>
+                            </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Distance depuis départ (km) *</label>
                                 <input type="number" step="0.01" class="form-control"
                                        x-model="currentReader.distance_from_start"
                                        required placeholder="Ex: 0, 5, 10, 21">
                             </div>
+                        </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -384,6 +373,51 @@
                                         <option :value="race.id" x-text="race.name"></option>
                                     </template>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Time Ranges Configuration -->
+                        <div class="alert alert-info mb-3">
+                            
+                            <strong>Plages horaires</strong>
+                            <p class="mb-0 mt-1 small">WIP info plages horaires</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag"></i> Mode DEPART - Début
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.depart_time_start"
+                                       placeholder="15:00">
+                                <small class="text-muted">Heure de début du mode DEPART (ex: 15:00)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag"></i> Mode DEPART - Fin
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.depart_time_end"
+                                       placeholder="15:30">
+                                <small class="text-muted">Heure de fin du mode DEPART (ex: 15:30)</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag-fill"></i> Mode ARRIVEE - Début
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.arrival_time_start"
+                                       placeholder="15:30">
+                                <small class="text-muted">Heure de début du mode ARRIVEE (ex: 15:30)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-flag-fill"></i> Mode ARRIVEE - Fin
+                                </label>
+                                <input type="time" class="form-control" x-model="currentReader.arrival_time_end"
+                                       placeholder="19:00">
+                                <small class="text-muted">Heure de fin (optionnel, vide = jusqu'à la fin)</small>
                             </div>
                         </div>
 
@@ -579,27 +613,20 @@ function eventsManager() {
             });
         },
 
-        getModeLabel(mode) {
-            const labels = {
-                'single_reader_simple': 'Simple',
-                'single_reader_waves': 'Vagues',
-                'multi_reader': 'Multi',
-                'multi_reader_waves': 'Multi+Vagues'
-            };
-            return labels[mode] || 'Multi';
-        },
-
         openReaderModal() {
             this.readerEditMode = false;
             this.currentReader = {
                 serial: '',
                 location: '',
-                mode: 'multi_reader',
                 distance_from_start: 0,
                 anti_rebounce_seconds: 3,
                 event_id: this.editingEvent.id,
                 race_id: '',
-                is_active: true
+                is_active: true,
+                depart_time_start: '',
+                depart_time_end: '',
+                arrival_time_start: '',
+                arrival_time_end: ''
             };
             this.showReaderModal = true;
         },
