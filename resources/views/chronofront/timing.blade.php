@@ -1986,14 +1986,16 @@ function chronoApp() {
         init() {
             this.startClock();
             this.loadEvent().then(() => {
-                this.loadAlertThreshold();
-                this.loadManualTimestampsFromStorage(); // Load manual timestamps after event is loaded
-                // Checkpoint is now loaded in loadEvent() after readers are loaded
-            });
-            this.loadRaces().then(() => this.autoSelectLastStartedRace());
-            this.loadCategories();
-            this.loadAllResults().then(() => {
-                this.loadAlertsFromStorage(); // Restore alerts after loading results
+                // Only load races, results, etc. if we have an active event
+                if (this.currentEventId) {
+                    this.loadAlertThreshold();
+                    this.loadManualTimestampsFromStorage();
+                    this.loadRaces().then(() => this.autoSelectLastStartedRace());
+                    this.loadCategories();
+                    this.loadAllResults().then(() => {
+                        this.loadAlertsFromStorage();
+                    });
+                }
             });
             this.startAutoRefresh();
             this.startAlertCheck();
@@ -2083,8 +2085,15 @@ function chronoApp() {
         },
 
         async loadRaces() {
+            // Don't load races if no active event
+            if (!this.currentEventId) {
+                this.races = [];
+                return;
+            }
+
             try {
-                const response = await axios.get('/races');
+                // Load only races for current active event
+                const response = await axios.get(`/races/event/${this.currentEventId}`);
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur chargement courses', error);
