@@ -3040,6 +3040,37 @@ function chronoApp() {
             this.autoRefreshInterval = setInterval(() => {
                 this.checkForNewResults();
             }, 1000);
+
+            // Check every 30 seconds if event is still active
+            setInterval(() => {
+                this.checkEventStatus();
+            }, 30000);
+        },
+
+        async checkEventStatus() {
+            try {
+                const response = await axios.get('/events/active/list');
+
+                // If no active event and we currently have one loaded, clear the interface
+                if (response.data.length === 0 && this.currentEventId) {
+                    this.currentEvent = null;
+                    this.eventName = 'Aucun événement actif';
+                    this.currentEventId = null;
+                    this.readers = [];
+                    this.races = [];
+                    this.detections = [];
+                    this.results = [];
+                    this.showToast('L\'événement a été archivé', 'info');
+                }
+
+                // If active event changed, reload
+                if (response.data.length > 0 && response.data[0].id !== this.currentEventId) {
+                    await this.loadEvent();
+                    this.showToast('Événement mis à jour', 'info');
+                }
+            } catch (error) {
+                console.error('Erreur vérification statut événement:', error);
+            }
         },
 
         startAlertCheck() {
