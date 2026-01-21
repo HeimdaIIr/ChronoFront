@@ -57,22 +57,32 @@ class ReaderController extends Controller
         if (isset($data['race_id']) && $data['race_id'] === '') {
             $data['race_id'] = null;
         }
-
+        if (isset($data['custom_ip']) && $data['custom_ip'] === '') {
+            $data['custom_ip'] = null;
+        }
+        
         // Fusionner les données nettoyées dans la request
         $request->merge($data);
-
+        
         $validated = $request->validate([
             'serial' => 'required|string|max:50',
             'name' => 'nullable|string|max:200',
+            'network_type' => 'nullable|in:local,vpn,custom',
+            'custom_ip' => 'nullable|string|max:50|ip',
+            'http_username' => 'nullable|string|max:100',
+            'http_password' => 'nullable|string|max:255',
             'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
-            'location' => 'required|string|max:100',
-            'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',
+            'location' => 'required|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
             'distance_from_start' => 'required|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date|after_or_equal:date_min',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Calculate checkpoint_order based on distance for this event
@@ -106,22 +116,32 @@ class ReaderController extends Controller
         if (isset($data['race_id']) && $data['race_id'] === '') {
             $data['race_id'] = null;
         }
-
+        if (isset($data['custom_ip']) && $data['custom_ip'] === '') {
+            $data['custom_ip'] = null;
+        }
+        
         // Fusionner les données nettoyées dans la request
         $request->merge($data);
-
+        
         $validated = $request->validate([
             'serial' => 'sometimes|string|max:50',
             'name' => 'nullable|string|max:200',
+            'network_type' => 'sometimes|in:local,vpn,custom',
+            'custom_ip' => 'nullable|string|max:50|ip',
+            'http_username' => 'nullable|string|max:100',
+            'http_password' => 'nullable|string|max:255',
             'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
-            'location' => 'sometimes|string|max:100',
-            'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',
+            'location' => 'sometimes|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
             'distance_from_start' => 'sometimes|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',
             'date_max' => 'nullable|date',
             'is_active' => 'nullable|boolean',
+            'depart_time_start' => 'nullable|date_format:H:i',
+            'depart_time_end' => 'nullable|date_format:H:i',
+            'arrival_time_start' => 'nullable|date_format:H:i',
+            'arrival_time_end' => 'nullable|date_format:H:i',
         ]);
 
         // Recalculate checkpoint_order if distance or event changed
@@ -230,6 +250,7 @@ class ReaderController extends Controller
                     'reader_id' => $reader->id,
                     'serial' => $reader->serial,
                     'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
                     'http_code' => $httpCode,
                     'status' => 'online'
                 ];
@@ -238,6 +259,7 @@ class ReaderController extends Controller
                     'reader_id' => $reader->id,
                     'serial' => $reader->serial,
                     'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
                     'status' => 'offline'
                 ];
             }
@@ -289,17 +311,21 @@ class ReaderController extends Controller
                     'date_test' => now(),
                 ]);
 
-                $status = match($httpCode) {
-                    200 => ' (Authenticated ✓)',
-                    401 => ' (Auth required)',
-                    403 => ' (Blocked by proxy)',
-                    default => ''
-                };
+                // Determine status message based on HTTP code (PHP 7.3 compatible)
+                $status = '';
+                if ($httpCode === 200) {
+                    $status = ' (Authenticated ✓)';
+                } elseif ($httpCode === 401) {
+                    $status = ' (Auth required)';
+                } elseif ($httpCode === 403) {
+                    $status = ' (Blocked by proxy)';
+                }
 
                 return response()->json([
                     'success' => true,
                     'message' => "Reader is online (HTTP {$httpCode}){$status}",
                     'ip' => $readerIp,
+                    'network_type' => $reader->network_type,
                     'http_code' => $httpCode,
                     'reader' => $reader
                 ]);
@@ -307,14 +333,16 @@ class ReaderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Reader is offline or unreachable: ' . ($curlError ?: 'No response'),
-                    'ip' => $readerIp
+                    'ip' => $readerIp,
+                    'network_type' => $reader->network_type
                 ], 503);
             }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error pinging reader: ' . $e->getMessage(),
-                'ip' => $readerIp
+                'ip' => $readerIp,
+                'network_type' => $reader->network_type
             ], 500);
         }
     }
@@ -354,12 +382,12 @@ class ReaderController extends Controller
             'target_method' => 'PUT',
             'serial' => $reader->serial,
             'event_id' => $reader->event_id,
-            'event_name' => $reader->event?->name,
+            'event_name' => $reader->event ? $reader->event->name : null,
             'race_id' => $reader->race_id,
             'location' => $reader->location,
             'anti_rebounce_seconds' => $reader->anti_rebounce_seconds ?? 5,
-            'date_min' => $reader->date_min?->toIso8601String(),
-            'date_max' => $reader->date_max?->toIso8601String(),
+            'date_min' => $reader->date_min ? $reader->date_min->toIso8601String() : null,
+            'date_max' => $reader->date_max ? $reader->date_max->toIso8601String() : null,
             'configured_at' => now()->toIso8601String(),
         ]);
     }
