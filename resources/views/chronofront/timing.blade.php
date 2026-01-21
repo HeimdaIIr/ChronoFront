@@ -2144,6 +2144,11 @@ function chronoApp() {
         },
 
         async checkForNewResults() {
+            // Don't check for results if no active event
+            if (!this.currentEventId) {
+                return;
+            }
+
             // Silent check for new results without loading spinner
             try {
                 const response = await axios.get('/results?timing_mode=true');
@@ -3041,10 +3046,10 @@ function chronoApp() {
                 this.checkForNewResults();
             }, 1000);
 
-            // Check every 30 seconds if event is still active
+            // Check every 5 seconds if event is still active (reduced from 30s for faster response)
             setInterval(() => {
                 this.checkEventStatus();
-            }, 30000);
+            }, 5000);
         },
 
         async checkEventStatus() {
@@ -3053,6 +3058,7 @@ function chronoApp() {
 
                 // If no active event and we currently have one loaded, clear the interface
                 if (response.data.length === 0 && this.currentEventId) {
+                    // Clear ALL data to have a clean interface
                     this.currentEvent = null;
                     this.eventName = 'Aucun événement actif';
                     this.currentEventId = null;
@@ -3060,6 +3066,9 @@ function chronoApp() {
                     this.races = [];
                     this.detections = [];
                     this.results = [];
+                    this.selectedRaceId = null;
+                    this.selectedCheckpointId = null;
+                    this.liveResults = [];
                     this.showToast('L\'événement a été archivé', 'info');
                 }
 
