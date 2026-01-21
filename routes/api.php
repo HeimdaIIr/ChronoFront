@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\RfidLogController;
 */
 
 // Events Routes
+Route::get('events/active/list', [EventController::class, 'activeEvents']);
 Route::apiResource('events', EventController::class);
 
 // Races Routes

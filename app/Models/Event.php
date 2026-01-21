@@ -33,4 +33,30 @@ class Event extends Model
     {
         return $this->hasMany(Race::class);
     }
+
+    /**
+     * Check if event is currently active
+     * An event is active if:
+     * - is_active flag is true
+     * - current datetime is between date_start and date_end
+     */
+    public function isCurrentlyActive(): bool
+    {
+        if (!$this->is_active) {
+            return false;
+        }
+
+        $now = now();
+        return $now >= $this->date_start && $now <= $this->date_end;
+    }
+
+    /**
+     * Scope to get only currently active events
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)
+                    ->where('date_start', '<=', now())
+                    ->where('date_end', '>=', now());
+    }
 }

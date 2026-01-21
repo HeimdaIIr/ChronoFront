@@ -2047,17 +2047,28 @@ function chronoApp() {
 
         async loadEvent() {
             try {
-                // Load first active event
-                const response = await axios.get('/events');
-                const activeEvent = response.data.find(e => e.is_active) || response.data[0];
-                if (activeEvent) {
-                    this.currentEvent = activeEvent;
-                    this.eventName = activeEvent.name;
-                    this.currentEventId = activeEvent.id;
-                    // Reload readers when event is loaded, then load checkpoint
-                    await this.loadReaders();
-                    this.loadManualCheckpointFromStorage();
+                // Load only currently active events (is_active=true AND within date range)
+                const response = await axios.get('/events/active/list');
+
+                if (response.data.length === 0) {
+                    // No active event - clear everything
+                    this.currentEvent = null;
+                    this.eventName = 'Aucun événement actif';
+                    this.currentEventId = null;
+                    this.readers = [];
+                    this.races = [];
+                    this.detections = [];
+                    return;
                 }
+
+                // Load first active event
+                const activeEvent = response.data[0];
+                this.currentEvent = activeEvent;
+                this.eventName = activeEvent.name;
+                this.currentEventId = activeEvent.id;
+                // Reload readers when event is loaded, then load checkpoint
+                await this.loadReaders();
+                this.loadManualCheckpointFromStorage();
             } catch (error) {
                 console.error('Erreur chargement événement', error);
             }

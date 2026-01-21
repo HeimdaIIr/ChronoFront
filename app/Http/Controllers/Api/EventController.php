@@ -22,6 +22,20 @@ class EventController extends Controller
     }
 
     /**
+     * Get only currently active events (for timing interface)
+     * Active = is_active flag + current date between date_start and date_end
+     */
+    public function activeEvents(): JsonResponse
+    {
+        $events = Event::active()
+            ->with('races')
+            ->orderBy('date_start', 'desc')
+            ->get();
+
+        return response()->json($events);
+    }
+
+    /**
      * Store a newly created event
      */
     public function store(Request $request): JsonResponse
