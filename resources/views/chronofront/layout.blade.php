@@ -280,6 +280,18 @@
                                 <i class="bi bi-trophy"></i> Épreuves
                             </a>
                         </li>
+                        @php
+                            // Vérifier si au moins un lecteur a un mode avec vagues
+                            $hasWavesMode = \App\Models\Reader::whereIn('mode', ['single_reader_waves', 'multi_reader_waves'])->exists();
+                        @endphp
+                        @if($hasWavesMode)
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('chronofront.waves') ? 'active' : '' }}"
+                               href="{{ route('waves') }}">
+                                <i class="bi bi-water"></i> Vagues
+                            </a>
+                        </li>
+                        @endif
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('chronofront.timing') ? 'active' : '' }}"
                                href="{{ route('timing') }}">

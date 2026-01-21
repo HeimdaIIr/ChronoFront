@@ -179,11 +179,6 @@
                                 <i class="bi bi-broadcast"></i> Lecteurs RFID
                             </button>
                         </li>
-                        <li class="nav-item" x-show="hasWavesMode">
-                            <button class="nav-link" :class="{'active': editTab === 'waves'}" @click="editTab = 'waves'">
-                                <i class="bi bi-water"></i> Vagues
-                            </button>
-                        </li>
                     </ul>
 
                     <!-- Tab: Event Information -->
@@ -311,26 +306,6 @@
                                     </template>
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-
-                    <!-- Tab: Vagues (uniquement pour modes avec vagues) -->
-                    <div x-show="editTab === 'waves'">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0"><i class="bi bi-water"></i> Gestion des vagues de départ</h6>
-                            <button class="btn btn-sm btn-primary">
-                                <i class="bi bi-plus-circle"></i> Nouvelle vague
-                            </button>
-                        </div>
-
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>À venir :</strong> Interface de gestion des vagues (création, édition, assignation des participants, bouton TOP départ)
-                        </div>
-
-                        <div class="text-center text-muted py-5">
-                            <i class="bi bi-water" style="font-size: 3rem;"></i>
-                            <p class="mt-3">Aucune vague configurée pour cet événement</p>
                         </div>
                     </div>
                 </div>
@@ -653,13 +628,6 @@ function eventsManager() {
             return [...this.readers].sort((a, b) => {
                 return parseFloat(a.distance_from_start || 0) - parseFloat(b.distance_from_start || 0);
             });
-        },
-
-        get hasWavesMode() {
-            // Vérifie si au moins un lecteur a un mode contenant "waves"
-            return this.readers.some(reader =>
-                reader.mode === 'single_reader_waves' || reader.mode === 'multi_reader_waves'
-            );
         },
 
         getModeLabel(mode) {
