@@ -13,8 +13,6 @@ class Reader extends Model
     protected $fillable = [
         'serial',
         'name',
-        'network_type',
-        'custom_ip',
         'http_username',
         'http_password',
         'event_id',
@@ -96,21 +94,14 @@ class Reader extends Model
     }
 
     /**
-     * Calculate IP address based on network type and serial
+     * Calculate IP address based on serial number
+     * Format: 192.168.10.{150 + last 2 digits of serial}
      */
     public function getCalculatedIpAttribute(): string
     {
-        switch ($this->network_type ?? 'local') {
-            case 'vpn':
-                return "10.8.0.{$this->serial}";
-            case 'custom':
-                return $this->custom_ip ?? '0.0.0.0';
-            case 'local':
-            default:
-                $lastTwoDigits = substr((string)$this->serial, -2);
-                $ipSuffix = 150 + (int)$lastTwoDigits;
-                return "192.168.10.{$ipSuffix}";
-        }
+        $lastTwoDigits = substr((string)$this->serial, -2);
+        $ipSuffix = 150 + (int)$lastTwoDigits;
+        return "192.168.10.{$ipSuffix}";
     }
 
     /**
@@ -169,24 +160,18 @@ class Reader extends Model
     }
 
     /**
-     * Get the web config URL (for VPN ATS Sport)
+     * Get the web config URL
      */
-    public function getWebConfigUrlAttribute(): ?string
+    public function getWebConfigUrlAttribute(): string
     {
-        if ($this->network_type === 'vpn') {
-            return "http://{$this->serial}.conf.ats-sport.com/";
-        }
-        return null;
+        return "http://{$this->serial}.conf.ats-sport.com/";
     }
 
     /**
-     * Get the ChronoFront URL (for VPN ATS Sport)
+     * Get the ChronoFront URL
      */
-    public function getChronoFrontUrlAttribute(): ?string
+    public function getChronoFrontUrlAttribute(): string
     {
-        if ($this->network_type === 'vpn') {
-            return "http://{$this->serial}.course.ats-sport.com/";
-        }
-        return null;
+        return "http://{$this->serial}.course.ats-sport.com/";
     }
 }

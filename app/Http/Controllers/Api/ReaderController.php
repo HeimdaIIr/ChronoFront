@@ -57,20 +57,13 @@ class ReaderController extends Controller
         if (isset($data['race_id']) && $data['race_id'] === '') {
             $data['race_id'] = null;
         }
-        if (isset($data['custom_ip']) && $data['custom_ip'] === '') {
-            $data['custom_ip'] = null;
-        }
-        
+
         // Fusionner les données nettoyées dans la request
         $request->merge($data);
-        
+
         $validated = $request->validate([
             'serial' => 'required|string|max:50',
             'name' => 'nullable|string|max:200',
-            'network_type' => 'nullable|in:local,vpn,custom',
-            'custom_ip' => 'nullable|string|max:50|ip',
-            'http_username' => 'nullable|string|max:100',
-            'http_password' => 'nullable|string|max:255',
             'event_id' => 'required|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'required|string|max:100',
@@ -113,20 +106,13 @@ class ReaderController extends Controller
         if (isset($data['race_id']) && $data['race_id'] === '') {
             $data['race_id'] = null;
         }
-        if (isset($data['custom_ip']) && $data['custom_ip'] === '') {
-            $data['custom_ip'] = null;
-        }
-        
+
         // Fusionner les données nettoyées dans la request
         $request->merge($data);
-        
+
         $validated = $request->validate([
             'serial' => 'sometimes|string|max:50',
             'name' => 'nullable|string|max:200',
-            'network_type' => 'sometimes|in:local,vpn,custom',
-            'custom_ip' => 'nullable|string|max:50|ip',
-            'http_username' => 'nullable|string|max:100',
-            'http_password' => 'nullable|string|max:255',
             'event_id' => 'sometimes|exists:events,id',
             'race_id' => 'nullable|exists:races,id',
             'location' => 'sometimes|string|max:100',
@@ -244,7 +230,6 @@ class ReaderController extends Controller
                     'reader_id' => $reader->id,
                     'serial' => $reader->serial,
                     'ip' => $readerIp,
-                    'network_type' => $reader->network_type,
                     'http_code' => $httpCode,
                     'status' => 'online'
                 ];
@@ -253,7 +238,6 @@ class ReaderController extends Controller
                     'reader_id' => $reader->id,
                     'serial' => $reader->serial,
                     'ip' => $readerIp,
-                    'network_type' => $reader->network_type,
                     'status' => 'offline'
                 ];
             }
@@ -316,7 +300,6 @@ class ReaderController extends Controller
                     'success' => true,
                     'message' => "Reader is online (HTTP {$httpCode}){$status}",
                     'ip' => $readerIp,
-                    'network_type' => $reader->network_type,
                     'http_code' => $httpCode,
                     'reader' => $reader
                 ]);
@@ -324,16 +307,14 @@ class ReaderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Reader is offline or unreachable: ' . ($curlError ?: 'No response'),
-                    'ip' => $readerIp,
-                    'network_type' => $reader->network_type
+                    'ip' => $readerIp
                 ], 503);
             }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error pinging reader: ' . $e->getMessage(),
-                'ip' => $readerIp,
-                'network_type' => $reader->network_type
+                'ip' => $readerIp
             ], 500);
         }
     }
