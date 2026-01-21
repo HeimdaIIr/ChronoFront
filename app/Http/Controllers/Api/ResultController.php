@@ -21,6 +21,16 @@ class ResultController extends Controller
     {
         $query = Result::with(['entrant.category', 'wave', 'race']);
 
+        // In timing mode, only show results from currently active events
+        $timingMode = $request->boolean('timing_mode', false);
+        if ($timingMode) {
+            $query->whereHas('race.event', function($q) {
+                $q->where('is_active', true)
+                  ->where('date_start', '<=', now())
+                  ->where('date_end', '>=', now());
+            });
+        }
+
         // Apply filters if provided
         $hasFilters = false;
 
@@ -81,8 +91,6 @@ class ResultController extends Controller
         // For multi-lap races, show only ONE result per runner (their latest/last lap)
         // This prevents showing duplicates in the results table
         // EXCEPT in timing mode where we want to see ALL laps
-        $timingMode = $request->boolean('timing_mode', false);
-
         if (!$timingMode) {
             $results = $results->groupBy('entrant_id')->map(function ($entrantResults) {
                 // Get the race type from the first result
