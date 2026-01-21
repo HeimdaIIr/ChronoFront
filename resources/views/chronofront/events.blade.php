@@ -678,13 +678,11 @@ function eventsManager() {
                 } else {
                     await axios.post('/readers', this.currentReader);
                 }
-                this.closeReaderModal();
-                await this.loadReaders();
-                alert('Lecteur enregistré avec succès !');
+                // Recharger la page pour mettre à jour la navbar (onglet Vagues)
+                window.location.reload();
             } catch (error) {
                 console.error('Error saving reader:', error);
                 alert('Erreur lors de l\'enregistrement du lecteur');
-            } finally {
                 this.savingReader = false;
             }
         },
@@ -694,8 +692,8 @@ function eventsManager() {
 
             try {
                 await axios.delete(`/readers/${id}`);
-                await this.loadReaders();
-                alert('Lecteur supprimé avec succès !');
+                // Recharger la page pour mettre à jour la navbar (onglet Vagues)
+                window.location.reload();
             } catch (error) {
                 console.error('Error deleting reader:', error);
                 alert('Erreur lors de la suppression du lecteur');
