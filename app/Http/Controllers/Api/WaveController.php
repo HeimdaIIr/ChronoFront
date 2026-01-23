@@ -178,9 +178,10 @@ public function topDepart(Request $request, Wave $wave)
         'wave' => [
             'id' => $wave->id,
             'name' => $wave->name,
-            'real_start_time' => $wave->real_start_time->format('Y-m-d H:i:s'),
-            'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
-            'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+            // Use ISO 8601 format with timezone to prevent JavaScript timezone confusion
+            'real_start_time' => $wave->real_start_time->toIso8601String(),
+            'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->toIso8601String(),
+            'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->toIso8601String(),
         ],
     ]);
 }
@@ -217,10 +218,11 @@ public function topDepart(Request $request, Wave $wave)
             'wave' => [
                 'id' => $wave->id,
                 'name' => $wave->name,
-                'old_real_start_time' => $oldTime ? $oldTime->format('Y-m-d H:i:s') : null,
-                'new_real_start_time' => $wave->real_start_time->format('Y-m-d H:i:s'),
-                'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
-                'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->format('Y-m-d H:i:s'),
+                // Use ISO 8601 format with timezone to prevent JavaScript timezone confusion
+                'old_real_start_time' => $oldTime ? $oldTime->toIso8601String() : null,
+                'new_real_start_time' => $wave->real_start_time->toIso8601String(),
+                'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->toIso8601String(),
+                'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->toIso8601String(),
             ],
             'reprocessed' => $reprocessResult['detections_reprocessed'],
             'results_updated' => $reprocessResult['results_updated'],
