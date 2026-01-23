@@ -114,22 +114,6 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm mb-1">
-                                        <button
-                                            class="btn btn-success"
-                                            @click="startWave(wave)"
-                                            x-show="!wave.is_started"
-                                            title="Démarrer"
-                                        >
-                                            <i class="bi bi-play-fill"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-danger"
-                                            @click="endWave(wave)"
-                                            x-show="wave.is_started && !wave.end_time"
-                                            title="Terminer"
-                                        >
-                                            <i class="bi bi-stop-fill"></i>
-                                        </button>
                                         <button class="btn btn-outline-primary" @click="openEditModal(wave)" title="Modifier">
                                             <i class="bi bi-pencil"></i>
                                         </button>
