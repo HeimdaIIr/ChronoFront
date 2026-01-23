@@ -2050,7 +2050,10 @@ function chronoApp() {
         async loadEvent() {
             try {
                 // Load only currently active events (is_active=true AND within date range)
-                const response = await axios.get('/events/active/list');
+                // Add timestamp to prevent caching
+                const response = await axios.get('/events/active/list', {
+                    params: { _t: Date.now() }
+                });
 
                 if (response.data.length === 0) {
                     // No active event - clear everything
@@ -2118,7 +2121,10 @@ function chronoApp() {
 
             try {
                 // Load only races for current active event
-                const response = await axios.get(`/races/event/${this.currentEventId}`);
+                // Add timestamp to prevent caching
+                const response = await axios.get(`/races/event/${this.currentEventId}`, {
+                    params: { _t: Date.now() }
+                });
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur chargement courses', error);
@@ -2133,7 +2139,10 @@ function chronoApp() {
             }
 
             try {
-                const response = await axios.get('/categories');
+                // Add timestamp to prevent caching
+                const response = await axios.get('/categories', {
+                    params: { _t: Date.now() }
+                });
                 this.categories = response.data;
             } catch (error) {
                 console.error('Erreur chargement catégories', error);
@@ -2142,12 +2151,16 @@ function chronoApp() {
 
         async loadReaders() {
             if (!this.currentEventId) {
+                this.readers = [];
                 return; // Wait for event to load
             }
 
             try {
                 // Load only readers for current event
-                const response = await axios.get(`/readers/event/${this.currentEventId}`);
+                // Add timestamp to prevent caching
+                const response = await axios.get(`/readers/event/${this.currentEventId}`, {
+                    params: { _t: Date.now() }
+                });
                 this.readers = response.data;
             } catch (error) {
                 console.error('Erreur chargement lecteurs', error);
@@ -2172,7 +2185,13 @@ function chronoApp() {
                     }
                 });
 
-                const response = await axios.get('/results?timing_mode=true');
+                // Add timestamp to prevent caching
+                const response = await axios.get('/results', {
+                    params: {
+                        timing_mode: true,
+                        _t: Date.now()
+                    }
+                });
                 this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
 
                 // Restore alerts after reload
@@ -2198,7 +2217,13 @@ function chronoApp() {
 
             // Silent check for new results without loading spinner
             try {
-                const response = await axios.get('/results?timing_mode=true');
+                // Add timestamp to prevent caching
+                const response = await axios.get('/results', {
+                    params: {
+                        timing_mode: true,
+                        _t: Date.now()
+                    }
+                });
                 const newResults = response.data;
 
                 // Find truly new results (not in current array)
@@ -3101,7 +3126,10 @@ function chronoApp() {
 
         async checkEventStatus() {
             try {
-                const response = await axios.get('/events/active/list');
+                // Add timestamp to prevent caching
+                const response = await axios.get('/events/active/list', {
+                    params: { _t: Date.now() }
+                });
 
                 // If no active event and we currently have one loaded, clear the interface
                 if (response.data.length === 0 && this.currentEventId) {
