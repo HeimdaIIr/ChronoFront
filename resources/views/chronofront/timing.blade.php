@@ -2059,7 +2059,32 @@ function chronoApp() {
                     this.currentEventId = null;
                     this.readers = [];
                     this.races = [];
+                    this.categories = [];
                     this.detections = [];
+                    this.results = [];
+                    this.displayedResults = [];
+                    this.selectedRaceId = null;
+                    this.selectedCheckpointId = null;
+                    this.liveResults = [];
+                    this.selectedResult = null;
+                    this.runnerCheckpoints = [];
+                    this.runnerAverageSpeed = null;
+                    this.raceChrono = '00:00:00';
+                    this.alertMessage = null;
+
+                    // Clear filters
+                    this.searchQuery = '';
+                    this.categoryFilter = '';
+                    this.sasFilter = '';
+                    this.raceFilter = '';
+                    this.checkpointFilter = '';
+                    this.lapFilter = '';
+
+                    // Clear editing states
+                    this.editingField = null;
+                    this.editingValue = '';
+                    this.editingCheckpointId = null;
+
                     return;
                 }
 
@@ -2101,6 +2126,12 @@ function chronoApp() {
         },
 
         async loadCategories() {
+            // Don't load categories if no active event
+            if (!this.currentEventId) {
+                this.categories = [];
+                return;
+            }
+
             try {
                 const response = await axios.get('/categories');
                 this.categories = response.data;
@@ -2124,6 +2155,13 @@ function chronoApp() {
         },
 
         async loadAllResults() {
+            // Don't load results if no active event
+            if (!this.currentEventId) {
+                this.results = [];
+                this.displayedResults = [];
+                return;
+            }
+
             this.loading = true;
             try {
                 // Save existing alerts before reload
@@ -3073,11 +3111,32 @@ function chronoApp() {
                     this.currentEventId = null;
                     this.readers = [];
                     this.races = [];
+                    this.categories = [];
                     this.detections = [];
                     this.results = [];
+                    this.displayedResults = [];
                     this.selectedRaceId = null;
                     this.selectedCheckpointId = null;
                     this.liveResults = [];
+                    this.selectedResult = null;
+                    this.runnerCheckpoints = [];
+                    this.runnerAverageSpeed = null;
+                    this.raceChrono = '00:00:00';
+                    this.alertMessage = null;
+
+                    // Clear filters
+                    this.searchQuery = '';
+                    this.categoryFilter = '';
+                    this.sasFilter = '';
+                    this.raceFilter = '';
+                    this.checkpointFilter = '';
+                    this.lapFilter = '';
+
+                    // Clear editing states
+                    this.editingField = null;
+                    this.editingValue = '';
+                    this.editingCheckpointId = null;
+
                     this.showToast('L\'événement a été archivé', 'info');
                 }
 
