@@ -23,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Force PHP timezone to match Laravel config
+        // This ensures PHP date functions use the same timezone as Carbon/Laravel
+        date_default_timezone_set(config('app.timezone'));
     }
 }
