@@ -435,14 +435,35 @@ function wavesManager() {
                 const response = await axios.post(`/api/waves/${wave.id}/top-depart`);
                 const data = response.data;
 
-                this.successMessage = `TOP départ enregistré pour "${wave.name}" à ${data.wave.real_start_time}`;
+                this.successMessage = `TOP départ enregistré pour "${wave.name}"`;
                 this.loadWaves();
+
+                // Format dates for display (ISO 8601 to local time)
+                const formatDateTime = (isoString) => {
+                    const date = new Date(isoString);
+                    return date.toLocaleString('fr-FR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                };
+
+                const formatTime = (isoString) => {
+                    const date = new Date(isoString);
+                    return date.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
 
                 // Show window info
                 alert(`✅ TOP départ enregistré !\n\n` +
                       `Vague: ${data.wave.name}\n` +
-                      `Heure réelle: ${data.wave.real_start_time}\n` +
-                      `Fenêtre DEPART: ${data.wave.depart_window_start} → ${data.wave.depart_window_end}`);
+                      `Heure réelle: ${formatDateTime(data.wave.real_start_time)}\n` +
+                      `Fenêtre DÉPART: ${formatTime(data.wave.depart_window_start)} → ${formatTime(data.wave.depart_window_end)}`);
             } catch (error) {
                 alert('Erreur lors de l\'enregistrement du TOP départ : ' + (error.response?.data?.message || error.message));
             }
