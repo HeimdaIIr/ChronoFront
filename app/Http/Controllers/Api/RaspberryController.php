@@ -346,7 +346,7 @@ class RaspberryController extends Controller
                     ->where('reader_id', $reader->id)
                     ->where('reader_location', 'ARRIVEE')
                     ->first();
-                
+
                 if ($existingResult) {
                     Log::info("ARRIVEE already recorded - skipping", [
                         'bib' => $bibNumber,
@@ -354,21 +354,41 @@ class RaspberryController extends Controller
                         'existing_time' => $existingResult->raw_time,
                         'current_time' => $datetime->format('Y-m-d H:i:s'),
                     ]);
-                    
+
                     // Store detection in database
                     $this->storeRfidDetection(
-                        $reader, 
-                        $serial, 
-                        $datetime, 
-                        $entrant, 
+                        $reader,
+                        $serial,
+                        $datetime,
+                        $entrant,
                         $entrant->wave_id,
                         'skipped',
                         null,
                         "ARRIVEE already recorded"
                     );
-                    
+
                     $skipped++;
                     continue; // Skip this detection
+                }
+
+                // FALLBACK: For Mode 2 (single_reader_waves), if entrant has no start_time,
+                // use wave's real_start_time as fallback (runner never detected during DEPART window)
+                if ($reader->mode === 'single_reader_waves' && !$entrant->start_time) {
+                    $wave = $entrant->wave;
+                    if ($wave && $wave->real_start_time) {
+                        // Extract time portion from wave's real_start_time
+                        $realStartTime = Carbon::parse($wave->real_start_time);
+                        $entrant->start_time = $realStartTime->format('H:i:s');
+                        $entrant->save();
+
+                        Log::info("Fallback start_time assigned from wave TOP départ", [
+                            'bib' => $bibNumber,
+                            'entrant_id' => $entrant->id,
+                            'wave_id' => $wave->id,
+                            'real_start_time' => $wave->real_start_time,
+                            'assigned_start_time' => $entrant->start_time,
+                        ]);
+                    }
                 }
             }
 

@@ -140,7 +140,7 @@ class Result extends Model
 
     /**
      * Calculate time from individual start, wave start or race start (TOP DÉPART)
-     * Priorité : entrant.start_time > wave.start_time > race.start_time
+     * Priorité : entrant.start_time > wave.real_start_time > wave.start_time > race.start_time
      */
     public function calculateTime(): void
     {
@@ -163,7 +163,16 @@ class Result extends Model
             return;
         }
 
-        // PRIORITÉ 2 : Heure de départ de la vague
+        // PRIORITÉ 2 : Heure réelle de départ de la vague (TOP départ effectué)
+        if ($this->wave && $this->wave->real_start_time) {
+            $start = \Carbon\Carbon::parse($this->wave->real_start_time);
+            $end = \Carbon\Carbon::parse($this->raw_time);
+
+            $this->calculated_time = abs($end->diffInSeconds($start));
+            return;
+        }
+
+        // PRIORITÉ 3 : Heure planifiée de départ de la vague
         if ($this->wave && $this->wave->start_time) {
             $start = \Carbon\Carbon::parse($this->wave->start_time);
             $end = \Carbon\Carbon::parse($this->raw_time);
@@ -172,7 +181,7 @@ class Result extends Model
             return;
         }
 
-        // PRIORITÉ 3 : TOP DÉPART de la course (fallback)
+        // PRIORITÉ 4 : TOP DÉPART de la course (fallback)
         if ($this->race && $this->race->start_time) {
             $start = \Carbon\Carbon::parse($this->race->start_time);
             $end = \Carbon\Carbon::parse($this->raw_time);
