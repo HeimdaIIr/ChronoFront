@@ -749,10 +749,18 @@ class RaspberryController extends Controller
                     $wave = $entrant->wave;
                     if ($wave && $wave->real_start_time) {
                         return $this->determineByWaveWindow($wave, $datetime);
+                    } else {
+                        // Vague pas encore lancée (pas de real_start_time) = IGNORE toutes détections
+                        Log::info("Detection IGNORED - wave not started yet", [
+                            'wave_id' => $wave ? $wave->id : 'null',
+                            'wave_name' => $wave ? $wave->name : 'null',
+                            'real_start_time' => 'null',
+                        ]);
+                        return null;
                     }
                 }
-                // Fallback sur plages horaires si pas de TOP départ configuré
-                return $this->determineByTimeRanges($reader, $datetime);
+                // Pas de vague assignée = IGNORE
+                return null;
 
             case 'multi_reader':
                 // MODE 3: Multi lecteurs sans vagues, chaque lecteur = checkpoint fixe

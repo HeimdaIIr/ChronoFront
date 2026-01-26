@@ -2769,14 +2769,36 @@ function chronoApp() {
 
                 this.runnerCheckpoints = [];
 
-                // Add race start
+                // Add race start with priority: entrant.start_time > wave.real_start_time > wave.start_time > race.start_time
                 const runnerWave = this.selectedResult.wave;
-                const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
+                const runnerEntrant = this.selectedResult.entrant;
+
+                // Determine start time with priority
+                let startTime = null;
+                let startLabel = 'DÉPART';
+
+                if (runnerEntrant && runnerEntrant.start_time) {
+                    // Priority 1: Individual start time (detected in DEPART window)
+                    startTime = runnerEntrant.start_time;
+                    startLabel = 'DÉPART (détecté)';
+                } else if (runnerWave && runnerWave.real_start_time) {
+                    // Priority 2: Wave TOP départ (actual)
+                    startTime = runnerWave.real_start_time;
+                    startLabel = 'DÉPART (TOP vague)';
+                } else if (runnerWave && runnerWave.start_time) {
+                    // Priority 3: Wave planned start
+                    startTime = runnerWave.start_time;
+                    startLabel = 'DÉPART (vague planifié)';
+                } else if (runnerRace && runnerRace.start_time) {
+                    // Priority 4: Race TOP départ
+                    startTime = runnerRace.start_time;
+                    startLabel = 'DÉPART (course)';
+                }
 
                 if (startTime) {
                     this.runnerCheckpoints.push({
                         id: null,
-                        location: 'DÉPART',
+                        location: startLabel,
                         lap_number: null,
                         distance: 0,
                         time_display: this.formatTime(startTime),
@@ -2837,14 +2859,36 @@ function chronoApp() {
                 this.runnerCheckpoints = [];
                 let lastRealCheckpoint = null;
 
-                // Add race start as first checkpoint
+                // Add race start as first checkpoint with priority: entrant.start_time > wave.real_start_time > wave.start_time > race.start_time
                 const runnerWave = this.selectedResult.wave;
-                const startTime = (runnerWave && runnerWave.start_time) || (runnerRace && runnerRace.start_time);
+                const runnerEntrant = this.selectedResult.entrant;
+
+                // Determine start time with priority
+                let startTime = null;
+                let startLabel = 'DÉPART';
+
+                if (runnerEntrant && runnerEntrant.start_time) {
+                    // Priority 1: Individual start time (detected in DEPART window)
+                    startTime = runnerEntrant.start_time;
+                    startLabel = 'DÉPART (détecté)';
+                } else if (runnerWave && runnerWave.real_start_time) {
+                    // Priority 2: Wave TOP départ (actual)
+                    startTime = runnerWave.real_start_time;
+                    startLabel = 'DÉPART (TOP vague)';
+                } else if (runnerWave && runnerWave.start_time) {
+                    // Priority 3: Wave planned start
+                    startTime = runnerWave.start_time;
+                    startLabel = 'DÉPART (vague planifié)';
+                } else if (runnerRace && runnerRace.start_time) {
+                    // Priority 4: Race TOP départ
+                    startTime = runnerRace.start_time;
+                    startLabel = 'DÉPART (course)';
+                }
 
                 if (startTime) {
                     this.runnerCheckpoints.push({
                         id: null,
-                        location: 'DÉPART',
+                        location: startLabel,
                         distance: 0,
                         time_display: this.formatTime(startTime),
                         raw_time: new Date(startTime),
