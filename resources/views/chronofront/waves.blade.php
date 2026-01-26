@@ -436,14 +436,6 @@ function wavesManager() {
                 const now = new Date();
                 const windowMinutes = wave.depart_window_minutes || 5;
 
-                await axios.post(`/api/waves/${wave.id}/top-depart`);
-
-                // Mettre à jour localement avec l'heure du navigateur (comme race.start_time)
-                wave.real_start_time = now.toISOString();
-
-                this.successMessage = `TOP départ enregistré pour "${wave.name}"`;
-                this.loadWaves();
-
                 // Calculer la fenêtre localement avec l'heure du navigateur
                 const windowStart = new Date(now.getTime() - windowMinutes * 60000);
                 const windowEnd = new Date(now.getTime() + windowMinutes * 60000);
@@ -453,11 +445,21 @@ function wavesManager() {
                     minute: '2-digit'
                 });
 
-                // Show window info
+                await axios.post(`/api/waves/${wave.id}/top-depart`);
+
+                // Mettre à jour localement avec l'heure du navigateur (comme race.start_time)
+                wave.real_start_time = now.toISOString();
+
+                this.successMessage = `TOP départ enregistré pour "${wave.name}"`;
+
+                // Show window info AVANT de recharger les waves
                 alert(`✅ TOP départ enregistré !\n\n` +
                       `Vague: ${wave.name}\n` +
                       `Heure: ${now.toLocaleTimeString('fr-FR')}\n` +
                       `Fenêtre DÉPART: ${formatTime(windowStart)} → ${formatTime(windowEnd)}`);
+
+                // Recharger en arrière-plan après l'alerte
+                this.loadWaves();
             } catch (error) {
                 alert('Erreur lors de l\'enregistrement du TOP départ : ' + (error.response?.data?.message || error.message));
             }
@@ -511,7 +513,7 @@ function wavesManager() {
         },
 
         getWindowInfo(wave) {
-            if (!wave.real_start_time || !wave.depart_window_minutes) return '';
+            if (!wave || !wave.real_start_time || !wave.depart_window_minutes) return '';
 
             const startTime = new Date(wave.real_start_time);
             const windowMin = wave.depart_window_minutes;
