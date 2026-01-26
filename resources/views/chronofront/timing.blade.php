@@ -1422,9 +1422,9 @@ body {
                     <!-- Info de base -->
                     <div class="mb-3">
                         <!-- Épreuve -->
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Épreuve:</div>
-                            <div style="text-align: right; flex: 1; margin-left: 1rem;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Épreuve:</div>
+                            <div style="flex: 1;">
                                 <!-- Editable Race -->
                                 <div x-show="editingField !== 'race_id'"
                                      @dblclick="startEditField('race_id', selectedResult?.race?.id)"
@@ -1444,9 +1444,9 @@ body {
                             </div>
                         </div>
                         <!-- Catégorie -->
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Catégorie:</div>
-                            <div style="text-align: right; flex: 1; margin-left: 1rem;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Catégorie:</div>
+                            <div style="flex: 1;">
                                 <!-- Editable Category -->
                                 <div x-show="editingField !== 'category_id'"
                                      @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
@@ -1469,9 +1469,9 @@ body {
 
                     <!-- Runner Status -->
                     <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Statut:</div>
-                            <div style="flex: 1; margin-left: 1rem;">
+                        <div style="display: flex; align-items: center;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Statut:</div>
+                            <div style="flex: 1;">
                                 <select :value="getRunnerStatusValue(selectedResult)"
                                         @change="updateRunnerStatus(selectedResult, $event.target.value)"
                                         style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500;">
@@ -1558,13 +1558,13 @@ body {
 
                     <!-- Summary -->
                     <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div style="color: #22c55e; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">TEMPS TOTAL:</div>
-                            <div style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
+                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #22c55e; font-size: 0.85rem; font-weight: 600; min-width: 135px; flex-shrink: 0;">TEMPS TOTAL:</div>
+                            <div style="flex: 1; text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center" x-show="runnerAverageSpeed">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Vitesse moyenne:</div>
-                            <div style="text-align: right; font-weight: 500;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
+                        <div style="display: flex; align-items: center;" x-show="runnerAverageSpeed">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 135px; flex-shrink: 0;">Vitesse moyenne:</div>
+                            <div style="flex: 1; text-align: right; font-weight: 500;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
                         </div>
                     </div>
 
