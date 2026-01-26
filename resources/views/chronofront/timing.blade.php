@@ -1423,12 +1423,12 @@ body {
                     <div class="mb-3">
                         <!-- Épreuve -->
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Épreuve:</div>
-                            <div style="text-align: right; flex: 1; margin-left: 0.5rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Épreuve:</div>
+                            <div style="text-align: right; flex: 1; margin-left: 1rem;">
                                 <!-- Editable Race -->
                                 <div x-show="editingField !== 'race_id'"
                                      @dblclick="startEditField('race_id', selectedResult?.race?.id)"
-                                     style="cursor: pointer; font-size: 0.9rem;"
+                                     style="cursor: pointer; font-size: 0.9rem; font-weight: 500;"
                                      x-text="selectedResult?.race?.name || '-'">
                                 </div>
                                 <select x-show="editingField === 'race_id'"
@@ -1445,12 +1445,12 @@ body {
                         </div>
                         <!-- Catégorie -->
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Catégorie:</div>
-                            <div style="text-align: right; flex: 1; margin-left: 0.5rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Catégorie:</div>
+                            <div style="text-align: right; flex: 1; margin-left: 1rem;">
                                 <!-- Editable Category -->
                                 <div x-show="editingField !== 'category_id'"
                                      @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
-                                     style="cursor: pointer;"
+                                     style="cursor: pointer; font-weight: 500;"
                                      x-text="selectedResult?.entrant?.category?.name || '-'">
                                 </div>
                                 <select x-show="editingField === 'category_id'"
@@ -1469,12 +1469,12 @@ body {
 
                     <!-- Runner Status -->
                     <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div class="row mb-2">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Statut:</div>
-                            <div class="col-6" style="text-align: right;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap; min-width: 90px;">Statut:</div>
+                            <div style="flex: 1; margin-left: 1rem;">
                                 <select :value="getRunnerStatusValue(selectedResult)"
                                         @change="updateRunnerStatus(selectedResult, $event.target.value)"
-                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500;">
                                     <option value="active">Actif</option>
                                     <option value="dns">Non partant</option>
                                     <option value="dnf">ABD</option>
@@ -1558,13 +1558,13 @@ body {
 
                     <!-- Summary -->
                     <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div class="row mb-2">
-                            <div class="col-6" style="color: #22c55e; font-size: 0.85rem; font-weight: 600;">TEMPS TOTAL:</div>
-                            <div class="col-6" style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div style="color: #22c55e; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">TEMPS TOTAL:</div>
+                            <div style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
                         </div>
-                        <div class="row" x-show="runnerAverageSpeed">
-                            <div class="col-6" style="color: #a1a1aa; font-size: 0.85rem;">Vitesse moyenne:</div>
-                            <div class="col-6" style="text-align: right;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
+                        <div class="d-flex justify-content-between align-items-center" x-show="runnerAverageSpeed">
+                            <div style="color: #a1a1aa; font-size: 0.85rem; white-space: nowrap;">Vitesse moyenne:</div>
+                            <div style="text-align: right; font-weight: 500;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
                         </div>
                     </div>
 
@@ -2779,7 +2779,9 @@ function chronoApp() {
 
                 if (runnerEntrant && runnerEntrant.start_time) {
                     // Priority 1: Individual start time (detected in DEPART window)
-                    startTime = runnerEntrant.start_time;
+                    // start_time is TIME only (HH:MM:SS), combine with result date
+                    const resultDate = new Date(this.selectedResult.raw_time).toISOString().split('T')[0];
+                    startTime = `${resultDate}T${runnerEntrant.start_time}`;
                     startLabel = 'DÉPART (détecté)';
                 } else if (runnerWave && runnerWave.real_start_time) {
                     // Priority 2: Wave TOP départ (actual)
@@ -2869,7 +2871,9 @@ function chronoApp() {
 
                 if (runnerEntrant && runnerEntrant.start_time) {
                     // Priority 1: Individual start time (detected in DEPART window)
-                    startTime = runnerEntrant.start_time;
+                    // start_time is TIME only (HH:MM:SS), combine with result date
+                    const resultDate = new Date(this.selectedResult.raw_time).toISOString().split('T')[0];
+                    startTime = `${resultDate}T${runnerEntrant.start_time}`;
                     startLabel = 'DÉPART (détecté)';
                 } else if (runnerWave && runnerWave.real_start_time) {
                     // Priority 2: Wave TOP départ (actual)
