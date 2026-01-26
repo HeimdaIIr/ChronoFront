@@ -151,7 +151,7 @@
                                             <input
                                                 type="datetime-local"
                                                 class="form-control form-control-sm"
-                                                :value="wave.real_start_time ? wave.real_start_time.slice(0,16) : ''"
+                                                :value="wave.real_start_time ? formatForDatetimeLocal(wave.real_start_time) : ''"
                                                 @change="updateRealStartTime(wave, $event.target.value)"
                                                 step="1"
                                                 title="Modifier manuellement l'heure de départ"
@@ -536,6 +536,18 @@ function wavesManager() {
             } catch (error) {
                 alert('Erreur lors de la suppression : ' + (error.response?.data?.message || error.message));
             }
+        },
+
+        formatForDatetimeLocal(datetime) {
+            if (!datetime) return '';
+            // Convert ISO string to local datetime-local format (YYYY-MM-DDThh:mm)
+            const date = new Date(datetime);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
         },
 
         formatDateTime(datetime) {
