@@ -432,38 +432,32 @@ function wavesManager() {
             if (!confirm(confirmMsg)) return;
 
             try {
-                const response = await axios.post(`/api/waves/${wave.id}/top-depart`);
-                const data = response.data;
+                // Capture l'heure locale du navigateur AVANT l'appel API (comme pour les races)
+                const now = new Date();
+                const windowMinutes = wave.depart_window_minutes || 5;
+
+                await axios.post(`/api/waves/${wave.id}/top-depart`);
+
+                // Mettre à jour localement avec l'heure du navigateur (comme race.start_time)
+                wave.real_start_time = now.toISOString();
 
                 this.successMessage = `TOP départ enregistré pour "${wave.name}"`;
                 this.loadWaves();
 
-                // Format dates for display (ISO 8601 to local time)
-                const formatDateTime = (isoString) => {
-                    const date = new Date(isoString);
-                    return date.toLocaleString('fr-FR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                };
+                // Calculer la fenêtre localement avec l'heure du navigateur
+                const windowStart = new Date(now.getTime() - windowMinutes * 60000);
+                const windowEnd = new Date(now.getTime() + windowMinutes * 60000);
 
-                const formatTime = (isoString) => {
-                    const date = new Date(isoString);
-                    return date.toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                };
+                const formatTime = (d) => d.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
                 // Show window info
                 alert(`✅ TOP départ enregistré !\n\n` +
-                      `Vague: ${data.wave.name}\n` +
-                      `Heure réelle: ${formatDateTime(data.wave.real_start_time)}\n` +
-                      `Fenêtre DÉPART: ${formatTime(data.wave.depart_window_start)} → ${formatTime(data.wave.depart_window_end)}`);
+                      `Vague: ${wave.name}\n` +
+                      `Heure: ${now.toLocaleTimeString('fr-FR')}\n` +
+                      `Fenêtre DÉPART: ${formatTime(windowStart)} → ${formatTime(windowEnd)}`);
             } catch (error) {
                 alert('Erreur lors de l\'enregistrement du TOP départ : ' + (error.response?.data?.message || error.message));
             }

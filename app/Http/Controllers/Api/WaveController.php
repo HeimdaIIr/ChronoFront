@@ -175,14 +175,6 @@ public function topDepart(Request $request, Wave $wave)
     return response()->json([
         'success' => true,
         'message' => 'TOP départ enregistré',
-        'wave' => [
-            'id' => $wave->id,
-            'name' => $wave->name,
-            // Use ISO 8601 format with timezone to prevent JavaScript timezone confusion
-            'real_start_time' => $wave->real_start_time->toIso8601String(),
-            'depart_window_start' => $wave->real_start_time->copy()->subMinutes($wave->depart_window_minutes)->toIso8601String(),
-            'depart_window_end' => $wave->real_start_time->copy()->addMinutes($wave->depart_window_minutes)->toIso8601String(),
-        ],
     ]);
 }
 

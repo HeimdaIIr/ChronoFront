@@ -29,15 +29,6 @@ class Wave extends Model
     ];
 
     /**
-     * Prepare a date for array / JSON serialization.
-     * Use ISO 8601 format with timezone to prevent JavaScript timezone confusion
-     */
-    protected function serializeDate(\DateTimeInterface $date): string
-    {
-        return $date->format(\DateTime::ATOM);
-    }
-
-    /**
      * Get the race that owns the wave
      */
     public function race(): BelongsTo
