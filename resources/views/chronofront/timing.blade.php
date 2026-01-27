@@ -1493,14 +1493,14 @@ body {
                                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem; background: #1a1d2e; border-radius: 8px; border-left: 3px solid; gap: 0.75rem;"
                                      :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
                                     <!-- Nom du checkpoint -->
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; max-width: 60%; min-width: 0; flex-shrink: 1;">
                                         <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
                                              :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
                                         <div style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
                                              x-text="checkpoint.location"></div>
                                     </div>
                                     <!-- Temps -->
-                                    <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; flex-shrink: 0;"
+                                    <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; flex-shrink: 0; margin-left: auto;"
                                          :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
                                          x-text="checkpoint.time_display"></div>
                                     <!-- Boutons d'édition -->
