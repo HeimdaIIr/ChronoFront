@@ -1493,14 +1493,14 @@ body {
                                 <div style="padding: 0.75rem; background: #1a1d2e; border-radius: 8px; border-left: 3px solid"
                                      :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
                                     <!-- Première ligne: Point + Nom + Temps + Boutons -->
-                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; max-width: 45%; overflow: hidden;">
                                             <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
                                                  :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
                                             <div style="font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                                                  x-text="checkpoint.location"></div>
                                         </div>
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
                                             <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap;"
                                                  :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
                                                  x-text="checkpoint.time_display"></div>
