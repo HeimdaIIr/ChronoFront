@@ -218,35 +218,32 @@ class EntrantController extends Controller
                 $bibNumber = $data['dossard'] ?? $data['bib'] ?? null;
                 $startTime = $data['top'] ?? null; // Heure de départ individuelle (contre-la-montre)
 
-                // Skip if missing required fields
-                if (empty($firstname) || empty($lastname) || empty($parcours)) {
-                    // Debug: afficher les colonnes disponibles pour la première erreur
-                    if ($index === 0) {
-                        $errors[] = "Ligne " . ($index + 2) . ": Colonnes détectées: " . implode(', ', array_keys($data));
-                        $errors[] = "Ligne " . ($index + 2) . ": PRENOM='{$firstname}', NOM='{$lastname}', PARCOURS='{$parcours}'";
-                    } else {
-                        $errors[] = "Ligne " . ($index + 2) . ": Données manquantes (nom, prénom ou parcours)";
-                    }
+                // Skip if missing required fields (only bib_number is required)
+                if (empty($bibNumber)) {
+                    $errors[] = "Ligne " . ($index + 2) . ": Numéro de dossard manquant";
                     continue;
                 }
 
-                // Find or create Race based on PARCOURS
-                $raceKey = strtolower(trim($parcours));
-                if (!isset($racesCache[$raceKey])) {
-                    $race = Race::where('event_id', $eventId)
-                        ->where('name', trim($parcours))
-                        ->first();
+                // Find or create Race based on PARCOURS (optional)
+                $race = null;
+                if (!empty($parcours)) {
+                    $raceKey = strtolower(trim($parcours));
+                    if (!isset($racesCache[$raceKey])) {
+                        $race = Race::where('event_id', $eventId)
+                            ->where('name', trim($parcours))
+                            ->first();
 
-                    if (!$race) {
-                        $race = Race::create([
-                            'event_id' => $eventId,
-                            'name' => trim($parcours),
-                            'type' => '1_passage', // Type par défaut
-                        ]);
+                        if (!$race) {
+                            $race = Race::create([
+                                'event_id' => $eventId,
+                                'name' => trim($parcours),
+                                'type' => '1_passage', // Type par défaut
+                            ]);
+                        }
+                        $racesCache[$raceKey] = $race;
+                    } else {
+                        $race = $racesCache[$raceKey];
                     }
-                    $racesCache[$raceKey] = $race;
-                } else {
-                    $race = $racesCache[$raceKey];
                 }
 
                 // Find or create Wave based on VAGUE
@@ -341,15 +338,15 @@ class EntrantController extends Controller
 
                 // Prepare entrant data
                 $entrantData = [
-                    'firstname' => trim($firstname),
-                    'lastname' => trim($lastname),
+                    'firstname' => !empty($firstname) ? trim($firstname) : '-',
+                    'lastname' => !empty($lastname) ? trim($lastname) : '-',
                     'gender' => $gender,
                     'birth_date' => $parsedBirthDate,
                     'bib_number' => $bibNumber,
                     'rfid_tag' => $rfidTag,
                     'club' => $club,
                     'event_id' => $eventId,
-                    'race_id' => $race->id,
+                    'race_id' => $race ? $race->id : null,
                     'wave_id' => $waveId,
                     'start_time' => $parsedStartTime, // Heure de départ individuelle
                 ];
