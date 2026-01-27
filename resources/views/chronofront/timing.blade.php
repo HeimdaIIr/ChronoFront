@@ -1424,7 +1424,7 @@ body {
                         <!-- Épreuve -->
                         <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
                             <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Épreuve:</div>
-                            <div style="flex: 1;">
+                            <div style="flex: 1; text-align: right;">
                                 <!-- Editable Race -->
                                 <div x-show="editingField !== 'race_id'"
                                      @dblclick="startEditField('race_id', selectedResult?.race?.id)"
@@ -1436,7 +1436,7 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%; text-align: right;">
                                     <template x-for="race in races" :key="race.id">
                                         <option :value="race.id" x-text="race.name"></option>
                                     </template>
@@ -1446,7 +1446,7 @@ body {
                         <!-- Catégorie -->
                         <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
                             <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Catégorie:</div>
-                            <div style="flex: 1;">
+                            <div style="flex: 1; text-align: right;">
                                 <!-- Editable Category -->
                                 <div x-show="editingField !== 'category_id'"
                                      @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
@@ -1458,7 +1458,7 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%; text-align: right;">
                                     <template x-for="cat in categories" :key="cat.id">
                                         <option :value="cat.id" x-text="cat.name"></option>
                                     </template>
@@ -1471,10 +1471,10 @@ body {
                     <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
                         <div style="display: flex; align-items: center;">
                             <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Statut:</div>
-                            <div style="flex: 1;">
+                            <div style="flex: 1; text-align: right;">
                                 <select :value="getRunnerStatusValue(selectedResult)"
                                         @change="updateRunnerStatus(selectedResult, $event.target.value)"
-                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500;">
+                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500; text-align: right;">
                                     <option value="active">Actif</option>
                                     <option value="dns">Non partant</option>
                                     <option value="dnf">ABD</option>
@@ -1574,42 +1574,51 @@ body {
                             <i class="bi bi-plus-circle-fill"></i> Ajouter temps intermédiaire
                         </h4>
                         <form @submit.prevent="addIntermediateTime" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <!-- Select checkpoint from configured readers -->
-                            <select x-model="intermediateReaderId"
-                                    style="padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                <option value="">Sélectionner checkpoint</option>
-                                <template x-for="reader in readers" :key="reader.id">
-                                    <option :value="reader.id" x-text="reader.location"></option>
-                                </template>
-                            </select>
-
-                            <!-- Date input -->
-                            <input type="date"
-                                   x-model="intermediateDate"
-                                   style="padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-
-                            <!-- Time inputs with seconds -->
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="time"
-                                       x-model="intermediateTime"
-                                       step="1"
-                                       style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                <button type="button"
-                                        @click="setIntermediateTimeNow()"
-                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;">
-                                    Maintenant
-                                </button>
+                            <!-- Checkpoint -->
+                            <div>
+                                <label style="display: block; color: #a1a1aa; font-size: 0.8rem; margin-bottom: 0.5rem;">Checkpoint</label>
+                                <select x-model="intermediateReaderId"
+                                        style="width: 100%; padding: 0.65rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                    <option value="">Sélectionner checkpoint</option>
+                                    <template x-for="reader in readers" :key="reader.id">
+                                        <option :value="reader.id" x-text="reader.location"></option>
+                                    </template>
+                                </select>
                             </div>
 
-                            <button type="submit"
-                                    class="btn-manual"
-                                    :disabled="!intermediateReaderId || !intermediateDate || !intermediateTime || saving"
-                                    style="opacity: 1;"
-                                    :style="(!intermediateReaderId || !intermediateDate || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                                <i class="bi bi-stopwatch"></i>
-                                <span x-show="!saving">Ajouter le temps</span>
-                                <span x-show="saving">Enregistrement...</span>
-                            </button>
+                            <!-- Date et Heure -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div>
+                                    <label style="display: block; color: #a1a1aa; font-size: 0.8rem; margin-bottom: 0.5rem;">Date</label>
+                                    <input type="date"
+                                           x-model="intermediateDate"
+                                           style="width: 100%; padding: 0.65rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #a1a1aa; font-size: 0.8rem; margin-bottom: 0.5rem;">Heure</label>
+                                    <input type="time"
+                                           x-model="intermediateTime"
+                                           step="1"
+                                           style="width: 100%; padding: 0.65rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+                                <button type="button"
+                                        @click="setIntermediateTimeNow()"
+                                        style="padding: 0.65rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                                    <i class="bi bi-clock"></i> Maintenant
+                                </button>
+                                <button type="submit"
+                                        :disabled="!intermediateReaderId || !intermediateDate || !intermediateTime || saving"
+                                        style="padding: 0.65rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;"
+                                        :style="(!intermediateReaderId || !intermediateDate || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                    <i class="bi bi-stopwatch"></i>
+                                    <span x-show="!saving">Ajouter</span>
+                                    <span x-show="saving">...</span>
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
