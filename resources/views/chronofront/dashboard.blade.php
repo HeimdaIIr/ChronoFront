@@ -16,7 +16,7 @@
             <p class="text-muted">Vue d'ensemble de votre système de chronométrage</p>
         </div>
         <div>
-            <span class="text-muted">{{ now()->format('d/m/Y H:i') }}</span>
+            <span class="text-muted" x-text="currentTime"></span>
         </div>
     </div>
 
@@ -238,10 +238,23 @@ function dashboard() {
         },
         recentEvents: [],
         showImportModal: false,
+        currentTime: '',
 
         init() {
+            this.updateTime();
+            setInterval(() => this.updateTime(), 1000);
             this.loadStats();
             this.loadRecentEvents();
+        },
+
+        updateTime() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            this.currentTime = `${day}/${month}/${year} ${hours}:${minutes}`;
         },
 
         async loadStats() {
