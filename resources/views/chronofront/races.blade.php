@@ -113,22 +113,6 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button
-                                            class="btn btn-success"
-                                            @click="startRace(race)"
-                                            x-show="!race.start_time"
-                                            title="Démarrer"
-                                        >
-                                            <i class="bi bi-play-fill"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-danger"
-                                            @click="endRace(race)"
-                                            x-show="race.start_time && !race.end_time"
-                                            title="Terminer"
-                                        >
-                                            <i class="bi bi-stop-fill"></i>
-                                        </button>
                                         <button class="btn btn-outline-primary" @click="openEditModal(race)" title="Modifier">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -331,30 +315,6 @@ function racesManager() {
                 alert('Erreur lors de l\'enregistrement : ' + (error.response?.data?.message || error.message));
             } finally {
                 this.saving = false;
-            }
-        },
-
-        async startRace(race) {
-            if (!confirm(`Démarrer l'épreuve "${race.name}" ?`)) return;
-
-            try {
-                await axios.post(`/races/${race.id}/start`);
-                this.successMessage = `Épreuve "${race.name}" démarrée`;
-                this.loadRaces();
-            } catch (error) {
-                alert('Erreur lors du démarrage : ' + (error.response?.data?.message || error.message));
-            }
-        },
-
-        async endRace(race) {
-            if (!confirm(`Terminer l'épreuve "${race.name}" ?`)) return;
-
-            try {
-                await axios.post(`/races/${race.id}/end`);
-                this.successMessage = `Épreuve "${race.name}" terminée`;
-                this.loadRaces();
-            } catch (error) {
-                alert('Erreur lors de l\'arrêt : ' + (error.response?.data?.message || error.message));
             }
         },
 
