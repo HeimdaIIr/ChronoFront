@@ -1492,48 +1492,29 @@ body {
                             <template x-for="(checkpoint, index) in runnerCheckpoints" :key="checkpoint.id || index">
                                 <div style="padding: 0.75rem; background: #1a1d2e; border-radius: 8px; border-left: 3px solid"
                                      :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
-                                    <!-- Première ligne: Point + Nom + Temps + Boutons -->
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; max-width: 45%; overflow: hidden;">
+                                    <!-- Première ligne: Point + Nom + Temps -->
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
                                             <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
                                                  :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
-                                            <div style="font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                            <div style="font-weight: 600; font-size: 0.9rem; white-space: nowrap;"
                                                  x-text="checkpoint.location"></div>
                                         </div>
-                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
-                                            <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap;"
-                                                 :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
-                                                 x-text="checkpoint.time_display"></div>
-                                            <!-- Edit buttons for real checkpoints only -->
-                                            <div style="display: flex; gap: 0.25rem;" x-show="!checkpoint.is_estimated && checkpoint.id">
-                                                <button @click="adjustResultTime(checkpoint.id, 5)"
-                                                        style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
-                                                        title="Ajouter 5 secondes">
-                                                    +5s
-                                                </button>
-                                                <button @click="adjustResultTime(checkpoint.id, -5)"
-                                                        style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
-                                                        title="Retirer 5 secondes">
-                                                    -5s
-                                                </button>
-                                                <button @click="deleteResult(checkpoint.id)"
-                                                        style="padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
-                                                        title="Supprimer ce passage">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; flex-shrink: 0;"
+                                             :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
+                                             x-text="checkpoint.time_display"></div>
                                     </div>
-                                    <!-- Deuxième ligne: Détails (distance, lap time, etc.) -->
-                                    <div style="padding-left: 1.3rem;">
-                                        <div style="font-size: 0.75rem; color: #a1a1aa; margin-bottom: 0.25rem;" x-show="checkpoint.distance">
-                                            <span x-text="checkpoint.distance.toFixed(2) + ' km'"></span>
-                                            <span style="color: #71717a; margin: 0 0.5rem;">•</span>
-                                            <span x-show="checkpoint.is_estimated" style="color: #f59e0b;">Estimé</span>
-                                            <span x-show="checkpoint.calculated_time_display && !checkpoint.is_estimated" style="color: #a1a1aa;">
-                                                Total: <span x-text="checkpoint.calculated_time_display"></span>
-                                            </span>
-                                        </div>
+                                    <!-- Deuxième ligne: Détails + Boutons -->
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding-left: 1.3rem;">
+                                        <div style="flex: 1;">
+                                            <div style="font-size: 0.75rem; color: #a1a1aa; margin-bottom: 0.25rem;" x-show="checkpoint.distance">
+                                                <span x-text="checkpoint.distance.toFixed(2) + ' km'"></span>
+                                                <span style="color: #71717a; margin: 0 0.5rem;">•</span>
+                                                <span x-show="checkpoint.is_estimated" style="color: #f59e0b;">Estimé</span>
+                                                <span x-show="checkpoint.calculated_time_display && !checkpoint.is_estimated" style="color: #a1a1aa;">
+                                                    Total: <span x-text="checkpoint.calculated_time_display"></span>
+                                                </span>
+                                            </div>
                                         <!-- Lap time for multi-lap races -->
                                         <div style="font-size: 0.75rem; color: #22c55e;" x-show="checkpoint.lap_time_display && editingField !== 'lap_time_' + checkpoint.id">
                                             <i class="bi bi-stopwatch"></i>
@@ -1557,7 +1538,26 @@ body {
                                                    style="width: 80px; background: #1a1d2e; color: #22c55e; border: 1px solid #3b82f6; padding: 0.1rem 0.3rem; font-size: 0.75rem;">
                                         </div>
                                     </div>
+                                    <!-- Edit buttons for real checkpoints only -->
+                                    <div style="display: flex; gap: 0.25rem; flex-shrink: 0;" x-show="!checkpoint.is_estimated && checkpoint.id">
+                                        <button @click="adjustResultTime(checkpoint.id, 5)"
+                                                style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Ajouter 5 secondes">
+                                            +5s
+                                        </button>
+                                        <button @click="adjustResultTime(checkpoint.id, -5)"
+                                                style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Retirer 5 secondes">
+                                            -5s
+                                        </button>
+                                        <button @click="deleteResult(checkpoint.id)"
+                                                style="padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                                                title="Supprimer ce passage">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
+                            </div>
                             </template>
                             <div x-show="runnerCheckpoints.length === 0" style="text-align: center; padding: 1rem; color: #71717a; font-size: 0.85rem;">
                                 Aucun passage enregistré
