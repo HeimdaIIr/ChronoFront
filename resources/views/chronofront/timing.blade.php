@@ -1494,7 +1494,7 @@ body {
                                      :style="`border-left-color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`">
                                     <div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;"
                                          :style="`background: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"></div>
-                                    <div style="flex: 1;">
+                                    <div style="flex: 1; min-width: 0;">
                                         <div style="font-weight: 600; font-size: 0.9rem;" x-text="checkpoint.location"></div>
                                         <div style="font-size: 0.75rem; color: #a1a1aa;" x-text="checkpoint.distance ? checkpoint.distance.toFixed(2) + ' km' : ''"></div>
                                         <!-- Lap time for multi-lap races -->
@@ -1520,18 +1520,18 @@ body {
                                                    style="width: 80px; background: #1a1d2e; color: #22c55e; border: 1px solid #3b82f6; padding: 0.1rem 0.3rem; font-size: 0.75rem;">
                                         </div>
                                     </div>
-                                    <div style="text-align: right; flex: 1;">
-                                        <div style="font-weight: 600; font-size: 0.95rem;"
+                                    <div style="text-align: right; flex-shrink: 0;">
+                                        <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap;"
                                              :style="`color: ${checkpoint.is_estimated ? '#f59e0b' : '#22c55e'}`"
                                              x-text="checkpoint.time_display"></div>
-                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.is_estimated">Estimé</div>
+                                        <div style="font-size: 0.75rem; color: #a1a1aa; white-space: nowrap;" x-show="checkpoint.is_estimated">Estimé</div>
                                         <!-- Cumulative time for multi-lap races -->
-                                        <div style="font-size: 0.75rem; color: #a1a1aa;" x-show="checkpoint.calculated_time_display && !checkpoint.is_estimated">
+                                        <div style="font-size: 0.75rem; color: #a1a1aa; white-space: nowrap;" x-show="checkpoint.calculated_time_display && !checkpoint.is_estimated">
                                             Total: <span x-text="checkpoint.calculated_time_display"></span>
                                         </div>
                                     </div>
                                     <!-- Edit buttons for real checkpoints only -->
-                                    <div style="display: flex; gap: 0.25rem;" x-show="!checkpoint.is_estimated && checkpoint.id">
+                                    <div style="display: flex; gap: 0.25rem; flex-shrink: 0;" x-show="!checkpoint.is_estimated && checkpoint.id">
                                         <button @click="adjustResultTime(checkpoint.id, 5)"
                                                 style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
                                                 title="Ajouter 5 secondes">
