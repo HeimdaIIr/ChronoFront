@@ -1422,9 +1422,9 @@ body {
                     <!-- Info de base -->
                     <div class="mb-3">
                         <!-- Épreuve -->
-                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Épreuve:</div>
-                            <div style="flex: 1; text-align: right;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem;">Épreuve:</div>
+                            <div style="text-align: right; max-width: 65%;">
                                 <!-- Editable Race -->
                                 <div x-show="editingField !== 'race_id'"
                                      @dblclick="startEditField('race_id', selectedResult?.race?.id)"
@@ -1436,7 +1436,7 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%; text-align: right;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
                                     <template x-for="race in races" :key="race.id">
                                         <option :value="race.id" x-text="race.name"></option>
                                     </template>
@@ -1444,9 +1444,9 @@ body {
                             </div>
                         </div>
                         <!-- Catégorie -->
-                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Catégorie:</div>
-                            <div style="flex: 1; text-align: right;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem;">Catégorie:</div>
+                            <div style="text-align: right; max-width: 65%;">
                                 <!-- Editable Category -->
                                 <div x-show="editingField !== 'category_id'"
                                      @dblclick="startEditField('category_id', selectedResult?.entrant?.category?.id)"
@@ -1458,7 +1458,7 @@ body {
                                         @change="saveEditField()"
                                         @blur="cancelEditField()"
                                         class="form-select form-select-sm"
-                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%; text-align: right;">
+                                        style="background: #1a1d2e; color: white; border: 1px solid #3b82f6; width: 100%;">
                                     <template x-for="cat in categories" :key="cat.id">
                                         <option :value="cat.id" x-text="cat.name"></option>
                                     </template>
@@ -1469,12 +1469,12 @@ body {
 
                     <!-- Runner Status -->
                     <div class="mb-3" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div style="display: flex; align-items: center;">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 100px; flex-shrink: 0;">Statut:</div>
-                            <div style="flex: 1; text-align: right;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="color: #a1a1aa; font-size: 0.85rem;">Statut:</div>
+                            <div style="text-align: right; max-width: 65%;">
                                 <select :value="getRunnerStatusValue(selectedResult)"
                                         @change="updateRunnerStatus(selectedResult, $event.target.value)"
-                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500; text-align: right;">
+                                        style="width: 100%; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem; font-weight: 500;">
                                     <option value="active">Actif</option>
                                     <option value="dns">Non partant</option>
                                     <option value="dnf">ABD</option>
@@ -1558,13 +1558,13 @@ body {
 
                     <!-- Summary -->
                     <div class="mb-4" style="border-top: 1px solid #2a2d3e; padding-top: 1rem;">
-                        <div style="display: flex; align-items: center; margin-bottom: 0.75rem;">
-                            <div style="color: #22c55e; font-size: 0.85rem; font-weight: 600; min-width: 135px; flex-shrink: 0;">TEMPS TOTAL:</div>
-                            <div style="flex: 1; text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="color: #22c55e; font-size: 0.85rem; font-weight: 600;">TEMPS TOTAL:</div>
+                            <div style="text-align: right; font-size: 1.5rem; font-weight: 700; color: #22c55e;" x-text="selectedResult?.formatted_time || '-'"></div>
                         </div>
-                        <div style="display: flex; align-items: center;" x-show="runnerAverageSpeed">
-                            <div style="color: #a1a1aa; font-size: 0.85rem; min-width: 135px; flex-shrink: 0;">Vitesse moyenne:</div>
-                            <div style="flex: 1; text-align: right; font-weight: 500;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;" x-show="runnerAverageSpeed">
+                            <div style="color: #a1a1aa; font-size: 0.85rem;">Vitesse moyenne:</div>
+                            <div style="text-align: right; font-weight: 500;" x-text="runnerAverageSpeed ? runnerAverageSpeed.toFixed(2) + ' km/h' : '-'"></div>
                         </div>
                     </div>
 
@@ -1587,19 +1587,19 @@ body {
                             </div>
 
                             <!-- Date et Heure -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                <div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                <div style="min-width: 0;">
                                     <label style="display: block; color: #a1a1aa; font-size: 0.8rem; margin-bottom: 0.5rem;">Date</label>
                                     <input type="date"
                                            x-model="intermediateDate"
-                                           style="width: 100%; padding: 0.65rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                           style="width: 100%; min-width: 0; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
                                 </div>
-                                <div>
+                                <div style="min-width: 0;">
                                     <label style="display: block; color: #a1a1aa; font-size: 0.8rem; margin-bottom: 0.5rem;">Heure</label>
                                     <input type="time"
                                            x-model="intermediateTime"
                                            step="1"
-                                           style="width: 100%; padding: 0.65rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.9rem;">
+                                           style="width: 100%; min-width: 0; padding: 0.5rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px; font-size: 0.85rem; box-sizing: border-box;">
                                 </div>
                             </div>
 
@@ -1607,12 +1607,12 @@ body {
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
                                 <button type="button"
                                         @click="setIntermediateTimeNow()"
-                                        style="padding: 0.65rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                                        style="padding: 0.6rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; white-space: nowrap;">
                                     <i class="bi bi-clock"></i> Maintenant
                                 </button>
                                 <button type="submit"
                                         :disabled="!intermediateReaderId || !intermediateDate || !intermediateTime || saving"
-                                        style="padding: 0.65rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;"
+                                        style="padding: 0.6rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500;"
                                         :style="(!intermediateReaderId || !intermediateDate || !intermediateTime || saving) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
                                     <i class="bi bi-stopwatch"></i>
                                     <span x-show="!saving">Ajouter</span>
