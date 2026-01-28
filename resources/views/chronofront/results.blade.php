@@ -23,13 +23,29 @@
                     Calcul...
                 </span>
             </button>
-            <button
-                class="btn btn-success me-2"
-                @click="exportResults"
-                :disabled="!selectedRace || results.length === 0"
-            >
-                <i class="bi bi-download"></i> Exporter CSV
-            </button>
+            <div class="btn-group me-2" role="group">
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    @click="exportResults"
+                    :disabled="!selectedRace || results.length === 0"
+                >
+                    <i class="bi bi-download"></i> Exporter
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-success dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    :disabled="!selectedRace || results.length === 0"
+                >
+                    <span class="visually-hidden">Options</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" @click.prevent="exportResults">Exporter CSV</a></li>
+                    <li><a class="dropdown-item" href="#" @click.prevent="exportWebFormat">Export Web</a></li>
+                </ul>
+            </div>
             <div class="btn-group me-2" role="group">
                 <button
                     type="button"
@@ -703,6 +719,15 @@ function resultsManager() {
             if (!this.selectedRace) return;
 
             window.location.href = `/api/results/race/${this.selectedRace}/export`;
+        },
+
+        exportWebFormat() {
+            if (!this.selectedRace) return;
+
+            // Construire l'URL avec les filtres actuels
+            let url = `/api/results/race/${this.selectedRace}/export-web?display_mode=${this.displayMode}&status_filter=${this.statusFilter}`;
+
+            window.location.href = url;
         },
 
         downloadPDF() {

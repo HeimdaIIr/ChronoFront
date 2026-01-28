@@ -767,6 +767,109 @@ class ResultController extends Controller
     }
 
     /**
+     * Export results to Web Format (.txt with tab-separated columns)
+     */
+    public function exportWebFormat(int $raceId, Request $request): \Illuminate\Http\Response
+    {
+        $race = Race::with('event')->findOrFail($raceId);
+
+        // Get filters from request
+        $displayMode = $request->query('display_mode', 'general');
+        $statusFilter = $request->query('status_filter', 'all');
+
+        // Build query
+        $query = Result::where('race_id', $raceId)
+            ->with(['entrant.category'])
+            ->orderBy('position');
+
+        // Apply status filter
+        if ($statusFilter === 'V') {
+            $query->where('status', 'V');
+        }
+
+        $allResults = $query->get();
+
+        // For multi-lap races, keep only the last lap per entrant
+        if (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+            $results = $allResults->groupBy('entrant_id')->map(function ($entrantResults) {
+                return $entrantResults->sortByDesc('lap_number')->first();
+            })->sortBy('position')->values();
+        } else {
+            $results = $allResults;
+        }
+
+        // Filter out non-valid results if only validated
+        $results = $results->filter(function($result) use ($statusFilter) {
+            return $statusFilter !== 'V' || $result->status === 'V';
+        });
+
+        // Calculate gender positions (/sx - rank by gender)
+        $genderPositions = [];
+        $malePosition = 1;
+        $femalePosition = 1;
+
+        foreach ($results as $result) {
+            if ($result->entrant->gender === 'M') {
+                $genderPositions[$result->id] = $malePosition++;
+            } elseif ($result->entrant->gender === 'F') {
+                $genderPositions[$result->id] = $femalePosition++;
+            } else {
+                $genderPositions[$result->id] = '-';
+            }
+        }
+
+        // Build text content
+        $txt = "Export Web - " . $race->name;
+        if ($race->event) {
+            $txt .= " (" . $race->event->name . ")";
+        }
+        $txt .= "\n";
+
+        // Headers with tabs
+        $txt .= "\t" . implode("\t", [
+            'DOSSARD',
+            'NOM',
+            'PRENOM',
+            'SEXE',
+            '/sx',
+            'CAT',
+            '/cat',
+            'CLUB',
+            'TEMPS',
+            'Vit.'
+        ]) . "\t\n";
+
+        // Data rows
+        foreach ($results as $result) {
+            $txt .= sprintf(
+                "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n",
+                $result->position ?? '-',
+                $result->entrant->bib_number ?? '',
+                strtoupper($result->entrant->lastname ?? ''),
+                strtoupper($result->entrant->firstname ?? ''),
+                $result->entrant->gender ?? '',
+                $genderPositions[$result->id] ?? '-',
+                $result->entrant->category->name ?? '',
+                $result->category_position ?? '-',
+                $result->entrant->club ?? '',
+                $result->formatted_time ?? '',
+                $result->speed ? number_format($result->speed, 1, ',', '') : '0,0'
+            );
+        }
+
+        $filename = sprintf(
+            'resultats_web_%s_%s_%s.txt',
+            $race->event->name ?? 'event',
+            $race->name,
+            now()->format('Y-m-d')
+        );
+
+        return response($txt, 200)
+            ->header('Content-Type', 'text/plain; charset=UTF-8')
+            ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+    }
+
+    /**
      * Export results to PDF
      */
     public function exportPdf(int $raceId, Request $request)
