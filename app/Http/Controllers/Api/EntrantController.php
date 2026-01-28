@@ -20,7 +20,7 @@ class EntrantController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Entrant::with(['category', 'race', 'wave']);
+        $query = Entrant::with(['category', 'race', 'wave', 'race.event']);
 
         // Search filter
         if ($request->has('search')) {
@@ -33,7 +33,14 @@ class EntrantController extends Controller
             });
         }
 
-        // Race filter
+        // Event filter (load all entrants for an event)
+        if ($request->has('event_id') && !$request->has('race_id')) {
+            $query->whereHas('race', function ($q) use ($request) {
+                $q->where('event_id', $request->input('event_id'));
+            });
+        }
+
+        // Race filter (takes precedence over event filter)
         if ($request->has('race_id')) {
             $query->where('race_id', $request->input('race_id'));
         }

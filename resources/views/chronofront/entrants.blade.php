@@ -433,28 +433,28 @@ function entrantsManager() {
             try {
                 let url = '/entrants';
                 const params = new URLSearchParams();
+
+                // Si un parcours spécifique est sélectionné
                 if (this.selectedRaceFilter) {
                     params.append('race_id', this.selectedRaceFilter);
                 }
+                // Sinon, si un événement est sélectionné (sans parcours)
+                else if (this.selectedEventFilter) {
+                    params.append('event_id', this.selectedEventFilter);
+                }
+
                 if (params.toString()) {
                     url += '?' + params.toString();
                 }
+
                 const response = await axios.get(url);
+                this.entrants = response.data;
 
-                // Si un événement est sélectionné (mais pas de parcours spécifique),
-                // filtrer par les races de cet événement
-                if (this.selectedEventFilter && !this.selectedRaceFilter) {
-                    const raceIds = this.filteredRaces.map(r => r.id);
-                    this.entrants = response.data.filter(e => raceIds.includes(e.race_id));
-                } else {
-                    this.entrants = response.data;
-                }
-
-                // Charger le nombre total de participants de l'événement sélectionné
+                // Charger le nombre total de participants
                 if (this.selectedEventFilter) {
-                    const raceIds = this.filteredRaces.map(r => r.id);
-                    const allEntrantsResponse = await axios.get('/entrants');
-                    this.totalEntrantsCount = allEntrantsResponse.data.filter(e => raceIds.includes(e.race_id)).length;
+                    // Si événement sélectionné, compter tous les participants de cet événement
+                    const allResponse = await axios.get(`/entrants?event_id=${this.selectedEventFilter}`);
+                    this.totalEntrantsCount = allResponse.data.length;
                 } else {
                     this.totalEntrantsCount = this.entrants.length;
                 }
