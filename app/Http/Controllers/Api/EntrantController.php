@@ -318,15 +318,18 @@ class EntrantController extends Controller
                 // Parse birth date (format français DD/MM/YYYY)
                 $parsedBirthDate = null;
                 if ($birthDate) {
-                    try {
-                        // Essayer le format français DD/MM/YYYY
-                        if (preg_match('#^(\d{2})/(\d{2})/(\d{4})$#', $birthDate, $matches)) {
-                            $parsedBirthDate = $matches[3] . '-' . $matches[2] . '-' . $matches[1];
-                        } else {
-                            $parsedBirthDate = \Carbon\Carbon::parse($birthDate)->format('Y-m-d');
+                    $birthDate = trim($birthDate); // Supprimer les espaces avant/après
+                    if (!empty($birthDate)) {
+                        try {
+                            // Essayer le format français DD/MM/YYYY
+                            if (preg_match('#^(\d{2})/(\d{2})/(\d{4})$#', $birthDate, $matches)) {
+                                $parsedBirthDate = $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+                            } else {
+                                $parsedBirthDate = \Carbon\Carbon::parse($birthDate)->format('Y-m-d');
+                            }
+                        } catch (\Exception $e) {
+                            $parsedBirthDate = null;
                         }
-                    } catch (\Exception $e) {
-                        $parsedBirthDate = null;
                     }
                 }
 
