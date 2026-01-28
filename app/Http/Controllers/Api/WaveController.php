@@ -13,9 +13,18 @@ class WaveController extends Controller
     /**
      * Display a listing of waves
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $waves = Wave::with(['race.event', 'entrants'])->get();
+        $query = Wave::with(['race.event', 'entrants']);
+
+        // Filter by event_id if provided
+        if ($request->has('event_id')) {
+            $query->whereHas('race', function ($q) use ($request) {
+                $q->where('event_id', $request->input('event_id'));
+            });
+        }
+
+        $waves = $query->get();
         return response()->json($waves);
     }
 

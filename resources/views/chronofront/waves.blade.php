@@ -317,18 +317,23 @@ function wavesManager() {
             this.loading = true;
             try {
                 let url = '/waves';
+                const params = new URLSearchParams();
+
+                // Si un parcours spécifique est sélectionné
                 if (this.selectedRaceFilter) {
                     url += `/race/${this.selectedRaceFilter}`;
                 }
-                const response = await axios.get(url);
-
-                // Filter by event if selected but no race filter
-                if (this.selectedEventFilter && !this.selectedRaceFilter) {
-                    const raceIds = this.filteredRaces.map(r => r.id);
-                    this.waves = response.data.filter(w => raceIds.includes(w.race_id));
-                } else {
-                    this.waves = response.data;
+                // Sinon, si un événement est sélectionné (sans parcours)
+                else if (this.selectedEventFilter) {
+                    params.append('event_id', this.selectedEventFilter);
                 }
+
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+
+                const response = await axios.get(url);
+                this.waves = response.data;
             } catch (error) {
                 console.error('Erreur lors du chargement des vagues', error);
             } finally {
