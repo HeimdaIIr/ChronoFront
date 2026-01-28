@@ -7,7 +7,7 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="h2"><i class="bi bi-flag text-primary"></i> Gestion des Vagues</h1>
-            <p class="text-muted">Gérez les vagues de départ de vos épreuves</p>
+            <p class="text-muted">Gérez les vagues de départ de vos parcours</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @click="openCreateModal">
@@ -36,9 +36,9 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Filtrer par épreuve</label>
+                    <label class="form-label">Filtrer par parcours</label>
                     <select class="form-select" x-model="selectedRaceFilter" @change="loadWaves">
-                        <option value="">Toutes les épreuves</option>
+                        <option value="">Tous les parcours</option>
                         <template x-for="race in filteredRaces" :key="race.id">
                             <option :value="race.id" x-text="race.name"></option>
                         </template>
@@ -213,7 +213,7 @@
                                     </template>
                                 </select>
                                 <div class="form-text">
-                                    <i class="bi bi-info-circle"></i> Tous les participants de cette vague seront classés dans cette épreuve
+                                    <i class="bi bi-info-circle"></i> Tous les participants de cette vague seront classés dans ce parcours
                                 </div>
                             </div>
 
@@ -290,7 +290,7 @@ function wavesManager() {
                 this.filteredRaces = this.races;
                 this.formFilteredRaces = this.races;
             } catch (error) {
-                console.error('Erreur lors du chargement des épreuves', error);
+                console.error('Erreur lors du chargement des parcours', error);
             }
         },
 

@@ -39,7 +39,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 x-text="stats.races || 0"></h3>
-                        <p>Épreuves</p>
+                        <p>Parcours</p>
                     </div>
                     <i class="bi bi-trophy" style="font-size: 3rem; opacity: 0.3;"></i>
                 </div>

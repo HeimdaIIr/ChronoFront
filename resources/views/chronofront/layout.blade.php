@@ -277,7 +277,7 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('chronofront.races') ? 'active' : '' }}"
                                href="{{ route('races') }}">
-                                <i class="bi bi-trophy"></i> Épreuves
+                                <i class="bi bi-trophy"></i> Parcours
                             </a>
                         </li>
                         @php

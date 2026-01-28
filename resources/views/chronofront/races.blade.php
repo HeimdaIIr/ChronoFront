@@ -1,17 +1,17 @@
 @extends('chronofront.layout')
 
-@section('title', 'Gestion des Épreuves')
+@section('title', 'Gestion des Parcours')
 
 @section('content')
 <div class="container-fluid" x-data="racesManager()">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h2"><i class="bi bi-trophy" style="color: #6366F1;"></i> Gestion des Épreuves</h1>
-            <p class="text-muted">Gérez les épreuves de vos événements sportifs</p>
+            <h1 class="h2"><i class="bi bi-trophy" style="color: #6366F1;"></i> Gestion des Parcours</h1>
+            <p class="text-muted">Gérez les parcours de vos événements sportifs</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @click="openCreateModal">
-                <i class="bi bi-plus-circle"></i> Nouvelle Épreuve
+                <i class="bi bi-plus-circle"></i> Nouveau Parcours
             </button>
         </div>
     </div>
@@ -54,7 +54,7 @@
 
             <div x-show="!loading && filteredRaces.length === 0" class="text-center py-5 text-muted">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                <p class="mt-3">Aucune épreuve trouvée</p>
+                <p class="mt-3">Aucun parcours trouvé</p>
             </div>
 
             <div x-show="!loading && filteredRaces.length > 0" class="table-responsive">
@@ -134,7 +134,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" x-text="editingRace ? 'Modifier l\'épreuve' : 'Nouvelle épreuve'"></h5>
+                    <h5 class="modal-title" x-text="editingRace ? 'Modifier le parcours' : 'Nouveau parcours'"></h5>
                     <button type="button" class="btn-close" @click="closeModal"></button>
                 </div>
                 <form @submit.prevent="saveRace">
@@ -151,7 +151,7 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Nom de l'épreuve <span class="text-danger">*</span></label>
+                                <label class="form-label">Nom du parcours <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" x-model="form.name" required>
                             </div>
 
@@ -250,7 +250,7 @@ function racesManager() {
                 this.races = response.data;
                 this.filterRaces();
             } catch (error) {
-                console.error('Erreur lors du chargement des épreuves', error);
+                console.error('Erreur lors du chargement des parcours', error);
             } finally {
                 this.loading = false;
             }
@@ -304,10 +304,10 @@ function racesManager() {
             try {
                 if (this.editingRace) {
                     await axios.put(`/races/${this.editingRace.id}`, this.form);
-                    this.successMessage = 'Épreuve modifiée avec succès';
+                    this.successMessage = 'Parcours modifié avec succès';
                 } else {
                     await axios.post('/races', this.form);
-                    this.successMessage = 'Épreuve créée avec succès';
+                    this.successMessage = 'Parcours créé avec succès';
                 }
                 this.closeModal();
                 this.loadRaces();
@@ -319,11 +319,11 @@ function racesManager() {
         },
 
         async deleteRace(race) {
-            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'épreuve "${race.name}" ?`)) return;
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer le parcours "${race.name}" ?`)) return;
 
             try {
                 await axios.delete(`/races/${race.id}`);
-                this.successMessage = `Épreuve "${race.name}" supprimée`;
+                this.successMessage = `Parcours "${race.name}" supprimé`;
                 this.loadRaces();
             } catch (error) {
                 alert('Erreur lors de la suppression : ' + (error.response?.data?.message || error.message));

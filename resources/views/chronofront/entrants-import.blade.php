@@ -7,7 +7,7 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="h2"><i class="bi bi-upload text-success"></i> Import CSV Participants</h1>
-            <p class="text-muted">Importez vos participants depuis un fichier CSV. Les épreuves et vagues seront créées automatiquement.</p>
+            <p class="text-muted">Importez vos participants depuis un fichier CSV. Les parcours et vagues seront créés automatiquement.</p>
         </div>
     </div>
 
@@ -199,7 +199,7 @@
                     <div class="alert alert-success mt-3">
                         <i class="bi bi-magic"></i> <strong>Automatique :</strong>
                         <ul class="mb-0 mt-2">
-                            <li>Création des épreuves si elles n'existent pas</li>
+                            <li>Création des parcours s'ils n'existent pas</li>
                             <li><strong>Attribution automatique des participants aux parcours</strong> selon la colonne <code>parcours</code></li>
                             <li>Création des vagues si elles n'existent pas</li>
                             <li>Génération tags RFID (2000 + dossard)</li>

@@ -49,9 +49,9 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Épreuve</label>
+                    <label class="form-label">Parcours</label>
                     <select class="form-select" x-model="selectedRaceFilter" @change="loadEntrants">
-                        <option value="">Toutes les épreuves</option>
+                        <option value="">Tous les parcours</option>
                         <template x-for="race in filteredRaces" :key="race.id">
                             <option :value="race.id" x-text="race.name"></option>
                         </template>
@@ -400,7 +400,7 @@ function entrantsManager() {
                 this.races = response.data;
                 this.filteredRaces = response.data;
             } catch (error) {
-                console.error('Erreur lors du chargement des épreuves', error);
+                console.error('Erreur lors du chargement des parcours', error);
             }
         },
 
@@ -441,7 +441,7 @@ function entrantsManager() {
                 }
                 const response = await axios.get(url);
 
-                // Si un événement est sélectionné (mais pas d'épreuve spécifique),
+                // Si un événement est sélectionné (mais pas de parcours spécifique),
                 // filtrer par les races de cet événement
                 if (this.selectedEventFilter && !this.selectedRaceFilter) {
                     const raceIds = this.filteredRaces.map(r => r.id);

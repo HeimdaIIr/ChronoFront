@@ -529,14 +529,14 @@ function resultsManager() {
                 const response = await axios.get('/races');
                 this.races = response.data;
             } catch (error) {
-                console.error('Erreur lors du chargement des épreuves', error);
+                console.error('Erreur lors du chargement des parcours', error);
             }
         },
 
         async onEventChange() {
             if (this.selectedEvent) {
                 this.filteredRaces = this.races.filter(race => race.event_id == this.selectedEvent);
-                // Charger les résultats de toutes les épreuves de l'événement
+                // Charger les résultats de tous les parcours de l'événement
                 await this.loadEventResults();
             } else {
                 this.filteredRaces = this.races;
@@ -561,7 +561,7 @@ function resultsManager() {
             }
         },
 
-        // Charger les résultats de toutes les épreuves d'un événement
+        // Charger les résultats de tous les parcours d'un événement
         async loadEventResults() {
             if (!this.selectedEvent) return;
 
@@ -569,7 +569,7 @@ function resultsManager() {
             this.resultsByRace = {};
 
             try {
-                // Charger les résultats pour chaque épreuve de l'événement
+                // Charger les résultats pour chaque parcours de l'événement
                 for (const race of this.filteredRaces) {
                     const response = await axios.get(`/results/race/${race.id}`);
                     if (response.data && response.data.length > 0) {
