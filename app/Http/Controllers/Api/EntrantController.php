@@ -188,7 +188,14 @@ class EntrantController extends Controller
             return str_getcsv($line, $delimiter);
         }, $lines);
 
-        $headers = array_map('strtolower', array_shift($csvData));
+        // Normaliser les headers : minuscules + sans accents
+        $rawHeaders = array_shift($csvData);
+        $headers = array_map(function($header) {
+            $normalized = strtolower(trim($header));
+            // Supprimer les accents
+            $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+            return $normalized;
+        }, $rawHeaders);
 
         $imported = 0;
         $errors = [];
@@ -213,17 +220,22 @@ class EntrantController extends Controller
 
                 $data = array_combine($headers, $row);
 
-                // Map CSV columns
+                // Map CSV columns with flexible naming (lowercase, no accents)
                 $firstname = $data['prenom'] ?? $data['firstname'] ?? '';
                 $lastname = $data['nom'] ?? $data['lastname'] ?? '';
                 $gender = strtoupper($data['sexe'] ?? $data['gender'] ?? '');
-                $birthDate = $data['naissance'] ?? $data['birth_date'] ?? null;
-                $parcours = $data['parcours'] ?? $data['race'] ?? null;
+                $birthDate = $data['naissance'] ?? $data['birth_date'] ?? $data['date_naissance'] ?? $data['ddn'] ?? null;
+                $parcours = $data['parcours'] ?? $data['race'] ?? $data['epreuve'] ?? null;
                 $vague = $data['vague'] ?? $data['wave'] ?? null;
-                $cat = $data['cat'] ?? $data['category'] ?? null;
+                $cat = $data['cat'] ?? $data['category'] ?? $data['categorie'] ?? null;
                 $club = $data['club'] ?? null;
-                $bibNumber = $data['dossard'] ?? $data['bib'] ?? null;
+                $bibNumber = $data['dossard'] ?? $data['bib'] ?? $data['bib_number'] ?? null;
                 $startTime = $data['top'] ?? null; // Heure de départ individuelle (contre-la-montre)
+
+                // Additional fields
+                $email = $data['email'] ?? $data['mail'] ?? $data['e-mail'] ?? null;
+                $phone = $data['telephone'] ?? $data['phone'] ?? $data['tel'] ?? $data['mobile'] ?? null;
+                $team = $data['equipe'] ?? $data['team'] ?? null;
 
                 // Skip if missing required fields (only bib_number is required)
                 if (empty($bibNumber)) {
@@ -352,6 +364,9 @@ class EntrantController extends Controller
                     'bib_number' => $bibNumber,
                     'rfid_tag' => $rfidTag,
                     'club' => $club,
+                    'email' => $email ? trim($email) : null,
+                    'phone' => $phone ? trim($phone) : null,
+                    'team' => $team ? trim($team) : null,
                     'event_id' => $eventId,
                     'race_id' => $race ? $race->id : null,
                     'wave_id' => $waveId,
