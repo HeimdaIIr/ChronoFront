@@ -781,7 +781,7 @@ body {
 .race-btn {
     width: 100%;
     padding: 1rem 1.5rem;
-    background: #22c55e;
+    background: #10B981;
     border: none;
     border-radius: 10px;
     color: white;
@@ -796,7 +796,7 @@ body {
 }
 
 .race-btn:hover:not(:disabled) {
-    background: #16a34a;
+    background: #059669;
 }
 
 .race-btn:disabled {
@@ -1163,12 +1163,12 @@ body {
         <div class="chrono-topbar">
             <div style="display: flex; align-items: center;">
                 <span class="event-title" x-text="eventName || 'ChronoFront'"></span>
-                <span class="event-status" x-show="hasOngoingRaces()" style="background: #22c55e;">Course en cours</span>
+                <span class="event-status" x-show="hasOngoingRaces()" style="background: #10B981;">Course en cours</span>
                 <span class="event-status" x-show="!hasOngoingRaces() && races.length > 0" style="background: #f59e0b;">En attente</span>
             </div>
             <div class="topbar-right">
                 <!-- Action buttons -->
-                <button class="btn-filter" @click="showTopDepartModal = true" style="height: 38px;">
+                <button class="btn-filter" @click="showTopDepartModal = true" style="height: 38px; background: #10B981;">
                     <i class="bi bi-flag-fill"></i>
                     TOP DÉPART
                 </button>
@@ -1635,7 +1635,7 @@ body {
                         <div x-show="race.start_time">
                             <!-- Display mode -->
                             <div x-show="editingRaceId !== race.id" style="display: flex; gap: 0.5rem; align-items: center;">
-                                <div class="race-btn" style="flex: 1; cursor: default; background: #22c55e;">
+                                <div class="race-btn" style="flex: 1; cursor: default; background: #10B981;">
                                     <span x-text="race.name"></span>
                                     <span class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
                                 </div>
@@ -1666,7 +1666,7 @@ body {
                                     </button>
                                     <button @click="saveStartTime(race)"
                                             :disabled="!editStartDate || !editStartTime || startingRace"
-                                            style="flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                                            style="flex: 1; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
                                             :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
                                         <i class="bi bi-check-lg"></i> Enregistrer
                                     </button>

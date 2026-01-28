@@ -6,7 +6,7 @@
 <div class="container-fluid" x-data="resultsManager()">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h2"><i class="bi bi-bar-chart text-success"></i> Résultats et Classements</h1>
+            <h1 class="h2"><i class="bi bi-bar-chart" style="color: #EAB308;"></i> Résultats et Classements</h1>
             <p class="text-muted">Consultez les classements et exportez les résultats</p>
         </div>
         <div class="col-auto">
@@ -77,7 +77,8 @@
                 </ul>
             </div>
             <button
-                class="btn btn-warning"
+                class="btn"
+                style="background: linear-gradient(135deg, #EAB308 0%, #CA8A04 100%); color: white; border: none;"
                 @click="showAwardsModal = true"
                 :disabled="!selectedRace || filteredResults.length === 0"
             >
@@ -93,7 +94,7 @@
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 8px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
             <!-- Header -->
             <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
-                <h5 style="margin: 0;"><i class="bi bi-trophy text-warning"></i> Configuration des Récompenses</h5>
+                <h5 style="margin: 0;"><i class="bi bi-trophy" style="color: #EAB308;"></i> Configuration des Récompenses</h5>
                 <button type="button" class="btn-close" @click="showAwardsModal = false"></button>
             </div>
 
@@ -418,7 +419,7 @@
                 <template x-for="(categoryResults, categoryName) in resultsByCategory" :key="categoryName">
                     <div class="mb-4">
                         <h5 class="border-bottom pb-2 mb-3">
-                            <i class="bi bi-trophy-fill text-warning"></i>
+                            <i class="bi bi-trophy-fill" style="color: #EAB308;"></i>
                             <span x-text="categoryName"></span>
                             <span class="badge bg-secondary ms-2" x-text="categoryResults.length + ' participants'"></span>
                         </h5>

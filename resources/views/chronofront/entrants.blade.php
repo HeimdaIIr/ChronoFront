@@ -6,7 +6,7 @@
 <div class="container-fluid" x-data="entrantsManager()">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h2"><i class="bi bi-people text-info"></i> Gestion des Participants</h1>
+            <h1 class="h2"><i class="bi bi-people" style="color: #F59E0B;"></i> Gestion des Participants</h1>
             <p class="text-muted">Gérez les participants de vos événements</p>
         </div>
         <div class="col-auto">

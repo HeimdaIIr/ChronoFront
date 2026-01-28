@@ -6,7 +6,7 @@
 <div class="container-fluid" x-data="racesManager()">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h2"><i class="bi bi-trophy text-warning"></i> Gestion des Épreuves</h1>
+            <h1 class="h2"><i class="bi bi-trophy" style="color: #6366F1;"></i> Gestion des Épreuves</h1>
             <p class="text-muted">Gérez les épreuves de vos événements sportifs</p>
         </div>
         <div class="col-auto">
@@ -92,7 +92,7 @@
                                     <span class="badge bg-secondary" x-text="race.event?.name"></span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info" x-text="race.type"></span>
+                                    <span class="badge" style="background-color: #6366F1; color: white;" x-text="race.type"></span>
                                 </td>
                                 <td>
                                     <span x-text="race.distance ? race.distance + ' km' : 'N/A'"></span>

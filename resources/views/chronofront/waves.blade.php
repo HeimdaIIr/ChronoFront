@@ -87,7 +87,7 @@
                                     <strong x-text="wave.name"></strong>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info" x-text="wave.race?.name"></span>
+                                    <span class="badge" style="background-color: #6366F1; color: white;" x-text="wave.race?.name"></span>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary" x-text="wave.race?.event?.name"></span>
@@ -160,8 +160,7 @@
 
                                         <!-- Bouton TOP Départ -->
                                         <button
-                                            class="btn btn-sm w-100"
-                                            :class="wave.real_start_time ? 'btn-success' : 'btn-primary'"
+                                            class="btn btn-sm w-100 btn-success"
                                             @click="topDepart(wave)"
                                             title="Enregistrer le TOP départ maintenant"
                                         >

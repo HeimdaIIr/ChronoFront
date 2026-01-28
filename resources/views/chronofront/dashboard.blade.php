@@ -35,7 +35,7 @@
         </div>
 
         <div class="col-md-3">
-            <div class="stats-card" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+            <div class="stats-card" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 x-text="stats.races || 0"></h3>
@@ -59,7 +59,7 @@
         </div>
 
         <div class="col-md-3">
-            <div class="stats-card" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);">
+            <div class="stats-card" style="background: linear-gradient(135deg, #EAB308 0%, #CA8A04 100%);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h3 x-text="stats.results || 0"></h3>
@@ -93,7 +93,7 @@
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{{ route('timing') }}" class="btn btn-warning w-100 py-3">
+                            <a href="{{ route('timing') }}" class="btn w-100 py-3" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; border: none;">
                                 <i class="bi bi-stopwatch"></i><br>
                                 <span class="mt-2">Chronométrer</span>
                             </a>
