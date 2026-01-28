@@ -1215,14 +1215,43 @@ body {
                         </select>
                     </div>
 
-                    <!-- Race Chrono Display -->
-                    <div class="main-clock" x-text="raceChrono" x-show="selectedRaceId && getSelectedRace()?.start_time"></div>
-                    <div class="main-clock" style="font-size: 3rem; color: #71717a;" x-show="!selectedRaceId || !getSelectedRace()?.start_time">
-                        -- : -- : --
+                    <!-- Waves Chrono Display (Multi-clocks) -->
+                    <div x-show="selectedRaceId && waves.length > 0" style="padding: 1rem 2rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <template x-for="wave in waves" :key="wave.id">
+                                <div style="text-align: center; background: #1a1d2e; border-radius: 12px; padding: 1.5rem; border: 2px solid #2a2d3e;" :style="wave.real_start_time ? 'border-color: #22c55e;' : ''">
+                                    <!-- Wave Name -->
+                                    <div style="font-size: 0.9rem; font-weight: 600; color: #a1a1aa; margin-bottom: 0.5rem;" x-text="wave.name"></div>
+                                    <!-- Clock -->
+                                    <div style="font-size: 3rem; font-weight: 200; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;" :style="wave.real_start_time ? 'color: #e4e4e7;' : 'color: #71717a;'" x-text="getWaveChrono(wave)"></div>
+                                    <!-- Start Time or Status -->
+                                    <div style="font-size: 0.85rem; color: #a1a1aa; margin-top: 0.5rem;" x-show="wave.real_start_time">
+                                        <span>Départ: </span>
+                                        <span x-text="formatTime(wave.real_start_time)"></span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #f59e0b; margin-top: 0.5rem;" x-show="!wave.real_start_time">
+                                        En attente
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
-                    <div style="text-align: center; padding-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;" x-show="selectedRaceId && getSelectedRace()?.start_time">
-                        <span>Départ: </span>
-                        <span x-text="formatTime(getSelectedRace()?.start_time)"></span>
+
+                    <!-- Fallback: Race Chrono Display (no waves) -->
+                    <div x-show="selectedRaceId && waves.length === 0">
+                        <div class="main-clock" x-text="raceChrono" x-show="getSelectedRace()?.start_time"></div>
+                        <div class="main-clock" style="font-size: 3rem; color: #71717a;" x-show="!getSelectedRace()?.start_time">
+                            -- : -- : --
+                        </div>
+                        <div style="text-align: center; padding-bottom: 0.5rem; color: #a1a1aa; font-size: 0.9rem;" x-show="getSelectedRace()?.start_time">
+                            <span>Départ: </span>
+                            <span x-text="formatTime(getSelectedRace()?.start_time)"></span>
+                        </div>
+                    </div>
+
+                    <!-- No race selected -->
+                    <div class="main-clock" style="font-size: 3rem; color: #71717a;" x-show="!selectedRaceId">
+                        -- : -- : --
                     </div>
 
                     <div class="readers-status" x-show="readers.length > 0">
@@ -1339,7 +1368,15 @@ body {
 
             <!-- Right -->
             <div class="chrono-right" x-show="selectedResult">
-                <div class="detail-header">
+                <div class="detail-header" style="position: relative;">
+                    <!-- Close Button -->
+                    <button @click="selectedResult = null"
+                            style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #2a2d3e; border: none; border-radius: 6px; color: #a1a1aa; cursor: pointer; transition: all 0.2s; font-size: 1.2rem;"
+                            onmouseover="this.style.background='#3b3e4e'; this.style.color='#e4e4e7';"
+                            onmouseout="this.style.background='#2a2d3e'; this.style.color='#a1a1aa';"
+                            title="Fermer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                     <div class="bib-title">Dossard</div>
                     <!-- Editable Bib Number -->
                     <div class="bib-value"
@@ -1617,59 +1654,123 @@ body {
     </div>
 
     <!-- Top Depart Modal -->
-    <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false">
-        <div class="modal-content">
+    <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false" x-init="loadAllWavesForModal()">
+        <div class="modal-content" style="max-width: 700px;">
             <h3>Gestion des départs</h3>
             <div class="race-list">
                 <template x-for="race in races" :key="race.id">
-                    <div style="margin-bottom: 1rem;">
-                        <!-- Race without start time -->
-                        <div x-show="!race.start_time">
-                            <button class="race-btn" @click="topDepart(race)" :disabled="startingRace">
-                                <span x-text="race.name"></span>
-                                <span>Donner le TOP</span>
-                            </button>
+                    <div style="margin-bottom: 1.5rem; background: #1a1d2e; padding: 1rem; border-radius: 12px;">
+                        <!-- Race Header -->
+                        <div style="margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 600; color: #e4e4e7; border-bottom: 1px solid #2a2d3e; padding-bottom: 0.5rem;">
+                            <i class="bi bi-flag-fill" style="color: #6366f1;"></i> <span x-text="race.name"></span>
                         </div>
 
-                        <!-- Race with start time -->
-                        <div x-show="race.start_time">
-                            <!-- Display mode -->
-                            <div x-show="editingRaceId !== race.id" style="display: flex; gap: 0.5rem; align-items: center;">
-                                <div class="race-btn" style="flex: 1; cursor: default; background: #10B981;">
-                                    <span x-text="race.name"></span>
-                                    <span class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
+                        <!-- Waves for this race -->
+                        <template x-for="wave in allWavesMap[race.id] || []" :key="wave.id">
+                            <div style="margin-bottom: 0.75rem; padding-left: 1rem;">
+                                <!-- Wave without start time -->
+                                <div x-show="!wave.real_start_time">
+                                    <button class="race-btn" @click="topDepartWave(wave)" :disabled="startingRace" style="background: #3b82f6;">
+                                        <span x-text="wave.name"></span>
+                                        <span>Donner le TOP</span>
+                                    </button>
                                 </div>
-                                <button @click="startEditingStartTime(race)"
-                                        style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                                    <i class="bi bi-pencil"></i> Modifier
+
+                                <!-- Wave with start time -->
+                                <div x-show="wave.real_start_time">
+                                    <!-- Display mode -->
+                                    <div x-show="editingWaveId !== wave.id" style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <div class="race-btn" style="flex: 1; cursor: default; background: #22c55e;">
+                                            <span x-text="wave.name"></span>
+                                            <span class="time" x-text="'Départ: ' + formatTime(wave.real_start_time)"></span>
+                                        </div>
+                                        <button @click="startEditingWaveStartTime(wave)"
+                                                style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                                            <i class="bi bi-pencil"></i> Modifier
+                                        </button>
+                                    </div>
+
+                                    <!-- Edit mode -->
+                                    <div x-show="editingWaveId === wave.id" style="background: #0f1117; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
+                                        <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
+                                            <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="wave.name"></span>
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                            <input type="date"
+                                                   x-model="editStartDate"
+                                                   style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                            <input type="time"
+                                                   x-model="editStartTime"
+                                                   step="1"
+                                                   style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button @click="cancelEditingWaveStartTime()"
+                                                    style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                                Annuler
+                                            </button>
+                                            <button @click="saveWaveStartTime(wave)"
+                                                    :disabled="!editStartDate || !editStartTime || startingRace"
+                                                    style="flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                                                    :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                                <i class="bi bi-check-lg"></i> Enregistrer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- If no waves, show fallback for race -->
+                        <div x-show="!(allWavesMap[race.id] && allWavesMap[race.id].length > 0)">
+                            <!-- Race without start time -->
+                            <div x-show="!race.start_time">
+                                <button class="race-btn" @click="topDepart(race)" :disabled="startingRace">
+                                    <span>Parcours entier</span>
+                                    <span>Donner le TOP</span>
                                 </button>
                             </div>
 
-                            <!-- Edit mode -->
-                            <div x-show="editingRaceId === race.id" style="background: #1a1d2e; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
-                                <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
-                                    <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="race.name"></span>
-                                </div>
-                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                    <input type="date"
-                                           x-model="editStartDate"
-                                           style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                    <input type="time"
-                                           x-model="editStartTime"
-                                           step="1"
-                                           style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                </div>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <button @click="cancelEditingStartTime()"
-                                            style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                        Annuler
+                            <!-- Race with start time -->
+                            <div x-show="race.start_time">
+                                <!-- Display mode -->
+                                <div x-show="editingRaceId !== race.id" style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div class="race-btn" style="flex: 1; cursor: default; background: #10B981;">
+                                        <span>Parcours entier</span>
+                                        <span class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
+                                    </div>
+                                    <button @click="startEditingStartTime(race)"
+                                            style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                                        <i class="bi bi-pencil"></i> Modifier
                                     </button>
-                                    <button @click="saveStartTime(race)"
-                                            :disabled="!editStartDate || !editStartTime || startingRace"
-                                            style="flex: 1; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                                            :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                                        <i class="bi bi-check-lg"></i> Enregistrer
-                                    </button>
+                                </div>
+
+                                <!-- Edit mode -->
+                                <div x-show="editingRaceId === race.id" style="background: #0f1117; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
+                                    <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
+                                        <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="race.name"></span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                        <input type="date"
+                                               x-model="editStartDate"
+                                               style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                        <input type="time"
+                                               x-model="editStartTime"
+                                               step="1"
+                                               style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button @click="cancelEditingStartTime()"
+                                                style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                            Annuler
+                                        </button>
+                                        <button @click="saveStartTime(race)"
+                                                :disabled="!editStartDate || !editStartTime || startingRace"
+                                                style="flex: 1; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                                                :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                            <i class="bi bi-check-lg"></i> Enregistrer
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1747,6 +1848,8 @@ body {
                         @change="saveManualCheckpointToStorage()"
                         style="width: 100%; padding: 0.5rem; border: 2px solid #3b82f6; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">
                     <option value="">Sélectionner le checkpoint</option>
+                    <option value="DEPART" style="background: #dbeafe; color: #1e40af; font-weight: 600;">🚀 DÉPART</option>
+                    <option value="ARRIVEE" style="background: #dcfce7; color: #166534; font-weight: 600;">🏁 ARRIVÉE</option>
                     <option value="ABD" style="background: #fef3c7; color: #92400e; font-weight: 600;">🚫 ABD</option>
                     <template x-for="reader in readers" :key="reader.id">
                         <option :value="reader.id" x-text="reader.location"></option>
@@ -1832,6 +1935,8 @@ body {
                 <select x-model="rfidCheckpointId"
                         style="width: 100%; padding: 0.75rem; background: #1a1d2e; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
                     <option value="">Sélectionner le checkpoint</option>
+                    <option value="DEPART" style="background: #1e3a8a; color: #93c5fd; font-weight: 600;">🚀 DÉPART</option>
+                    <option value="ARRIVEE" style="background: #14532d; color: #86efac; font-weight: 600;">🏁 ARRIVÉE</option>
                     <template x-for="reader in readers" :key="reader.id">
                         <option :value="reader.id" x-text="reader.location"></option>
                     </template>
@@ -1910,6 +2015,7 @@ function chronoApp() {
         raceChrono: '00:00:00',
         selectedRaceId: null,
         races: [],
+        waves: [],
         categories: [],
         readers: [],
         results: [],
@@ -1954,8 +2060,10 @@ function chronoApp() {
         intermediateDate: '',
         intermediateTime: '',
         editingRaceId: null,
+        editingWaveId: null,
         editStartDate: '',
         editStartTime: '',
+        allWavesMap: {},
         showRfidFileModal: false,
         rfidFile: null,
         rfidCheckpointId: '',
@@ -2012,12 +2120,29 @@ function chronoApp() {
             this.raceChrono = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         },
 
+        getWaveChrono(wave) {
+            if (!wave || !wave.real_start_time) {
+                return '-- : -- : --';
+            }
+
+            const startTime = new Date(wave.real_start_time);
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000); // seconds
+
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+
         getSelectedRace() {
             return this.races.find(r => r.id == this.selectedRaceId);
         },
 
         switchRaceChrono() {
             this.updateRaceChrono();
+            this.loadWaves();
         },
 
         autoSelectLastStartedRace() {
@@ -2110,6 +2235,29 @@ function chronoApp() {
                 this.races = response.data;
             } catch (error) {
                 console.error('Erreur chargement courses', error);
+            }
+        },
+
+        async loadWaves() {
+            // Don't load waves if no race selected
+            if (!this.selectedRaceId) {
+                this.waves = [];
+                return;
+            }
+
+            try {
+                // Load waves for selected race
+                // Add timestamp to prevent caching
+                const response = await axios.get(`/waves`, {
+                    params: {
+                        race_id: this.selectedRaceId,
+                        _t: Date.now()
+                    }
+                });
+                this.waves = response.data;
+            } catch (error) {
+                console.error('Erreur chargement vagues', error);
+                this.waves = [];
             }
         },
 
@@ -3135,6 +3283,100 @@ function chronoApp() {
 
             } catch (error) {
                 console.error('Erreur modification départ:', error);
+                this.showToast('Erreur lors de la modification', 'error');
+            } finally {
+                this.startingRace = false;
+            }
+        },
+
+        // ====== WAVES MANAGEMENT ======
+        async loadAllWavesForModal() {
+            // Load all waves for all races to display in the modal
+            this.allWavesMap = {};
+            for (const race of this.races) {
+                try {
+                    const response = await axios.get(`/waves`, {
+                        params: {
+                            race_id: race.id,
+                            _t: Date.now()
+                        }
+                    });
+                    this.allWavesMap[race.id] = response.data;
+                } catch (error) {
+                    console.error(`Erreur chargement vagues pour course ${race.id}`, error);
+                    this.allWavesMap[race.id] = [];
+                }
+            }
+        },
+
+        async topDepartWave(wave) {
+            if (!confirm(`Donner le TOP DÉPART pour "${wave.name}" ?`)) return;
+            this.startingRace = true;
+            try {
+                await axios.post(`/waves/${wave.id}/top-depart`);
+                wave.real_start_time = new Date().toISOString();
+                this.showToast(`TOP DÉPART donné pour ${wave.name}`, 'success');
+                await this.loadWaves(); // Reload waves for the selected race
+                await this.loadAllWavesForModal(); // Reload modal waves
+            } catch (error) {
+                console.error('Erreur TOP DÉPART vague:', error);
+                this.showToast('Erreur', 'error');
+            } finally {
+                this.startingRace = false;
+            }
+        },
+
+        startEditingWaveStartTime(wave) {
+            // Parse current start time to populate inputs
+            if (wave.real_start_time) {
+                const startDate = new Date(wave.real_start_time);
+                const year = startDate.getFullYear();
+                const month = String(startDate.getMonth() + 1).padStart(2, '0');
+                const day = String(startDate.getDate()).padStart(2, '0');
+                const hours = String(startDate.getHours()).padStart(2, '0');
+                const minutes = String(startDate.getMinutes()).padStart(2, '0');
+                const seconds = String(startDate.getSeconds()).padStart(2, '0');
+
+                this.editStartDate = `${year}-${month}-${day}`;
+                this.editStartTime = `${hours}:${minutes}:${seconds}`;
+            }
+            this.editingWaveId = wave.id;
+        },
+
+        cancelEditingWaveStartTime() {
+            this.editingWaveId = null;
+            this.editStartDate = '';
+            this.editStartTime = '';
+        },
+
+        async saveWaveStartTime(wave) {
+            if (!this.editStartDate || !this.editStartTime) return;
+
+            const newStartTime = `${this.editStartDate} ${this.editStartTime}`;
+
+            if (!confirm(`Modifier le départ de "${wave.name}" à ${this.editStartTime} ?`)) return;
+
+            this.startingRace = true;
+
+            try {
+                const response = await axios.post(`/waves/${wave.id}/update-real-start-time`, {
+                    real_start_time: newStartTime
+                });
+
+                this.showToast(`Départ modifié pour ${wave.name}`, 'success');
+
+                // Reload waves and results
+                await this.loadWaves();
+                await this.loadAllWavesForModal();
+                await this.loadAllResults();
+
+                // Recalculate all alerts with new start time
+                this.recalculateAllAlerts();
+
+                this.cancelEditingWaveStartTime();
+
+            } catch (error) {
+                console.error('Erreur modification départ vague:', error);
                 this.showToast('Erreur lors de la modification', 'error');
             } finally {
                 this.startingRace = false;
