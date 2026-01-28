@@ -30,7 +30,7 @@ class Entrant extends Model
     ];
 
     protected $casts = [
-        'birth_date' => 'date',
+        'birth_date' => 'date:Y-m-d', // Format yyyy-MM-dd pour les inputs HTML
         'start_time' => 'datetime:H:i:s', // Cast vers Time pour contre-la-montre
     ];
 

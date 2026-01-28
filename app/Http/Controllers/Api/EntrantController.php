@@ -319,19 +319,15 @@ class EntrantController extends Controller
                 $parsedBirthDate = null;
                 if ($birthDate) {
                     $birthDate = trim($birthDate); // Supprimer les espaces avant/après
-                    \Log::info("Birth date raw value for bib {$bibNumber}: [{$birthDate}]");
                     if (!empty($birthDate)) {
                         try {
                             // Essayer le format français DD/MM/YYYY
                             if (preg_match('#^(\d{2})/(\d{2})/(\d{4})$#', $birthDate, $matches)) {
                                 $parsedBirthDate = $matches[3] . '-' . $matches[2] . '-' . $matches[1];
-                                \Log::info("Birth date parsed (regex) for bib {$bibNumber}: [{$parsedBirthDate}]");
                             } else {
                                 $parsedBirthDate = \Carbon\Carbon::parse($birthDate)->format('Y-m-d');
-                                \Log::info("Birth date parsed (Carbon) for bib {$bibNumber}: [{$parsedBirthDate}]");
                             }
                         } catch (\Exception $e) {
-                            \Log::error("Birth date parsing failed for bib {$bibNumber}: " . $e->getMessage());
                             $parsedBirthDate = null;
                         }
                     }
@@ -380,8 +376,6 @@ class EntrantController extends Controller
                     'start_time' => $parsedStartTime, // Heure de départ individuelle
                 ];
 
-                \Log::info("Entrant data for bib {$bibNumber}", ['birth_date' => $parsedBirthDate, 'email' => $entrantData['email'], 'phone' => $entrantData['phone'], 'team' => $entrantData['team']]);
-
                 // Check if entrant already exists (by bib_number + event_id)
                 $entrant = null;
                 if (!empty($bibNumber)) {
@@ -392,14 +386,10 @@ class EntrantController extends Controller
 
                 if ($entrant) {
                     // Update existing entrant
-                    \Log::info("Updating entrant bib {$bibNumber}, ID: {$entrant->id}");
                     $entrant->update($entrantData);
-                    \Log::info("After update - birth_date: [{$entrant->birth_date}]");
                 } else {
                     // Create new entrant
-                    \Log::info("Creating new entrant bib {$bibNumber}");
                     $entrant = Entrant::create($entrantData);
-                    \Log::info("After create - ID: {$entrant->id}, birth_date: [{$entrant->birth_date}]");
                 }
 
                 // Handle category - PRIORITÉ CSV sur FFA
