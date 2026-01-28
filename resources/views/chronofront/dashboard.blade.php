@@ -73,44 +73,49 @@
 
     <!-- Quick Actions -->
     <div class="row mb-4">
-        <div class="col-12">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-lightning-charge text-warning"></i> Actions rapides
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <a href="{{ route('events') }}" class="btn btn-primary w-100 py-3">
                                 <i class="bi bi-plus-circle"></i><br>
                                 <span class="mt-2">Nouvel événement</span>
                             </a>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <a href="{{ route('entrants.import') }}" class="btn btn-success w-100 py-3">
                                 <i class="bi bi-upload"></i><br>
                                 <span class="mt-2">Import CSV</span>
                             </a>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <a href="{{ route('timing') }}" class="btn w-100 py-3" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; border: none;">
                                 <i class="bi bi-stopwatch"></i><br>
                                 <span class="mt-2">Chronométrer</span>
                             </a>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="{{ route('results') }}" class="btn btn-info w-100 py-3 text-white">
-                                <i class="bi bi-trophy"></i><br>
-                                <span class="mt-2">Voir résultats</span>
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-database"></i> Options Base de Données
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
                             <a href="{{ route('database.export') }}" class="btn btn-secondary w-100 py-3" download>
                                 <i class="bi bi-download"></i><br>
                                 <span class="mt-2">Exporter DB</span>
                             </a>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12">
                             <button @click="showImportModal = true" class="btn btn-danger w-100 py-3">
                                 <i class="bi bi-upload"></i><br>
                                 <span class="mt-2">Importer DB</span>
