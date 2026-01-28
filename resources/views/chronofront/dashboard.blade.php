@@ -201,23 +201,19 @@
                     <ol class="mb-0">
                         <li class="mb-2">
                             <strong>Créer un événement</strong>
-                            <p class="small text-muted mb-0">Commencez par créer votre événement sportif</p>
+                            <p class="small text-muted mb-0">Commencez par créer votre événement</p>
                         </li>
                         <li class="mb-2">
-                            <strong>Ajouter des épreuves</strong>
-                            <p class="small text-muted mb-0">Définissez les parcours et distances</p>
+                            <strong>Configurer votre/vos lecteur(s)</strong>
+                            <p class="small text-muted mb-0">Attribuez le numéro du lecteur et définissez son mode</p>
                         </li>
                         <li class="mb-2">
-                            <strong>Importer les participants</strong>
-                            <p class="small text-muted mb-0">Chargez votre fichier CSV avec les inscrits</p>
-                        </li>
-                        <li class="mb-2">
-                            <strong>Créer des vagues</strong> (optionnel)
-                            <p class="small text-muted mb-0">Organisez les départs par vagues</p>
+                            <strong>Importer votre fichier d'inscription</strong>
+                            <p class="small text-muted mb-0">Les parcours et vagues seront créés automatiquement</p>
                         </li>
                         <li class="mb-2">
                             <strong>Chronométrer</strong>
-                            <p class="small text-muted mb-0">Enregistrez les temps de passage</p>
+                            <p class="small text-muted mb-0">Place au chronométrage de votre événement</p>
                         </li>
                         <li>
                             <strong>Consulter les résultats</strong>
