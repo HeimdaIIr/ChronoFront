@@ -2169,6 +2169,8 @@ function chronoApp() {
                     this.currentEventId = null;
                     this.readers = [];
                     this.races = [];
+                    this.waves = [];
+                    this.allWavesMap = {};
                     this.categories = [];
                     this.detections = [];
                     this.results = [];
@@ -3411,6 +3413,8 @@ function chronoApp() {
                     this.currentEventId = null;
                     this.readers = [];
                     this.races = [];
+                    this.waves = [];
+                    this.allWavesMap = {};
                     this.categories = [];
                     this.detections = [];
                     this.results = [];

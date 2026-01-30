@@ -7,7 +7,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
-    
+    protected static function boot()
+    {
+        parent::boot();
+
+        // When an event is deleted, ensure all related data is properly cleaned
+        static::deleting(function ($event) {
+            // Delete all races (which will cascade to waves, entrants, results via DB constraints)
+            $event->races()->delete();
+
+            // Delete all readers
+            $event->readers()->delete();
+        });
+    }
 
     protected $fillable = [
         'name',
@@ -32,6 +44,22 @@ class Event extends Model
     public function races(): HasMany
     {
         return $this->hasMany(Race::class);
+    }
+
+    /**
+     * Get the readers for the event
+     */
+    public function readers(): HasMany
+    {
+        return $this->hasMany(Reader::class);
+    }
+
+    /**
+     * Get the entrants for the event
+     */
+    public function entrants(): HasMany
+    {
+        return $this->hasMany(Entrant::class);
     }
 
     /**
