@@ -776,11 +776,6 @@ function eventsManager() {
         },
 
         async createEvent() {
-            // Debug: log current values
-            console.log('Validation check - newEvent:', JSON.stringify(this.newEvent, null, 2));
-            console.log('date_start value:', this.newEvent.date_start, 'type:', typeof this.newEvent.date_start);
-            console.log('date_end value:', this.newEvent.date_end, 'type:', typeof this.newEvent.date_end);
-
             // Validate required fields
             if (!this.newEvent.name || !this.newEvent.name.trim()) {
                 alert('Le nom de l\'événement est requis');
@@ -791,13 +786,11 @@ function eventsManager() {
                 return;
             }
             if (!this.newEvent.date_end || this.newEvent.date_end.trim() === '') {
-                console.log('Date end is empty! Value:', this.newEvent.date_end);
                 alert('La date de fin est requise');
                 return;
             }
 
             try {
-                console.log('Creating event with data:', this.newEvent);
                 const response = await axios.post('/events', this.newEvent);
                 this.tempEventId = response.data.id;
                 await this.loadEvents();
@@ -883,14 +876,13 @@ function eventsManager() {
         },
 
         resetForm() {
-            this.newEvent = {
-                name: '',
-                date_start: '',
-                date_end: '',
-                location: '',
-                description: '',
-                is_active: true
-            };
+            // Modifier les propriétés individuellement pour préserver la réactivité Alpine.js
+            this.newEvent.name = '';
+            this.newEvent.date_start = '';
+            this.newEvent.date_end = '';
+            this.newEvent.location = '';
+            this.newEvent.description = '';
+            this.newEvent.is_active = true;
         },
 
         formatDate(dateString) {

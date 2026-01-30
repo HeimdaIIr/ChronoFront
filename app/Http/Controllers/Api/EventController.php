@@ -40,8 +40,6 @@ class EventController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        \Log::info('Event creation request data:', $request->all());
-
         // Convert empty strings to null for date fields (HTML5 datetime-local sends empty strings)
         $data = $request->all();
         if (isset($data['date_start']) && $data['date_start'] === '') {
@@ -51,33 +49,23 @@ class EventController extends Controller
             $data['date_end'] = null;
         }
 
-        try {
-            $validated = validator($data, [
-                'name' => 'required|string|max:200',
-                'date_start' => 'required|date',
-                'date_end' => 'required|date|after_or_equal:date_start',
-                'location' => 'nullable|string|max:200',
-                'description' => 'nullable|string',
-                'is_active' => 'sometimes|boolean',
-            ])->validate();
+        $validated = validator($data, [
+            'name' => 'required|string|max:200',
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after_or_equal:date_start',
+            'location' => 'nullable|string|max:200',
+            'description' => 'nullable|string',
+            'is_active' => 'sometimes|boolean',
+        ])->validate();
 
-            \Log::info('Event validation passed:', $validated);
-
-            // Ensure is_active has a default value if not provided
-            if (!isset($validated['is_active'])) {
-                $validated['is_active'] = true;
-            }
-
-            $event = Event::create($validated);
-
-            return response()->json($event, 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Event validation failed:', [
-                'errors' => $e->errors(),
-                'request_data' => $request->all()
-            ]);
-            throw $e;
+        // Ensure is_active has a default value if not provided
+        if (!isset($validated['is_active'])) {
+            $validated['is_active'] = true;
         }
+
+        $event = Event::create($validated);
+
+        return response()->json($event, 201);
     }
 
     /**
