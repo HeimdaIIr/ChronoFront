@@ -777,6 +777,7 @@ function eventsManager() {
 
         async createEvent() {
             try {
+                console.log('Creating event with data:', this.newEvent);
                 const response = await axios.post('/events', this.newEvent);
                 this.tempEventId = response.data.id;
                 await this.loadEvents();
@@ -788,7 +789,18 @@ function eventsManager() {
                 alert('Événement créé avec succès ! Vous pouvez maintenant configurer les lecteurs RFID.');
             } catch (error) {
                 console.error('Error creating event:', error);
-                alert('Erreur lors de la création de l\'événement');
+                console.error('Error response:', error.response?.data);
+                console.error('Error status:', error.response?.status);
+
+                let errorMessage = 'Erreur lors de la création de l\'événement';
+                if (error.response?.data?.errors) {
+                    const errors = Object.values(error.response.data.errors).flat();
+                    errorMessage += ':\n' + errors.join('\n');
+                } else if (error.response?.data?.message) {
+                    errorMessage += ': ' + error.response.data.message;
+                }
+
+                alert(errorMessage);
             }
         },
 

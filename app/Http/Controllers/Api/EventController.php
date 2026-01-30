@@ -40,18 +40,30 @@ class EventController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:200',
-            'date_start' => 'required|date',
-            'date_end' => 'required|date|after_or_equal:date_start',
-            'location' => 'nullable|string|max:200',
-            'description' => 'nullable|string',
-            'is_active' => 'boolean',
-        ]);
+        \Log::info('Event creation request data:', $request->all());
 
-        $event = Event::create($validated);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:200',
+                'date_start' => 'required|date',
+                'date_end' => 'required|date|after_or_equal:date_start',
+                'location' => 'nullable|string|max:200',
+                'description' => 'nullable|string',
+                'is_active' => 'boolean',
+            ]);
 
-        return response()->json($event, 201);
+            \Log::info('Event validation passed:', $validated);
+
+            $event = Event::create($validated);
+
+            return response()->json($event, 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Event validation failed:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            throw $e;
+        }
     }
 
     /**
