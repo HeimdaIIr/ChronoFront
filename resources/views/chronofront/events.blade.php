@@ -33,7 +33,7 @@
             <h1 class="h2 mb-0"><i class="bi bi-calendar-event text-primary"></i> Gestion des Événements</h1>
             <p class="text-muted">Créez et gérez vos événements sportifs</p>
         </div>
-        <button class="btn btn-primary" @click="showCreateModal = true">
+        <button class="btn btn-primary" @click="resetForm(); showCreateModal = true">
             <i class="bi bi-plus-circle"></i> Nouvel événement
         </button>
     </div>
@@ -56,7 +56,7 @@
                 <div class="text-center text-muted py-5">
                     <i class="bi bi-inbox" style="font-size: 4rem;"></i>
                     <p class="mt-3">Aucun événement créé</p>
-                    <button class="btn btn-primary" @click="showCreateModal = true">
+                    <button class="btn btn-primary" @click="resetForm(); showCreateModal = true">
                         <i class="bi bi-plus-circle"></i> Créer votre premier événement
                     </button>
                 </div>

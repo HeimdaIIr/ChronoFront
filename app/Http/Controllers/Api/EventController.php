@@ -49,10 +49,15 @@ class EventController extends Controller
                 'date_end' => 'required|date|after_or_equal:date_start',
                 'location' => 'nullable|string|max:200',
                 'description' => 'nullable|string',
-                'is_active' => 'boolean',
+                'is_active' => 'sometimes|boolean',
             ]);
 
             \Log::info('Event validation passed:', $validated);
+
+            // Ensure is_active has a default value if not provided
+            if (!isset($validated['is_active'])) {
+                $validated['is_active'] = true;
+            }
 
             $event = Event::create($validated);
 
