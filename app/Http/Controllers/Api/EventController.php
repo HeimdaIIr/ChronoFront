@@ -42,15 +42,24 @@ class EventController extends Controller
     {
         \Log::info('Event creation request data:', $request->all());
 
+        // Convert empty strings to null for date fields (HTML5 datetime-local sends empty strings)
+        $data = $request->all();
+        if (isset($data['date_start']) && $data['date_start'] === '') {
+            $data['date_start'] = null;
+        }
+        if (isset($data['date_end']) && $data['date_end'] === '') {
+            $data['date_end'] = null;
+        }
+
         try {
-            $validated = $request->validate([
+            $validated = validator($data, [
                 'name' => 'required|string|max:200',
                 'date_start' => 'required|date',
                 'date_end' => 'required|date|after_or_equal:date_start',
                 'location' => 'nullable|string|max:200',
                 'description' => 'nullable|string',
                 'is_active' => 'sometimes|boolean',
-            ]);
+            ])->validate();
 
             \Log::info('Event validation passed:', $validated);
 

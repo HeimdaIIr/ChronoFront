@@ -776,6 +776,20 @@ function eventsManager() {
         },
 
         async createEvent() {
+            // Validate required fields
+            if (!this.newEvent.name || !this.newEvent.name.trim()) {
+                alert('Le nom de l\'événement est requis');
+                return;
+            }
+            if (!this.newEvent.date_start) {
+                alert('La date de début est requise');
+                return;
+            }
+            if (!this.newEvent.date_end) {
+                alert('La date de fin est requise');
+                return;
+            }
+
             try {
                 console.log('Creating event with data:', this.newEvent);
                 const response = await axios.post('/events', this.newEvent);
