@@ -1216,9 +1216,9 @@ body {
                     </div>
 
                     <!-- Waves Chrono Display (Multi-clocks) -->
-                    <div x-show="selectedRaceId && waves.length > 0" style="padding: 1rem 2rem;">
+                    <div x-show="selectedRaceId && getFilteredWaves().length > 0" style="padding: 1rem 2rem;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                            <template x-for="wave in waves" :key="wave.id">
+                            <template x-for="wave in getFilteredWaves()" :key="wave.id">
                                 <div style="text-align: center; background: #1a1d2e; border-radius: 12px; padding: 1.5rem; border: 2px solid #2a2d3e;" :style="wave.real_start_time ? 'border-color: #22c55e;' : ''">
                                     <!-- Wave Name -->
                                     <div style="font-size: 0.9rem; font-weight: 600; color: #a1a1aa; margin-bottom: 0.5rem;" x-text="wave.name"></div>
@@ -1238,7 +1238,7 @@ body {
                     </div>
 
                     <!-- Fallback: Race Chrono Display (no waves) -->
-                    <div x-show="selectedRaceId && waves.length === 0">
+                    <div x-show="selectedRaceId && getFilteredWaves().length === 0">
                         <div class="main-clock" x-text="raceChrono" x-show="getSelectedRace()?.start_time"></div>
                         <div class="main-clock" style="font-size: 3rem; color: #71717a;" x-show="!getSelectedRace()?.start_time">
                             -- : -- : --
@@ -2138,6 +2138,14 @@ function chronoApp() {
 
         getSelectedRace() {
             return this.races.find(r => r.id == this.selectedRaceId);
+        },
+
+        // Get waves filtered by selected race
+        getFilteredWaves() {
+            if (!this.selectedRaceId) {
+                return [];
+            }
+            return this.waves.filter(wave => wave.race_id == this.selectedRaceId);
         },
 
         switchRaceChrono() {
