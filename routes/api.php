@@ -65,6 +65,7 @@ Route::post('results/manual-single', [ResultController::class, 'storeManualSingl
 Route::post('results/{result}/status', [ResultController::class, 'updateStatus']);
 Route::post('results/mark-abd', [ResultController::class, 'markAsABD']);
 Route::post('results/rfid-batch', [ResultController::class, 'importRfidBatch']);
+Route::post('results/clear-arrivals', [ResultController::class, 'clearArrivals']);
 Route::post('results/recalculate-all', [ResultController::class, 'recalculateAllPositions']);
 Route::post('results/race/{raceId}/recalculate', [ResultController::class, 'recalculatePositions']);
 Route::get('results/race/{raceId}/export', [ResultController::class, 'export']);

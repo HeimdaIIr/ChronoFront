@@ -1189,6 +1189,10 @@ body {
                     <i class="bi bi-file-earmark-text-fill"></i>
                     IMPORTER HEURES
                 </button>
+                <button class="btn-filter" @click="confirmClearAllArrivals()" style="background: #ef4444; height: 38px;" title="Supprimer toutes les heures d'arrivée">
+                    <i class="bi bi-trash-fill"></i>
+                    SUPPRIMER ARRIVÉES
+                </button>
                 <div class="alert-badge" :class="{ 'no-alerts': getPendingAlertsCount() === 0 }" style="margin-left: 1rem;">
                     <i class="bi bi-bell-fill"></i>
                     <span x-text="getPendingAlertsCount() + ' alerte' + (getPendingAlertsCount() > 1 ? 's' : '')"></span>
@@ -4261,6 +4265,31 @@ function chronoApp() {
                 };
             } finally {
                 this.importingRfidFile = false;
+            }
+        },
+
+        // Clear all arrival times
+        async confirmClearAllArrivals() {
+            const message = this.selectedRaceId
+                ? `Voulez-vous vraiment supprimer TOUTES les heures d'arrivée pour le parcours sélectionné ?\n\nCette action est irréversible.`
+                : `Voulez-vous vraiment supprimer TOUTES les heures d'arrivée de TOUS les parcours ?\n\nCette action est irréversible.`;
+
+            if (!confirm(message)) {
+                return;
+            }
+
+            try {
+                const response = await axios.post('/results/clear-arrivals', {
+                    race_id: this.selectedRaceId || null
+                });
+
+                this.showToast(response.data.message || 'Heures d\'arrivée supprimées avec succès', 'success');
+
+                // Reload results
+                await this.loadAllResults();
+            } catch (error) {
+                console.error('Erreur lors de la suppression des arrivées:', error);
+                this.showToast('Erreur lors de la suppression des heures d\'arrivée', 'error');
             }
         }
     }

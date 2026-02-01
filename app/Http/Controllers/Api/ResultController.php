@@ -1786,4 +1786,48 @@ class ResultController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Clear all arrival times from results
+     * If race_id is provided, only clear for that race
+     * Otherwise, clear for all active events
+     */
+    public function clearArrivals(Request $request): JsonResponse
+    {
+        try {
+            $raceId = $request->input('race_id');
+
+            $query = Result::query();
+
+            if ($raceId) {
+                // Clear only for specific race
+                $query->where('race_id', $raceId);
+                $affected = $query->update(['arrival_time' => null]);
+
+                $message = "Supprimé {$affected} heure(s) d'arrivée pour le parcours sélectionné";
+            } else {
+                // Clear for all active events
+                $query->whereHas('race.event', function($q) {
+                    $q->where('is_active', true)
+                      ->where('date_start', '<=', now())
+                      ->where('date_end', '>=', now());
+                });
+                $affected = $query->update(['arrival_time' => null]);
+
+                $message = "Supprimé {$affected} heure(s) d'arrivée pour tous les parcours actifs";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'affected' => $affected
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la suppression des heures d\'arrivée',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
