@@ -1373,6 +1373,14 @@ body {
             <!-- Right -->
             <div class="chrono-right" x-show="selectedResult">
                 <div class="detail-header" style="position: relative;">
+                    <!-- Delete Button -->
+                    <button @click="deleteDetection(selectedResult)"
+                            style="position: absolute; top: 1rem; right: 3.5rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #ef4444; border: none; border-radius: 6px; color: white; cursor: pointer; transition: all 0.2s; font-size: 1rem;"
+                            onmouseover="this.style.background='#dc2626';"
+                            onmouseout="this.style.background='#ef4444';"
+                            title="Supprimer cette détection">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
                     <!-- Close Button -->
                     <button @click="selectedResult = null"
                             style="position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #2a2d3e; border: none; border-radius: 6px; color: #a1a1aa; cursor: pointer; transition: all 0.2s; font-size: 1.2rem;"
@@ -4265,6 +4273,25 @@ function chronoApp() {
                 };
             } finally {
                 this.importingRfidFile = false;
+            }
+        },
+
+        // Delete single detection
+        async deleteDetection(result) {
+            if (!confirm(`Supprimer la détection du coureur #${result.entrant?.bib_number} ?\n\nCette action est irréversible.`)) {
+                return;
+            }
+
+            try {
+                await axios.delete(`/results/${result.id}`);
+                this.showToast('Détection supprimée', 'success');
+
+                // Close panel and reload
+                this.selectedResult = null;
+                await this.loadAllResults();
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                this.showToast('Erreur lors de la suppression', 'error');
             }
         },
 
