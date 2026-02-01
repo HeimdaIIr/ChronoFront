@@ -1789,6 +1789,7 @@ class ResultController extends Controller
 
     /**
      * Clear all arrival times from results
+     * Deletes all results with reader_location = 'ARRIVEE'
      * If race_id is provided, only clear for that race
      * Otherwise, clear for all active events
      */
@@ -1797,12 +1798,12 @@ class ResultController extends Controller
         try {
             $raceId = $request->input('race_id');
 
-            $query = Result::query();
+            $query = Result::where('reader_location', 'ARRIVEE');
 
             if ($raceId) {
                 // Clear only for specific race
                 $query->where('race_id', $raceId);
-                $affected = $query->update(['arrival_time' => null]);
+                $affected = $query->delete();
 
                 $message = "Supprimé {$affected} heure(s) d'arrivée pour le parcours sélectionné";
             } else {
@@ -1812,7 +1813,7 @@ class ResultController extends Controller
                       ->where('date_start', '<=', now())
                       ->where('date_end', '>=', now());
                 });
-                $affected = $query->update(['arrival_time' => null]);
+                $affected = $query->delete();
 
                 $message = "Supprimé {$affected} heure(s) d'arrivée pour tous les parcours actifs";
             }
