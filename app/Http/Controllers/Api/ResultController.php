@@ -1807,15 +1807,10 @@ class ResultController extends Controller
 
                 $message = "Supprimé {$affected} heure(s) d'arrivée pour le parcours sélectionné";
             } else {
-                // Clear for all active events
-                $query->whereHas('race.event', function($q) {
-                    $q->where('is_active', true)
-                      ->where('date_start', '<=', now())
-                      ->where('date_end', '>=', now());
-                });
+                // Clear for all active events - just delete all ARRIVEE results
                 $affected = $query->delete();
 
-                $message = "Supprimé {$affected} heure(s) d'arrivée pour tous les parcours actifs";
+                $message = "Supprimé {$affected} heure(s) d'arrivée";
             }
 
             return response()->json([
@@ -1824,10 +1819,20 @@ class ResultController extends Controller
                 'affected' => $affected
             ]);
         } catch (\Exception $e) {
+            \Log::error('Clear arrivals error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'error' => 'Erreur lors de la suppression des heures d\'arrivée',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'debug' => [
+                    'line' => $e->getLine(),
+                    'file' => basename($e->getFile())
+                ]
             ], 500);
         }
     }

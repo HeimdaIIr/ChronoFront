@@ -4289,7 +4289,17 @@ function chronoApp() {
                 await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur lors de la suppression des arrivées:', error);
-                this.showToast('Erreur lors de la suppression des heures d\'arrivée', 'error');
+                console.error('Error response:', error.response?.data);
+
+                let errorMsg = 'Erreur lors de la suppression des heures d\'arrivée';
+                if (error.response?.data?.message) {
+                    errorMsg += ': ' + error.response.data.message;
+                }
+                if (error.response?.data?.debug) {
+                    console.error('Debug info:', error.response.data.debug);
+                }
+
+                this.showToast(errorMsg, 'error');
             }
         }
     }
