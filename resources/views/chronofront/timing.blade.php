@@ -4268,22 +4268,16 @@ function chronoApp() {
             }
         },
 
-        // Clear all arrival times
+        // Clear all results
         async confirmClearAllArrivals() {
-            const message = this.selectedRaceId
-                ? `Voulez-vous vraiment supprimer TOUTES les heures d'arrivée pour le parcours sélectionné ?\n\nCette action est irréversible.`
-                : `Voulez-vous vraiment supprimer TOUTES les heures d'arrivée de TOUS les parcours ?\n\nCette action est irréversible.`;
-
-            if (!confirm(message)) {
+            if (!confirm('ATTENTION: Ceci va VIDER TOUTE LA TABLE RESULTS !\n\nCette action est IRRÉVERSIBLE.\n\nContinuer ?')) {
                 return;
             }
 
             try {
-                const response = await axios.post('/results/clear-arrivals', {
-                    race_id: this.selectedRaceId || null
-                });
+                const response = await axios.post('/results/clear-arrivals');
 
-                this.showToast(response.data.message || 'Heures d\'arrivée supprimées avec succès', 'success');
+                this.showToast(response.data.message || 'Table results vidée', 'success');
 
                 // Reload results
                 await this.loadAllResults();

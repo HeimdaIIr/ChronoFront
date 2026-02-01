@@ -1788,51 +1788,22 @@ class ResultController extends Controller
     }
 
     /**
-     * Clear all arrival times from results
-     * Deletes all results with reader_location = 'ARRIVEE'
-     * If race_id is provided, only clear for that race
-     * Otherwise, clear for all active events
+     * Clear all results - truncate table
      */
     public function clearArrivals(Request $request): JsonResponse
     {
         try {
-            $raceId = $request->input('race_id');
-
-            $query = Result::where('reader_location', 'ARRIVEE');
-
-            if ($raceId) {
-                // Clear only for specific race
-                $query->where('race_id', $raceId);
-                $affected = $query->delete();
-
-                $message = "Supprimé {$affected} heure(s) d'arrivée pour le parcours sélectionné";
-            } else {
-                // Clear for all active events - just delete all ARRIVEE results
-                $affected = $query->delete();
-
-                $message = "Supprimé {$affected} heure(s) d'arrivée";
-            }
+            $affected = DB::table('results')->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => $message,
+                'message' => "Supprimé {$affected} résultat(s)",
                 'affected' => $affected
             ]);
         } catch (\Exception $e) {
-            \Log::error('Clear arrivals error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
-            ]);
-
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de la suppression des heures d\'arrivée',
-                'message' => $e->getMessage(),
-                'debug' => [
-                    'line' => $e->getLine(),
-                    'file' => basename($e->getFile())
-                ]
+                'message' => $e->getMessage()
             ], 500);
         }
     }
