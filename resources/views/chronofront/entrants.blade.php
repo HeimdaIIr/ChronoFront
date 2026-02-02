@@ -409,14 +409,25 @@ function entrantsManager() {
                 try {
                     const response = await axios.get(`/races/event/${this.selectedEventFilter}`);
                     this.filteredRaces = response.data;
+
+                    // Vérifier si le parcours sélectionné appartient encore au nouvel événement
+                    const raceInEvent = this.filteredRaces.find(race => race.id == this.selectedRaceFilter);
+
+                    if (!raceInEvent) {
+                        // Le parcours ne fait pas partie de cet événement, on le reset
+                        this.selectedRaceFilter = '';
+                        await this.loadEntrants();
+                    }
+                    // Si raceInEvent existe, on garde le parcours sélectionné
+                    // et on ne lance pas loadEntrants() car @change va se déclencher
                 } catch (error) {
                     console.error('Erreur', error);
                 }
             } else {
                 this.filteredRaces = this.races;
+                this.selectedRaceFilter = '';
+                await this.loadEntrants();
             }
-            this.selectedRaceFilter = '';
-            this.loadEntrants();
         },
 
         async loadWaves() {
