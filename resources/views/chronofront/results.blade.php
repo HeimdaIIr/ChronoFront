@@ -191,7 +191,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Événement</label>
-                    <select class="form-select" x-model="selectedEvent" @change="onEventChange" :disabled="loading">
+                    <select class="form-select" x-model="selectedEvent" @change="onEventChange">
                         <option value="">-- Sélectionnez --</option>
                         <template x-for="event in events" :key="event.id">
                             <option :value="event.id" x-text="event.name"></option>
@@ -200,7 +200,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Épreuve</label>
-                    <select class="form-select" x-model="selectedRace" @change="onRaceChange" :disabled="loading">
+                    <select class="form-select" x-model="selectedRace" @change="onRaceChange">
                         <option value="">-- Sélectionnez --</option>
                         <template x-for="race in filteredRaces" :key="race.id">
                             <option :value="race.id" x-text="race.name"></option>
@@ -209,14 +209,14 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Affichage</label>
-                    <select class="form-select" x-model="displayMode" @change="filterResults" :disabled="loading">
+                    <select class="form-select" x-model="displayMode" @change="filterResults">
                         <option value="general">Général</option>
                         <option value="category">Par catégorie</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Statut</label>
-                    <select class="form-select" x-model="statusFilter" @change="filterResults" :disabled="loading">
+                    <select class="form-select" x-model="statusFilter" @change="filterResults">
                         <option value="all">Tous</option>
                         <option value="V">Validés uniquement</option>
                     </select>
@@ -552,14 +552,25 @@ function resultsManager() {
         async onEventChange() {
             if (this.selectedEvent) {
                 this.filteredRaces = this.races.filter(race => race.event_id == this.selectedEvent);
-                // Charger les résultats de tous les parcours de l'événement
-                await this.loadEventResults();
+
+                // Vérifier si le parcours sélectionné appartient encore au nouvel événement
+                const raceInEvent = this.filteredRaces.find(race => race.id == this.selectedRace);
+
+                if (!raceInEvent) {
+                    // Le parcours ne fait pas partie de cet événement, on le reset
+                    this.selectedRace = '';
+                    this.results = [];
+                    // Charger les résultats de tous les parcours de l'événement
+                    await this.loadEventResults();
+                }
+                // Si raceInEvent existe, on garde le parcours sélectionné
+                // et on ne lance pas loadEventResults() car onRaceChange() va se déclencher
             } else {
                 this.filteredRaces = this.races;
                 this.resultsByRace = {};
+                this.selectedRace = '';
+                this.results = [];
             }
-            this.selectedRace = '';
-            this.results = [];
         },
 
         async onRaceChange() {
