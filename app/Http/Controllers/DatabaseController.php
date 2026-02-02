@@ -41,7 +41,7 @@ class DatabaseController extends Controller
 
         // Validation - Accepter n'importe quel fichier .sqlite peu importe le MIME type
         $request->validate([
-            'database_file' => 'required|file|max:102400', // Max 100MB, pas de restriction MIME
+            'database_file' => 'required|file|max:204800', // Max 200MB, pas de restriction MIME
         ]);
 
         \Log::info("Validation passée");
