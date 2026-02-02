@@ -272,6 +272,10 @@ function dashboard() {
                 const entrantsResponse = await axios.get('/entrants');
                 this.stats.entrants = entrantsResponse.data.length || 0;
 
+                // Load results count
+                const resultsResponse = await axios.get('/results');
+                this.stats.results = resultsResponse.data.length || 0;
+
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
