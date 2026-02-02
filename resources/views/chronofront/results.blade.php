@@ -629,8 +629,19 @@ function resultsManager() {
             if (!this.selectedRace) return;
 
             this.loading = true;
+
+            // Sauvegarder le parcours sélectionné pour vérifier qu'il n'a pas changé
+            const currentRace = this.selectedRace;
+
             try {
                 const response = await axios.get(`/results/race/${this.selectedRace}`);
+
+                // Vérifier que le parcours sélectionné n'a pas changé pendant le chargement
+                if (this.selectedRace !== currentRace) {
+                    // Le parcours a changé, ignorer ces résultats
+                    return;
+                }
+
                 this.results = response.data;
                 this.filterResults();
                 await this.calculateStats();
