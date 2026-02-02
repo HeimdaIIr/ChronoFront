@@ -133,38 +133,29 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-upload"></i> Importer une base de données</h5>
-                    <button type="button" class="btn-close" @click="showImportModal = false" :disabled="uploading"></button>
+                    <button type="button" class="btn-close" @click="showImportModal = false"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Attention !</strong> Cette action va remplacer toutes les données actuelles par celles du fichier importé.
-                        Un backup automatique sera créé dans <code>storage/databases/archives/</code>.
-                    </div>
-                    <div class="mb-3">
-                        <label for="database_file" class="form-label">Fichier SQLite (.sqlite)</label>
-                        <input type="file" class="form-control" id="database_file" @change="selectFile($event)" accept=".sqlite" required :disabled="uploading">
-                        <div class="form-text">Sélectionnez un fichier .sqlite à importer (jusqu'à 500 Mo)</div>
-                    </div>
-
-                    <!-- Progress bar -->
-                    <div x-show="uploading" class="mb-3">
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                 role="progressbar"
-                                 :style="'width: ' + uploadProgress + '%'"
-                                 x-text="uploadProgress + '%'"></div>
+                <form action="{{ route('database.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Attention !</strong> Cette action va remplacer toutes les données actuelles par celles du fichier importé.
+                            Un backup automatique sera créé dans <code>storage/databases/archives/</code>.
                         </div>
-                        <div class="text-center mt-2 text-muted" x-text="uploadStatus"></div>
+                        <div class="mb-3">
+                            <label for="database_file" class="form-label">Fichier SQLite (.sqlite)</label>
+                            <input type="file" class="form-control" id="database_file" name="database_file" accept=".sqlite" required>
+                            <div class="form-text">Sélectionnez un fichier .sqlite à importer (jusqu'à 200 Mo)</div>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @click="showImportModal = false" :disabled="uploading">Annuler</button>
-                    <button type="button" class="btn btn-danger" @click="uploadDatabase()" :disabled="!selectedFile || uploading">
-                        <i class="bi" :class="uploading ? 'bi-hourglass-split' : 'bi-upload'"></i>
-                        <span x-text="uploading ? 'Import en cours...' : 'Importer et remplacer'"></span>
-                    </button>
-                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="showImportModal = false">Annuler</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-upload"></i> Importer et remplacer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -249,10 +240,6 @@ function dashboard() {
         recentEvents: [],
         showImportModal: false,
         currentTime: '',
-        selectedFile: null,
-        uploading: false,
-        uploadProgress: 0,
-        uploadStatus: '',
 
         init() {
             this.updateTime();
@@ -296,72 +283,6 @@ function dashboard() {
                 this.recentEvents = response.data.slice(0, 5);
             } catch (error) {
                 console.error('Error loading recent events:', error);
-            }
-        },
-
-        selectFile(event) {
-            this.selectedFile = event.target.files[0];
-            console.log('File selected:', this.selectedFile?.name, this.selectedFile?.size, 'bytes');
-        },
-
-        async uploadDatabase() {
-            if (!this.selectedFile) {
-                alert('Veuillez sélectionner un fichier');
-                return;
-            }
-
-            if (!confirm('ATTENTION: Cette action va remplacer toutes vos données actuelles. Continuer ?')) {
-                return;
-            }
-
-            this.uploading = true;
-            this.uploadProgress = 0;
-            this.uploadStatus = 'Préparation...';
-
-            const chunkSize = 10 * 1024 * 1024; // 10 Mo par chunk
-            const totalChunks = Math.ceil(this.selectedFile.size / chunkSize);
-            const fileName = this.selectedFile.name;
-
-            try {
-                // Upload each chunk
-                for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-                    const start = chunkIndex * chunkSize;
-                    const end = Math.min(start + chunkSize, this.selectedFile.size);
-                    const chunk = this.selectedFile.slice(start, end);
-
-                    const formData = new FormData();
-                    formData.append('chunk', chunk);
-                    formData.append('chunkIndex', chunkIndex);
-                    formData.append('totalChunks', totalChunks);
-                    formData.append('fileName', fileName);
-
-                    this.uploadStatus = `Upload chunk ${chunkIndex + 1}/${totalChunks}...`;
-
-                    await axios.post('/api/database/upload-chunk', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
-
-                    this.uploadProgress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-                }
-
-                // Finalize import
-                this.uploadStatus = 'Assemblage et import...';
-                const response = await axios.post('/api/database/finalize-import', {
-                    fileName: fileName,
-                    totalChunks: totalChunks
-                });
-
-                alert('Base de données importée avec succès !');
-                this.showImportModal = false;
-                this.selectedFile = null;
-                this.uploadProgress = 0;
-                window.location.reload();
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert('Erreur lors de l\'import: ' + (error.response?.data?.message || error.message));
-            } finally {
-                this.uploading = false;
             }
         }
     }
