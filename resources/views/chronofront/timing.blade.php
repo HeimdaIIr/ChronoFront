@@ -30,20 +30,69 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1.5rem 0;
-    gap: 1.5rem;
+    gap: 0.5rem;
+    transition: width 0.3s ease;
+    overflow: hidden;
 }
 
-.sidebar-icon {
+.chrono-sidebar.expanded {
+    width: 250px;
+}
+
+.sidebar-toggle-btn {
     width: 70px;
     height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #71717a;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+    margin-bottom: 1rem;
+}
+
+.sidebar-toggle-btn:hover {
+    color: #e4e4e7;
+    background: #1a1d2e;
+}
+
+.sidebar-icon {
+    min-width: 70px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0;
+    color: #71717a;
     font-size: 1.5rem;
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
+    position: relative;
+}
+
+.sidebar-icon i {
+    width: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sidebar-icon-label {
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.chrono-sidebar.expanded .sidebar-icon-label {
+    opacity: 1;
 }
 
 .sidebar-icon:hover {
@@ -827,10 +876,24 @@ body {
         width: 50px;
     }
 
-    .sidebar-icon {
+    .chrono-sidebar.expanded {
+        width: 220px;
+    }
+
+    .sidebar-toggle-btn {
         width: 50px;
         height: 36px;
         font-size: 1.1rem;
+    }
+
+    .sidebar-icon {
+        min-width: 50px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+
+    .sidebar-icon i {
+        width: 50px;
     }
 
     .chrono-topbar {
@@ -957,10 +1020,24 @@ body {
         width: 60px;
     }
 
-    .sidebar-icon {
+    .chrono-sidebar.expanded {
+        width: 230px;
+    }
+
+    .sidebar-toggle-btn {
         width: 60px;
         height: 45px;
+        font-size: 1.2rem;
+    }
+
+    .sidebar-icon {
+        min-width: 60px;
+        height: 45px;
         font-size: 1.3rem;
+    }
+
+    .sidebar-icon i {
+        width: 60px;
     }
 
     .chrono-topbar {
@@ -1031,10 +1108,24 @@ body {
         width: 55px;
     }
 
-    .sidebar-icon {
+    .chrono-sidebar.expanded {
+        width: 210px;
+    }
+
+    .sidebar-toggle-btn {
         width: 55px;
         height: 40px;
+        font-size: 1.1rem;
+    }
+
+    .sidebar-icon {
+        min-width: 55px;
+        height: 40px;
         font-size: 1.2rem;
+    }
+
+    .sidebar-icon i {
+        width: 55px;
     }
 
     .chrono-topbar {
@@ -1147,14 +1238,41 @@ body {
 @section('content')
 <div class="chrono-container" x-data="chronoApp()">
     <!-- Sidebar -->
-    <div class="chrono-sidebar">
-        <a href="{{ route('dashboard') }}" class="sidebar-icon" title="Dashboard"><i class="bi bi-house"></i></a>
-        <a href="{{ route('events') }}" class="sidebar-icon" title="Événements"><i class="bi bi-calendar-event"></i></a>
-        <a href="{{ route('races') }}" class="sidebar-icon" title="Épreuves"><i class="bi bi-trophy"></i></a>
-        <a href="{{ route('entrants') }}" class="sidebar-icon" title="Participants"><i class="bi bi-people"></i></a>
-        <a href="{{ route('waves') }}" class="sidebar-icon" title="Vagues"><i class="bi bi-list-ul"></i></a>
-        <a href="{{ route('timing') }}" class="sidebar-icon active" title="Chronométrage"><i class="bi bi-stopwatch"></i></a>
-        <a href="{{ route('results') }}" class="sidebar-icon" title="Résultats"><i class="bi bi-bar-chart"></i></a>
+    <div class="chrono-sidebar" x-data="{ sidebarExpanded: false }" :class="{ 'expanded': sidebarExpanded }">
+        <!-- Toggle Button -->
+        <button class="sidebar-toggle-btn" @click="sidebarExpanded = !sidebarExpanded" title="Ouvrir/Fermer le menu">
+            <i class="bi" :class="sidebarExpanded ? 'bi-chevron-left' : 'bi-chevron-right'"></i>
+        </button>
+
+        <!-- Navigation -->
+        <a href="{{ route('dashboard') }}" class="sidebar-icon" title="Tableau de bord">
+            <i class="bi bi-house-door"></i>
+            <span class="sidebar-icon-label">Tableau de bord</span>
+        </a>
+        <a href="{{ route('events') }}" class="sidebar-icon" title="Événements">
+            <i class="bi bi-calendar-event"></i>
+            <span class="sidebar-icon-label">Événements</span>
+        </a>
+        <a href="{{ route('entrants') }}" class="sidebar-icon" title="Participants">
+            <i class="bi bi-people"></i>
+            <span class="sidebar-icon-label">Participants</span>
+        </a>
+        <a href="{{ route('races') }}" class="sidebar-icon" title="Parcours">
+            <i class="bi bi-trophy"></i>
+            <span class="sidebar-icon-label">Parcours</span>
+        </a>
+        <a href="{{ route('waves') }}" class="sidebar-icon" title="Vagues">
+            <i class="bi bi-water"></i>
+            <span class="sidebar-icon-label">Vagues</span>
+        </a>
+        <a href="{{ route('timing') }}" class="sidebar-icon active" title="Chronométrage">
+            <i class="bi bi-stopwatch"></i>
+            <span class="sidebar-icon-label">Chronométrage</span>
+        </a>
+        <a href="{{ route('results') }}" class="sidebar-icon" title="Résultats">
+            <i class="bi bi-bar-chart"></i>
+            <span class="sidebar-icon-label">Résultats</span>
+        </a>
     </div>
 
     <!-- Main -->
