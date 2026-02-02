@@ -191,7 +191,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Événement</label>
-                    <select class="form-select" x-model="selectedEvent" @change="onEventChange">
+                    <select class="form-select" x-model="selectedEvent" @change="onEventChange" :disabled="loading">
                         <option value="">-- Sélectionnez --</option>
                         <template x-for="event in events" :key="event.id">
                             <option :value="event.id" x-text="event.name"></option>
@@ -200,7 +200,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Épreuve</label>
-                    <select class="form-select" x-model="selectedRace" @change="onRaceChange">
+                    <select class="form-select" x-model="selectedRace" @change="onRaceChange" :disabled="loading">
                         <option value="">-- Sélectionnez --</option>
                         <template x-for="race in filteredRaces" :key="race.id">
                             <option :value="race.id" x-text="race.name"></option>
@@ -209,14 +209,14 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Affichage</label>
-                    <select class="form-select" x-model="displayMode" @change="filterResults">
+                    <select class="form-select" x-model="displayMode" @change="filterResults" :disabled="loading">
                         <option value="general">Général</option>
                         <option value="category">Par catégorie</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Statut</label>
-                    <select class="form-select" x-model="statusFilter" @change="filterResults">
+                    <select class="form-select" x-model="statusFilter" @change="filterResults" :disabled="loading">
                         <option value="all">Tous</option>
                         <option value="V">Validés uniquement</option>
                     </select>
