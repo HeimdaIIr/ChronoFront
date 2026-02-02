@@ -1788,21 +1788,23 @@ class ResultController extends Controller
     }
 
     /**
-     * Clear all results - truncate table
+     * Clear all results from table
      */
     public function clearArrivals(Request $request): JsonResponse
     {
         try {
+            // Delete all results from table
             $affected = DB::table('results')->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => "Supprimé {$affected} résultat(s)",
+                'message' => "Table vidée: {$affected} résultat(s) supprimé(s)",
                 'affected' => $affected
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
+                'error' => 'Erreur',
                 'message' => $e->getMessage()
             ], 500);
         }
