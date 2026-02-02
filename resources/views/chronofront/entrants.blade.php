@@ -441,6 +441,11 @@ function entrantsManager() {
 
         async loadEntrants() {
             this.loading = true;
+
+            // Sauvegarder les filtres actuels pour vérifier qu'ils n'ont pas changé
+            const currentEventFilter = this.selectedEventFilter;
+            const currentRaceFilter = this.selectedRaceFilter;
+
             try {
                 let url = '/entrants';
                 const params = new URLSearchParams();
@@ -459,12 +464,25 @@ function entrantsManager() {
                 }
 
                 const response = await axios.get(url);
+
+                // Vérifier que les filtres n'ont pas changé pendant le chargement
+                if (this.selectedEventFilter !== currentEventFilter || this.selectedRaceFilter !== currentRaceFilter) {
+                    // Les filtres ont changé, ignorer ces résultats
+                    return;
+                }
+
                 this.entrants = response.data;
 
                 // Charger le nombre total de participants
                 if (this.selectedEventFilter) {
                     // Si événement sélectionné, compter tous les participants de cet événement
                     const allResponse = await axios.get(`/entrants?event_id=${this.selectedEventFilter}`);
+
+                    // Revérifier les filtres après le second appel
+                    if (this.selectedEventFilter !== currentEventFilter || this.selectedRaceFilter !== currentRaceFilter) {
+                        return;
+                    }
+
                     this.totalEntrantsCount = allResponse.data.length;
                 } else {
                     this.totalEntrantsCount = this.entrants.length;
