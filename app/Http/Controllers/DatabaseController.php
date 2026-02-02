@@ -36,18 +36,16 @@ class DatabaseController extends Controller
      */
     public function import(Request $request)
     {
-        // LOG AU TOUT DÉBUT pour voir si la méthode s'exécute
-        \Log::info("=== DÉBUT IMPORT DB ===");
-
         // Validation - Accepter n'importe quel fichier .sqlite peu importe le MIME type
         $request->validate([
             'database_file' => 'required|file|max:204800', // Max 200MB, pas de restriction MIME
         ]);
 
-        \Log::info("Validation passée");
-
         // Vérifier que le fichier a bien l'extension .sqlite
         $uploadedFile = $request->file('database_file');
+
+        \Log::info("Import DB - Fichier uploadé : " . $uploadedFile->getClientOriginalName());
+        \Log::info("Import DB - Taille : " . $uploadedFile->getSize() . " octets");
         if (!in_array(strtolower($uploadedFile->getClientOriginalExtension()), ['sqlite', 'db'])) {
             \Log::error("Extension invalide : " . $uploadedFile->getClientOriginalExtension());
             return redirect()->route('dashboard')
@@ -69,10 +67,6 @@ class DatabaseController extends Controller
             $backupPath = "{$archiveDir}/{$backupFilename}";
             copy($currentDbPath, $backupPath);
         }
-
-        // Log de debug
-        \Log::info("Import DB - Fichier uploadé : " . $uploadedFile->getClientOriginalName());
-        \Log::info("Import DB - Taille fichier : " . $uploadedFile->getSize() . " octets");
 
         // Vérifier que c'est un vrai fichier SQLite
         try {
