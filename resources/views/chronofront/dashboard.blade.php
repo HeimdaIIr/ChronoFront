@@ -273,8 +273,8 @@ function dashboard() {
                 this.stats.entrants = entrantsResponse.data.length || 0;
 
                 // Load results count
-                const resultsResponse = await axios.get('/results');
-                this.stats.results = resultsResponse.data.length || 0;
+                const resultsResponse = await axios.get('/results/count');
+                this.stats.results = resultsResponse.data.count || 0;
 
             } catch (error) {
                 console.error('Error loading stats:', error);

@@ -14,6 +14,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class ResultController extends Controller
 {
     /**
+     * Get total count of results
+     */
+    public function count(Request $request): JsonResponse
+    {
+        $count = Result::count();
+        return response()->json(['count' => $count]);
+    }
+
+    /**
      * Display all results across all races
      * Supports filtering via query parameters
      */
