@@ -598,6 +598,11 @@ function resultsManager() {
             try {
                 // Charger les résultats pour chaque parcours de l'événement
                 for (const race of this.filteredRaces) {
+                    // Si un parcours spécifique a été sélectionné entre-temps, arrêter
+                    if (this.selectedRace) {
+                        return;
+                    }
+
                     const response = await axios.get(`/results/race/${race.id}`);
                     if (response.data && response.data.length > 0) {
                         // Filtrer et trier
