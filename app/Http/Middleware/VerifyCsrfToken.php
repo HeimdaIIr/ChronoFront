@@ -12,6 +12,6 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'database/import', // Large file upload - CSRF token expires during upload
     ];
 }
