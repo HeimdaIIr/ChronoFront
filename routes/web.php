@@ -17,6 +17,12 @@ Route::get('/events/{id}/readers', [ChronoFrontController::class, 'readers'])->n
 Route::get('/screens/speaker', [ChronoFrontController::class, 'speakerScreen'])->name('screens.speaker');
 Route::get('/rfidlive', [ChronoFrontController::class, 'rfidlive'])->name('rfidlive');
 
+// TEMPORAIRE : Voir la config PHP
+Route::get('/phpinfo', function() {
+    phpinfo();
+    die();
+});
+
 // Database export/import
 Route::get('/database/export', [DatabaseController::class, 'export'])->name('database.export');
 Route::post('/database/import', [DatabaseController::class, 'import'])->name('database.import');
