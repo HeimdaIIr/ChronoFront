@@ -1807,7 +1807,7 @@ body {
     </div>
 
     <!-- Top Depart Modal -->
-    <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false" x-init="loadAllWavesForModal()">
+    <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false">
         <div class="modal-content" style="max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -1832,79 +1832,30 @@ body {
                     </thead>
                     <tbody>
                         <template x-for="race in races" :key="race.id">
-                            <template x-if="allWavesMap[race.id] && allWavesMap[race.id].length > 0">
-                                <!-- Race with waves -->
-                                <tr>
-                                    <!-- ID column (rowspan for all waves) -->
-                                    <td :rowspan="allWavesMap[race.id].length + 1"
-                                        style="padding: 1rem; border-right: 1px solid #2a2d3e; border-bottom: 1px solid #2a2d3e; vertical-align: top; font-weight: 600; color: #e4e4e7;">
-                                        <span x-text="race.id"></span>
-                                    </td>
-                                    <!-- Race name (header row for waves) -->
-                                    <td colspan="2"
-                                        style="padding: 1rem; border-bottom: 1px solid #2a2d3e; font-weight: 600; font-size: 1.05rem; color: #e4e4e7; background: #1a1d2e;">
-                                        <i class="bi bi-flag-fill" style="color: #6366f1; margin-right: 0.5rem;"></i>
-                                        <span x-text="race.name"></span>
-                                    </td>
-                                </tr>
-                                <!-- Waves rows -->
-                                <template x-for="wave in allWavesMap[race.id]" :key="wave.id">
-                                    <tr style="border-bottom: 1px solid #2a2d3e;">
-                                        <!-- Wave name -->
-                                        <td style="padding: 1rem; border-right: 1px solid #2a2d3e; padding-left: 2rem; color: #a1a1aa;">
-                                            <span x-text="wave.name"></span>
-                                        </td>
-                                        <!-- Wave start time + TOP button -->
-                                        <td style="padding: 1rem;">
-                                            <div style="display: flex; gap: 0.75rem; align-items: center;">
-                                                <input type="text"
-                                                       :value="wave.real_start_time ? formatTimeInput(wave.real_start_time) : ''"
-                                                       @blur="updateWaveStartTime(wave, $event.target.value)"
-                                                       placeholder="--:--:--"
-                                                       style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
-                                                       :style="wave.real_start_time ? 'border-color: #22c55e;' : ''">
-                                                <button @click="topDepartWave(wave)"
-                                                        style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
-                                                        onmouseover="this.style.background='#2563eb';"
-                                                        onmouseout="this.style.background='#3b82f6';">
-                                                    TOP
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </template>
-
-                            <!-- Race without waves -->
-                            <template x-if="!(allWavesMap[race.id] && allWavesMap[race.id].length > 0)">
-                                <tr style="border-bottom: 1px solid #2a2d3e;">
-                                    <!-- ID -->
-                                    <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 600; color: #e4e4e7;">
-                                        <span x-text="race.id"></span>
-                                    </td>
-                                    <!-- Race name -->
-                                    <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 500; color: #e4e4e7;">
-                                        <span x-text="race.name"></span>
-                                    </td>
-                                    <!-- Race start time + TOP button -->
-                                    <td style="padding: 1rem;">
-                                        <div style="display: flex; gap: 0.75rem; align-items: center;">
-                                            <input type="text"
-                                                   :value="race.start_time ? formatTimeInput(race.start_time) : ''"
-                                                   @blur="updateRaceStartTime(race, $event.target.value)"
-                                                   placeholder="--:--:--"
-                                                   style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
-                                                   :style="race.start_time ? 'border-color: #22c55e;' : ''">
-                                            <button @click="topDepart(race)"
-                                                    style="padding: 0.75rem 1.5rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
-                                                    onmouseover="this.style.background='#059669';"
-                                                    onmouseout="this.style.background='#10B981';">
-                                                TOP
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
+                            <tr style="border-bottom: 1px solid #2a2d3e;">
+                                <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 600; color: #e4e4e7;">
+                                    <span x-text="race.id"></span>
+                                </td>
+                                <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 500; color: #e4e4e7;">
+                                    <span x-text="race.name"></span>
+                                </td>
+                                <td style="padding: 1rem;">
+                                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                        <input type="text"
+                                               :value="race.start_time ? formatTimeInput(race.start_time) : ''"
+                                               @blur="updateRaceStartTime(race, $event.target.value)"
+                                               placeholder="--:--:--"
+                                               style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
+                                               :style="race.start_time ? 'border-color: #22c55e;' : ''">
+                                        <button @click="topDepart(race)"
+                                                style="padding: 0.75rem 1.5rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                                                onmouseover="this.style.background='#059669';"
+                                                onmouseout="this.style.background='#10B981';">
+                                            TOP
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         </template>
                     </tbody>
                 </table>
