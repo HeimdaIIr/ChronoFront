@@ -3326,11 +3326,15 @@ function chronoApp() {
         async topDepart(race) {
             this.startingRace = true;
             try {
-                await axios.post(`/races/${race.id}/start`);
-                race.start_time = new Date().toISOString();
+                const now = new Date().toISOString();
+                await axios.put(`/api/races/${race.id}/start`, {
+                    start_time: now
+                });
+                race.start_time = now;
                 this.showToast(`TOP DÉPART donné pour ${race.name}`, 'success');
                 await this.loadRaces();
             } catch (error) {
+                console.error('Erreur TOP DÉPART:', error);
                 this.showToast('Erreur lors du TOP DÉPART', 'error');
             } finally {
                 this.startingRace = false;
@@ -3470,7 +3474,7 @@ function chronoApp() {
                 const newStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 
                 // Save to API
-                await axios.put(`/races/${race.id}/start`, {
+                await axios.put(`/api/races/${race.id}/start`, {
                     start_time: newStartTime
                 });
 
