@@ -1808,129 +1808,107 @@ body {
 
     <!-- Top Depart Modal -->
     <div x-show="showTopDepartModal" class="modal-overlay" @click.self="showTopDepartModal = false" x-init="loadAllWavesForModal()">
-        <div class="modal-content" style="max-width: 700px;">
-            <h3>Gestion des départs</h3>
-            <div class="race-list">
-                <template x-for="race in races" :key="race.id">
-                    <div style="margin-bottom: 1.5rem; background: #1a1d2e; padding: 1rem; border-radius: 12px;">
-                        <!-- Race Header -->
-                        <div style="margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 600; color: #e4e4e7; border-bottom: 1px solid #2a2d3e; padding-bottom: 0.5rem;">
-                            <i class="bi bi-flag-fill" style="color: #6366f1;"></i> <span x-text="race.name"></span>
-                        </div>
-
-                        <!-- Waves for this race -->
-                        <template x-for="wave in allWavesMap[race.id] || []" :key="wave.id">
-                            <div style="margin-bottom: 0.75rem; padding-left: 1rem;">
-                                <!-- Wave without start time -->
-                                <div x-show="!wave.real_start_time">
-                                    <button class="race-btn" @click="topDepartWave(wave)" :disabled="startingRace" style="background: #3b82f6;">
-                                        <span x-text="wave.name"></span>
-                                        <span>Donner le TOP</span>
-                                    </button>
-                                </div>
-
-                                <!-- Wave with start time -->
-                                <div x-show="wave.real_start_time">
-                                    <!-- Display mode -->
-                                    <div x-show="editingWaveId !== wave.id" style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <div class="race-btn" style="flex: 1; cursor: default; background: #22c55e;">
-                                            <span x-text="wave.name"></span>
-                                            <span class="time" x-text="'Départ: ' + formatTime(wave.real_start_time)"></span>
-                                        </div>
-                                        <button @click="startEditingWaveStartTime(wave)"
-                                                style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                                            <i class="bi bi-pencil"></i> Modifier
-                                        </button>
-                                    </div>
-
-                                    <!-- Edit mode -->
-                                    <div x-show="editingWaveId === wave.id" style="background: #0f1117; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
-                                        <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
-                                            <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="wave.name"></span>
-                                        </div>
-                                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                            <input type="date"
-                                                   x-model="editStartDate"
-                                                   style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                            <input type="time"
-                                                   x-model="editStartTime"
-                                                   step="1"
-                                                   style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                        </div>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button @click="cancelEditingWaveStartTime()"
-                                                    style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                                Annuler
-                                            </button>
-                                            <button @click="saveWaveStartTime(wave)"
-                                                    :disabled="!editStartDate || !editStartTime || startingRace"
-                                                    style="flex: 1; padding: 0.75rem; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                                                    :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                                                <i class="bi bi-check-lg"></i> Enregistrer
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- If no waves, show fallback for race -->
-                        <div x-show="!(allWavesMap[race.id] && allWavesMap[race.id].length > 0)">
-                            <!-- Race without start time -->
-                            <div x-show="!race.start_time">
-                                <button class="race-btn" @click="topDepart(race)" :disabled="startingRace">
-                                    <span>Parcours entier</span>
-                                    <span>Donner le TOP</span>
-                                </button>
-                            </div>
-
-                            <!-- Race with start time -->
-                            <div x-show="race.start_time">
-                                <!-- Display mode -->
-                                <div x-show="editingRaceId !== race.id" style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <div class="race-btn" style="flex: 1; cursor: default; background: #10B981;">
-                                        <span>Parcours entier</span>
-                                        <span class="time" x-text="'Départ: ' + formatTime(race.start_time)"></span>
-                                    </div>
-                                    <button @click="startEditingStartTime(race)"
-                                            style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                                        <i class="bi bi-pencil"></i> Modifier
-                                    </button>
-                                </div>
-
-                                <!-- Edit mode -->
-                                <div x-show="editingRaceId === race.id" style="background: #0f1117; padding: 1rem; border-radius: 8px; border: 2px solid #3b82f6;">
-                                    <div style="margin-bottom: 0.75rem; font-weight: 600; color: #e4e4e7;">
-                                        <i class="bi bi-pencil"></i> Modifier le départ : <span x-text="race.name"></span>
-                                    </div>
-                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                        <input type="date"
-                                               x-model="editStartDate"
-                                               style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                        <input type="time"
-                                               x-model="editStartTime"
-                                               step="1"
-                                               style="flex: 1; padding: 0.75rem; background: #0a0c14; color: white; border: 1px solid #2a2d3e; border-radius: 6px;">
-                                    </div>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <button @click="cancelEditingStartTime()"
-                                                style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                            Annuler
-                                        </button>
-                                        <button @click="saveStartTime(race)"
-                                                :disabled="!editStartDate || !editStartTime || startingRace"
-                                                style="flex: 1; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                                                :style="(!editStartDate || !editStartTime || startingRace) ? 'opacity: 0.5; cursor: not-allowed;' : ''">
-                                            <i class="bi bi-check-lg"></i> Enregistrer
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; font-size: 1.3rem; color: #e4e4e7;">Gestion des départs</h3>
+                <button @click="showTopDepartModal = false"
+                        style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #2a2d3e; border-radius: 6px; color: #71717a; cursor: pointer; transition: all 0.2s;"
+                        onmouseover="this.style.background='#2a2d3e'; this.style.color='#e4e4e7';"
+                        onmouseout="this.style.background='transparent'; this.style.color='#71717a';">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
-            <button class="btn-close-modal" @click="showTopDepartModal = false">Fermer</button>
+
+            <!-- Table Container (scrollable) -->
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #2a2d3e; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; background: #0f1117; color: #e4e4e7;">
+                    <thead style="position: sticky; top: 0; background: #1a1d2e; border-bottom: 2px solid #2a2d3e; z-index: 10;">
+                        <tr>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #a1a1aa; border-right: 1px solid #2a2d3e; width: 80px;">ID</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #a1a1aa; border-right: 1px solid #2a2d3e;">Parcours</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #a1a1aa; width: 350px;">Heure de départ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="race in races" :key="race.id">
+                            <template x-if="allWavesMap[race.id] && allWavesMap[race.id].length > 0">
+                                <!-- Race with waves -->
+                                <tr>
+                                    <!-- ID column (rowspan for all waves) -->
+                                    <td :rowspan="allWavesMap[race.id].length + 1"
+                                        style="padding: 1rem; border-right: 1px solid #2a2d3e; border-bottom: 1px solid #2a2d3e; vertical-align: top; font-weight: 600; color: #e4e4e7;">
+                                        <span x-text="race.id"></span>
+                                    </td>
+                                    <!-- Race name (header row for waves) -->
+                                    <td colspan="2"
+                                        style="padding: 1rem; border-bottom: 1px solid #2a2d3e; font-weight: 600; font-size: 1.05rem; color: #e4e4e7; background: #1a1d2e;">
+                                        <i class="bi bi-flag-fill" style="color: #6366f1; margin-right: 0.5rem;"></i>
+                                        <span x-text="race.name"></span>
+                                    </td>
+                                </tr>
+                                <!-- Waves rows -->
+                                <template x-for="wave in allWavesMap[race.id]" :key="wave.id">
+                                    <tr style="border-bottom: 1px solid #2a2d3e;">
+                                        <!-- Wave name -->
+                                        <td style="padding: 1rem; border-right: 1px solid #2a2d3e; padding-left: 2rem; color: #a1a1aa;">
+                                            <span x-text="wave.name"></span>
+                                        </td>
+                                        <!-- Wave start time + TOP button -->
+                                        <td style="padding: 1rem;">
+                                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                                <input type="text"
+                                                       :value="wave.real_start_time ? formatTimeInput(wave.real_start_time) : ''"
+                                                       @blur="updateWaveStartTime(wave, $event.target.value)"
+                                                       placeholder="--:--:--"
+                                                       style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
+                                                       :style="wave.real_start_time ? 'border-color: #22c55e;' : ''">
+                                                <button @click="topDepartWave(wave)"
+                                                        style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                                                        onmouseover="this.style.background='#2563eb';"
+                                                        onmouseout="this.style.background='#3b82f6';">
+                                                    TOP
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+
+                            <!-- Race without waves -->
+                            <template x-if="!(allWavesMap[race.id] && allWavesMap[race.id].length > 0)">
+                                <tr style="border-bottom: 1px solid #2a2d3e;">
+                                    <!-- ID -->
+                                    <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 600; color: #e4e4e7;">
+                                        <span x-text="race.id"></span>
+                                    </td>
+                                    <!-- Race name -->
+                                    <td style="padding: 1rem; border-right: 1px solid #2a2d3e; font-weight: 500; color: #e4e4e7;">
+                                        <span x-text="race.name"></span>
+                                    </td>
+                                    <!-- Race start time + TOP button -->
+                                    <td style="padding: 1rem;">
+                                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                            <input type="text"
+                                                   :value="race.start_time ? formatTimeInput(race.start_time) : ''"
+                                                   @blur="updateRaceStartTime(race, $event.target.value)"
+                                                   placeholder="--:--:--"
+                                                   style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
+                                                   :style="race.start_time ? 'border-color: #22c55e;' : ''">
+                                            <button @click="topDepart(race)"
+                                                    style="padding: 0.75rem 1.5rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                                                    onmouseover="this.style.background='#059669';"
+                                                    onmouseout="this.style.background='#10B981';">
+                                                TOP
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -3380,7 +3358,6 @@ function chronoApp() {
         },
 
         async topDepart(race) {
-            if (!confirm(`Donner le TOP DÉPART pour "${race.name}" ?`)) return;
             this.startingRace = true;
             try {
                 await axios.post(`/races/${race.id}/start`);
@@ -3388,10 +3365,9 @@ function chronoApp() {
                 this.showToast(`TOP DÉPART donné pour ${race.name}`, 'success');
                 await this.loadRaces();
             } catch (error) {
-                this.showToast('Erreur', 'error');
+                this.showToast('Erreur lors du TOP DÉPART', 'error');
             } finally {
                 this.startingRace = false;
-                this.showTopDepartModal = false;
             }
         },
 
@@ -3473,7 +3449,6 @@ function chronoApp() {
         },
 
         async topDepartWave(wave) {
-            if (!confirm(`Donner le TOP DÉPART pour "${wave.name}" ?`)) return;
             this.startingRace = true;
             try {
                 await axios.post(`/waves/${wave.id}/top-depart`);
@@ -3483,9 +3458,86 @@ function chronoApp() {
                 await this.loadAllWavesForModal(); // Reload modal waves
             } catch (error) {
                 console.error('Erreur TOP DÉPART vague:', error);
-                this.showToast('Erreur', 'error');
+                this.showToast('Erreur lors du TOP DÉPART', 'error');
             } finally {
                 this.startingRace = false;
+            }
+        },
+
+        // Format ISO datetime to HH:MM:SS for input display
+        formatTimeInput(datetime) {
+            if (!datetime) return '';
+            const date = new Date(datetime);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        },
+
+        // Update race start time from inline edit
+        async updateRaceStartTime(race, timeString) {
+            if (!timeString || timeString === '--:--:--') return;
+
+            // Parse HH:MM:SS
+            const timeMatch = timeString.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+            if (!timeMatch) {
+                this.showToast('Format invalide. Utilisez HH:MM:SS', 'error');
+                return;
+            }
+
+            try {
+                // Build full datetime with today's date + entered time
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const newStartTime = `${year}-${month}-${day}T${timeString}`;
+
+                // Save to API
+                await axios.put(`/races/${race.id}/start`, {
+                    start_time: newStartTime
+                });
+
+                race.start_time = newStartTime;
+                this.showToast(`Heure de départ mise à jour pour ${race.name}`, 'success');
+                await this.loadRaces();
+            } catch (error) {
+                console.error('Erreur mise à jour départ:', error);
+                this.showToast('Erreur lors de la mise à jour', 'error');
+            }
+        },
+
+        // Update wave start time from inline edit
+        async updateWaveStartTime(wave, timeString) {
+            if (!timeString || timeString === '--:--:--') return;
+
+            // Parse HH:MM:SS
+            const timeMatch = timeString.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+            if (!timeMatch) {
+                this.showToast('Format invalide. Utilisez HH:MM:SS', 'error');
+                return;
+            }
+
+            try {
+                // Build full datetime with today's date + entered time
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const newStartTime = `${year}-${month}-${day}T${timeString}`;
+
+                // Save to API
+                await axios.post(`/waves/${wave.id}/update-real-start-time`, {
+                    real_start_time: newStartTime
+                });
+
+                wave.real_start_time = newStartTime;
+                this.showToast(`Heure de départ mise à jour pour ${wave.name}`, 'success');
+                await this.loadWaves();
+                await this.loadAllWavesForModal();
+            } catch (error) {
+                console.error('Erreur mise à jour départ vague:', error);
+                this.showToast('Erreur lors de la mise à jour', 'error');
             }
         },
 
