@@ -3419,9 +3419,7 @@ function chronoApp() {
             if (this.races.length === 0) {
                 await this.loadRaces();
             }
-            // Load waves for all races
-            await this.loadAllWavesForModal();
-            // Open modal
+            // Open modal immediately (waves not displayed yet, so no need to load them)
             this.showTopDepartModal = true;
         },
 
