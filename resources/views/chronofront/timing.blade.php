@@ -3327,7 +3327,7 @@ function chronoApp() {
             this.startingRace = true;
             try {
                 const now = new Date().toISOString();
-                await axios.put(`/api/races/${race.id}/start`, {
+                await axios.put(`races/${race.id}/start`, {
                     start_time: now
                 });
                 race.start_time = now;
@@ -3474,7 +3474,7 @@ function chronoApp() {
                 const newStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 
                 // Save to API
-                await axios.put(`/api/races/${race.id}/start`, {
+                await axios.put(`races/${race.id}/start`, {
                     start_time: newStartTime
                 });
 
