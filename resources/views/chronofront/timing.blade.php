@@ -178,6 +178,11 @@ body {
     display: grid;
     grid-template-columns: 1fr 400px;
     height: calc(100vh - 70px);
+    transition: grid-template-columns 0.3s ease;
+}
+
+.chrono-content.panel-closed {
+    grid-template-columns: 1fr;
 }
 
 /* Left Side */
@@ -925,6 +930,10 @@ body {
         height: calc(100vh - 45px);
     }
 
+    .chrono-content.panel-closed {
+        grid-template-columns: 1fr;
+    }
+
     .main-clock {
         font-size: 3.6rem;
         padding: 1rem 0 0.7rem;
@@ -1054,6 +1063,10 @@ body {
         height: calc(100vh - 55px);
     }
 
+    .chrono-content.panel-closed {
+        grid-template-columns: 1fr;
+    }
+
     .main-clock {
         font-size: 5.5rem;
         padding: 1.5rem 0 1rem;
@@ -1152,6 +1165,10 @@ body {
     .chrono-content {
         grid-template-columns: 1fr 300px;
         height: calc(100vh - 50px);
+    }
+
+    .chrono-content.panel-closed {
+        grid-template-columns: 1fr;
     }
 
     .main-clock {
@@ -1327,7 +1344,7 @@ body {
         </div>
 
         <!-- Content -->
-        <div class="chrono-content">
+        <div class="chrono-content" :class="{ 'panel-closed': !selectedResult }">
             <!-- Left -->
             <div class="chrono-left">
                 <!-- Clock + Readers Status -->
