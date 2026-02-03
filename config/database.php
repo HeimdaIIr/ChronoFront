@@ -43,6 +43,20 @@ return [
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
 
+        'system' => [
+            'driver' => 'sqlite',
+            'database' => database_path('system.sqlite'),
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+
+        'tenant' => [
+            'driver' => 'sqlite',
+            'database' => database_path('database.sqlite'), // Will be changed dynamically
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
