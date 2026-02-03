@@ -1309,7 +1309,7 @@ body {
             </div>
             <div class="topbar-right">
                 <!-- Action buttons -->
-                <button class="btn-filter" @click="showTopDepartModal = true" style="height: 38px; background: #10B981;">
+                <button class="btn-filter" @click="openTopDepartModal()" style="height: 38px; background: #10B981;">
                     <i class="bi bi-flag-fill"></i>
                     TOP DÉPART
                 </button>
@@ -1820,9 +1820,21 @@ body {
                 </button>
             </div>
 
+            <!-- Debug Info -->
+            <div style="padding: 0.75rem; background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #a1a1aa;">
+                <span>Parcours chargés: </span><span x-text="races.length" style="color: #10B981; font-weight: 600;"></span>
+            </div>
+
             <!-- Table Container (scrollable) -->
             <div style="flex: 1; overflow-y: auto; border: 1px solid #2a2d3e; border-radius: 8px;">
-                <table style="width: 100%; border-collapse: collapse; background: #0f1117; color: #e4e4e7;">
+                <!-- Empty State -->
+                <div x-show="races.length === 0" style="padding: 3rem; text-align: center; color: #71717a;">
+                    <i class="bi bi-inbox" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                    <p style="margin: 0;">Aucun parcours trouvé</p>
+                </div>
+
+                <!-- Table -->
+                <table x-show="races.length > 0" style="width: 100%; border-collapse: collapse; background: #0f1117; color: #e4e4e7;">
                     <thead style="position: sticky; top: 0; background: #1a1d2e; border-bottom: 2px solid #2a2d3e; z-index: 10;">
                         <tr>
                             <th style="padding: 1rem; text-align: left; font-weight: 600; color: #a1a1aa; border-right: 1px solid #2a2d3e; width: 80px;">ID</th>
@@ -3397,6 +3409,17 @@ function chronoApp() {
                     this.allWavesMap[race.id] = [];
                 }
             }
+        },
+
+        async openTopDepartModal() {
+            // Ensure races are loaded
+            if (this.races.length === 0) {
+                await this.loadRaces();
+            }
+            // Load waves for all races
+            await this.loadAllWavesForModal();
+            // Open modal
+            this.showTopDepartModal = true;
         },
 
         async topDepartWave(wave) {
