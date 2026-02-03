@@ -2178,6 +2178,44 @@ function chronoApp() {
             });
             this.startAutoRefresh();
             this.startAlertCheck();
+            this.setupKeyboardNavigation();
+        },
+
+        setupKeyboardNavigation() {
+            document.addEventListener('keydown', (e) => {
+                // Only handle arrow keys if a result is selected
+                if (!this.selectedResult) return;
+
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    this.navigateResults(e.key === 'ArrowDown' ? 1 : -1);
+                }
+            });
+        },
+
+        navigateResults(direction) {
+            if (!this.selectedResult || this.displayedResults.length === 0) return;
+
+            // Find current index
+            const currentIndex = this.displayedResults.findIndex(r => r.id === this.selectedResult.id);
+            if (currentIndex === -1) return;
+
+            // Calculate new index
+            const newIndex = currentIndex + direction;
+
+            // Check bounds
+            if (newIndex < 0 || newIndex >= this.displayedResults.length) return;
+
+            // Select new result
+            this.selectResult(this.displayedResults[newIndex]);
+
+            // Scroll to the selected row
+            this.$nextTick(() => {
+                const selectedRow = document.querySelector('.chrono-table tr.selected');
+                if (selectedRow) {
+                    selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
         },
 
         startClock() {
