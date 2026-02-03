@@ -1852,15 +1852,15 @@ body {
                                     <span x-text="race.name"></span>
                                 </td>
                                 <td style="padding: 1rem;">
-                                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                    <div style="display: flex; gap: 0.75rem; align-items: stretch;">
                                         <input type="text"
                                                :value="race.start_time ? formatTimeInput(race.start_time) : ''"
                                                @blur="updateRaceStartTime(race, $event.target.value)"
-                                               placeholder="--:--:--"
-                                               style="flex: 1; padding: 0.75rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem;"
+                                               placeholder="--/--/---- --:--:--"
+                                               style="flex: 1; padding: 0.75rem 1rem; background: #1a1d2e; color: #e4e4e7; border: 1px solid #2a2d3e; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 1rem; height: 48px;"
                                                :style="race.start_time ? 'border-color: #22c55e;' : ''">
                                         <button @click="topDepart(race)"
-                                                style="padding: 0.75rem 1.5rem; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;"
+                                                style="padding: 0.75rem 1.5rem; background: #10B981; color: white; border: none; border-radius: 0; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s; height: 48px;"
                                                 onmouseover="this.style.background='#059669';"
                                                 onmouseout="this.style.background='#10B981';">
                                             TOP
@@ -3438,34 +3438,35 @@ function chronoApp() {
             }
         },
 
-        // Format ISO datetime to HH:MM:SS for input display
+        // Format ISO datetime to DD/MM/YYYY HH:MM:SS for input display
         formatTimeInput(datetime) {
             if (!datetime) return '';
             const date = new Date(datetime);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${hours}:${minutes}:${seconds}`;
+            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
         },
 
         // Update race start time from inline edit
         async updateRaceStartTime(race, timeString) {
-            if (!timeString || timeString === '--:--:--') return;
+            if (!timeString || timeString === '--/--/---- --:--:--') return;
 
-            // Parse HH:MM:SS
-            const timeMatch = timeString.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+            // Parse DD/MM/YYYY HH:MM:SS
+            const timeMatch = timeString.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
             if (!timeMatch) {
-                this.showToast('Format invalide. Utilisez HH:MM:SS', 'error');
+                this.showToast('Format invalide. Utilisez DD/MM/YYYY HH:MM:SS', 'error');
                 return;
             }
 
+            const [, day, month, year, hours, minutes, seconds] = timeMatch;
+
             try {
-                // Build full datetime with today's date + entered time
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const newStartTime = `${year}-${month}-${day}T${timeString}`;
+                // Build ISO datetime
+                const newStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 
                 // Save to API
                 await axios.put(`/races/${race.id}/start`, {
@@ -3483,22 +3484,20 @@ function chronoApp() {
 
         // Update wave start time from inline edit
         async updateWaveStartTime(wave, timeString) {
-            if (!timeString || timeString === '--:--:--') return;
+            if (!timeString || timeString === '--/--/---- --:--:--') return;
 
-            // Parse HH:MM:SS
-            const timeMatch = timeString.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+            // Parse DD/MM/YYYY HH:MM:SS
+            const timeMatch = timeString.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
             if (!timeMatch) {
-                this.showToast('Format invalide. Utilisez HH:MM:SS', 'error');
+                this.showToast('Format invalide. Utilisez DD/MM/YYYY HH:MM:SS', 'error');
                 return;
             }
 
+            const [, day, month, year, hours, minutes, seconds] = timeMatch;
+
             try {
-                // Build full datetime with today's date + entered time
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const newStartTime = `${year}-${month}-${day}T${timeString}`;
+                // Build ISO datetime
+                const newStartTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 
                 // Save to API
                 await axios.post(`/waves/${wave.id}/update-real-start-time`, {
