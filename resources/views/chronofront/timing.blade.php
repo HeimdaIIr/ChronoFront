@@ -1236,6 +1236,10 @@ body {
 @endsection
 
 @section('content')
+@php
+    // Vérifier si au moins un lecteur a un mode avec vagues
+    $hasWavesMode = \App\Models\Reader::whereIn('mode', ['single_reader_waves', 'multi_reader_waves'])->exists();
+@endphp
 <div class="chrono-container" x-data="chronoApp()">
     <!-- Sidebar -->
     <div class="chrono-sidebar" x-data="{ sidebarExpanded: false }" :class="{ 'expanded': sidebarExpanded }">
@@ -1261,10 +1265,12 @@ body {
             <i class="bi bi-trophy"></i>
             <span class="sidebar-icon-label">Parcours</span>
         </a>
+        @if($hasWavesMode)
         <a href="{{ route('waves') }}" class="sidebar-icon" title="Vagues">
             <i class="bi bi-water"></i>
             <span class="sidebar-icon-label">Vagues</span>
         </a>
+        @endif
         <a href="{{ route('timing') }}" class="sidebar-icon active" title="Chronométrage">
             <i class="bi bi-stopwatch"></i>
             <span class="sidebar-icon-label">Chronométrage</span>
