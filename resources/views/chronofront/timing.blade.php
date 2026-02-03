@@ -3111,47 +3111,37 @@ function chronoApp() {
                 }
 
             } else {
-                // FOR SINGLE-PASSAGE RACES: Use checkpoint logic (original code)
-                const runnerResults = this.results.filter(r => r.entrant_id === this.selectedResult.entrant_id);
+                // FOR SINGLE-PASSAGE RACES: Show only real detections from database
+                const runnerResults = this.results
+                    .filter(r => r.entrant_id === this.selectedResult.entrant_id && r.race_id === this.selectedResult.race_id)
+                    .sort((a, b) => new Date(a.raw_time) - new Date(b.raw_time));
 
-                // Get configured readers sorted by distance
-                const sortedReaders = [...this.readers]
-                    .filter(r => r.distance_from_start !== undefined)
-                    .sort((a, b) => parseFloat(a.distance_from_start || 0) - parseFloat(b.distance_from_start || 0));
-
-                if (sortedReaders.length === 0) {
-                    this.runnerCheckpoints = [];
-                    return;
-                }
-
-                // Build checkpoint list
                 this.runnerCheckpoints = [];
-                let lastRealCheckpoint = null;
 
-                // Add race start as first checkpoint with priority: entrant.start_time > wave.real_start_time > wave.start_time > race.start_time
                 const runnerWave = this.selectedResult.wave;
                 const runnerEntrant = this.selectedResult.entrant;
+                const runnerRace = this.selectedResult.race;
 
-                // Determine start time with priority
+                // 1. Add START TIME
+                // Priority: entrant.start_time (detected) > wave.real_start_time > wave.start_time > race.start_time
                 let startTime = null;
                 let startLabel = 'DÉPART';
 
                 if (runnerEntrant && runnerEntrant.start_time) {
-                    // Priority 1: Individual start time (detected in DEPART window)
-                    // start_time is TIME only (HH:MM:SS), combine with result date
+                    // Individual start time (detected in DEPART window)
                     const resultDate = new Date(this.selectedResult.raw_time).toISOString().split('T')[0];
                     startTime = `${resultDate}T${runnerEntrant.start_time}`;
                     startLabel = 'DÉPART (détecté)';
                 } else if (runnerWave && runnerWave.real_start_time) {
-                    // Priority 2: Wave TOP départ (actual)
+                    // Wave TOP départ
                     startTime = runnerWave.real_start_time;
                     startLabel = 'DÉPART (TOP vague)';
                 } else if (runnerWave && runnerWave.start_time) {
-                    // Priority 3: Wave planned start
+                    // Wave planned start
                     startTime = runnerWave.start_time;
                     startLabel = 'DÉPART (vague planifié)';
                 } else if (runnerRace && runnerRace.start_time) {
-                    // Priority 4: Race TOP départ
+                    // Race TOP départ
                     startTime = runnerRace.start_time;
                     startLabel = 'DÉPART (course)';
                 }
@@ -3165,48 +3155,28 @@ function chronoApp() {
                         raw_time: new Date(startTime),
                         is_estimated: false
                     });
-                    lastRealCheckpoint = {
-                        distance: 0,
-                        raw_time: new Date(startTime)
-                    };
                 }
 
-                // Process each reader checkpoint
-                for (let reader of sortedReaders) {
-                    // Find if runner was detected at this checkpoint
-                    const detection = runnerResults.find(r => r.reader_id === reader.id || r.reader_location === reader.location);
+                // 2. Add all REAL DETECTIONS from database (intermediates + finish)
+                runnerResults.forEach(detection => {
+                    if (detection.raw_time) {
+                        // Find reader info to get location name
+                        const reader = this.readers.find(r => r.id === detection.reader_id || r.location === detection.reader_location);
+                        const location = reader ? reader.location : (detection.reader_location || 'Checkpoint');
+                        const distance = reader ? parseFloat(reader.distance_from_start || 0) : 0;
 
-                    if (detection && detection.raw_time) {
-                        // Real detection
                         this.runnerCheckpoints.push({
                             id: detection.id,
-                            location: reader.location,
-                            distance: reader.distance_from_start,
+                            location: location,
+                            distance: distance,
                             time_display: this.formatTime(detection.raw_time),
                             raw_time: new Date(detection.raw_time),
                             is_estimated: false
                         });
-                        lastRealCheckpoint = {
-                            distance: parseFloat(reader.distance_from_start),
-                            raw_time: new Date(detection.raw_time)
-                        };
-                    } else if (lastRealCheckpoint) {
-                        // Estimate time based on average speed
-                        const estimatedTime = this.estimateCheckpointTime(lastRealCheckpoint, reader.distance_from_start);
-                        if (estimatedTime) {
-                            this.runnerCheckpoints.push({
-                                id: null,
-                                location: reader.location,
-                                distance: reader.distance_from_start,
-                                time_display: this.formatTime(estimatedTime.toISOString()),
-                                raw_time: estimatedTime,
-                                is_estimated: true
-                            });
-                        }
                     }
-                }
+                });
 
-                // Calculate average speed
+                // Calculate average speed from first to last checkpoint
                 this.calculateAverageSpeed();
             }
         },
