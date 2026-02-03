@@ -2209,13 +2209,13 @@ function chronoApp() {
             // Select new result
             this.selectResult(this.displayedResults[newIndex]);
 
-            // Scroll to the selected row
-            this.$nextTick(() => {
-                const selectedRow = document.querySelector('.chrono-table tr.selected');
+            // Scroll to the selected row after a small delay to let Alpine render
+            setTimeout(() => {
+                const selectedRow = document.querySelector('.chrono-table tbody tr.selected');
                 if (selectedRow) {
-                    selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    selectedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-            });
+            }, 50);
         },
 
         startClock() {
