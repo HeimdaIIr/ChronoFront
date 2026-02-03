@@ -1820,11 +1820,6 @@ body {
                 </button>
             </div>
 
-            <!-- Debug Info -->
-            <div style="padding: 0.75rem; background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #a1a1aa;">
-                <span>Parcours chargés: </span><span x-text="races.length" style="color: #10B981; font-weight: 600;"></span>
-            </div>
-
             <!-- Table Container (scrollable) -->
             <div style="flex: 1; overflow-y: auto; border: 1px solid #2a2d3e; border-radius: 8px;">
                 <!-- Empty State -->
