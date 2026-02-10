@@ -20,7 +20,7 @@ class Reader extends Model
         'event_id',
         'race_id',
         'location',
-        'mode',
+        // 'mode',  // Removed - column doesn't exist in tenant DBs
         'distance_from_start',
         'checkpoint_order',
         'anti_rebounce_seconds',
