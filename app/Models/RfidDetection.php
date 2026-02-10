@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class RfidDetection extends Model
 {
+    /**
+     * The connection name for the model.
+     */
+    protected $connection = 'tenant';
+
     protected $fillable = [
         'reader_id',
         'serial',

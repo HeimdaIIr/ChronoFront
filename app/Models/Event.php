@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
+    /**
+     * The connection name for the model.
+     */
+    protected $connection = 'tenant';
+
     protected static function boot()
     {
         parent::boot();

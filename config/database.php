@@ -57,6 +57,13 @@ return [
             'foreign_key_constraints' => true,
         ],
 
+        'tenant_search' => [
+            'driver' => 'sqlite',
+            'database' => database_path('database.sqlite'), // Will be changed dynamically for searching
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),

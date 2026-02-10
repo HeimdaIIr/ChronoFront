@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Wave extends Model
 {
-    
+    /**
+     * The connection name for the model.
+     */
+    protected $connection = 'tenant';
 
     protected $fillable = [
         'race_id',

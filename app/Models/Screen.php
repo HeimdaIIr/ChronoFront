@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Screen extends Model
 {
-    
+    /**
+     * The connection name for the model.
+     */
+    protected $connection = 'tenant';
 
     protected $fillable = [
         'name',

@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    
+    /**
+     * The connection name for the model.
+     */
+    protected $connection = 'tenant';
 
     protected $fillable = [
         'name',

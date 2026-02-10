@@ -22,6 +22,20 @@ use App\Http\Controllers\Api\RfidLogController;
 |
 */
 
+// RFID Raspberry Reader Routes (NO authentication - use rfid.tenant middleware)
+Route::middleware(['rfid.tenant'])->group(function () {
+    Route::put('raspberry', [RaspberryController::class, 'store']);
+    Route::post('raspberry', [RaspberryController::class, 'store']);
+    Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-config endpoint
+
+    // Alternative endpoint names (aliases)
+    Route::post('rfid/detections', [RaspberryController::class, 'store']);
+    Route::put('rfid/detections', [RaspberryController::class, 'store']);
+});
+
+// Authenticated API Routes (use auth + tenant middleware)
+Route::middleware(['auth', 'tenant'])->group(function () {
+
 // Events Routes
 Route::get('events/active/list', [EventController::class, 'activeEvents']);
 Route::apiResource('events', EventController::class);
@@ -84,46 +98,14 @@ Route::post('readers/event/{eventId}/ping-all', [ReaderController::class, 'pingA
 Route::post('readers/{reader}/ping', [ReaderController::class, 'ping']);
 Route::apiResource('readers', ReaderController::class);
 
-// RFID Raspberry Reader Routes
-Route::put('raspberry', [RaspberryController::class, 'store']);
-Route::post('raspberry', [RaspberryController::class, 'store']);
-Route::get('raspberry/config', [ReaderController::class, 'getConfig']); // Auto-config endpoint
-
-// Alternative endpoint names (aliases)
-Route::post('rfid/detections', [RaspberryController::class, 'store']);
-Route::put('rfid/detections', [RaspberryController::class, 'store']);
-
-// RFID Live Ultra - Raw logs for monitoring
+// RFID Live Ultra - Raw logs for monitoring (authenticated)
 Route::get('rfid/raw-logs', [RfidLogController::class, 'rawLogs']);
 Route::get('rfid/raw-logs/all', [RfidLogController::class, 'allRawLogs']);
 Route::get('rfid/raw-logs/stats', [RfidLogController::class, 'stats']);
 Route::delete('rfid/raw-logs', [RfidLogController::class, 'clearLogs']);
 Route::post('rfid/clear-logs', [RfidLogController::class, 'clearLogs']); // Alias for clear (used by rfidlive-ultra)
 
-// Health check
-Route::get('health', function () {
-    try {
-        // Test database connection
-        DB::connection()->getPdo();
-        $dbStatus = 'connected';
-        $dbError = null;
-    } catch (\Exception $e) {
-        $dbStatus = 'error';
-        $dbError = $e->getMessage();
-    }
-
-    return response()->json([
-        'status' => $dbStatus === 'connected' ? 'ok' : 'degraded',
-        'timestamp' => now(),
-        'app' => 'ChronoFront V2 Laravel',
-        'version' => '2.0.0',
-        'database' => $dbStatus,
-        'database_error' => $dbError,
-        'php_version' => PHP_VERSION,
-    ]);
-});
-
-// Debug logs (temporary)
+// Debug logs (temporary - authenticated)
 Route::get('debug/logs', function () {
     $logFile = storage_path('logs/laravel.log');
     if (!file_exists($logFile)) {
@@ -160,4 +142,31 @@ Route::post('debug/fix-event-ids', function () {
             'error' => $e->getMessage()
         ], 500);
     }
+});
+
+}); // End of authenticated API routes group
+
+// Public routes (no authentication required)
+
+// Health check
+Route::get('health', function () {
+    try {
+        // Test database connection
+        DB::connection()->getPdo();
+        $dbStatus = 'connected';
+        $dbError = null;
+    } catch (\Exception $e) {
+        $dbStatus = 'error';
+        $dbError = $e->getMessage();
+    }
+
+    return response()->json([
+        'status' => $dbStatus === 'connected' ? 'ok' : 'degraded',
+        'timestamp' => now(),
+        'app' => 'ChronoFront V2 Laravel',
+        'version' => '2.0.0',
+        'database' => $dbStatus,
+        'database_error' => $dbError,
+        'php_version' => PHP_VERSION,
+    ]);
 });
