@@ -7,6 +7,7 @@ use App\Models\Account;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -61,8 +62,15 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        // Purge tenant connection before logout
+        DB::purge('tenant');
+
+        // Reset to system connection
+        DB::setDefaultConnection('system');
+
         Auth::logout();
 
+        // Completely invalidate the session
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

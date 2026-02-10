@@ -24,23 +24,31 @@ class TenantMiddleware
             return redirect('/login');
         }
 
-        // Get account database file from session
-        $accountDb = session('account_db');
+        // ALWAYS get account from currently authenticated user
+        // This ensures we use the correct DB even after logout/login
+        $account = Auth::user();
+        $accountDb = $account->database_file;
 
-        if (!$accountDb) {
-            // If session doesn't have account_db, get it from auth user
-            $account = Auth::user();
-            $accountDb = $account->database_file;
-            session(['account_db' => $accountDb]);
-        }
+        // Update session to match current user (in case of account switch)
+        session([
+            'account_id' => $account->id,
+            'account_name' => $account->username,
+            'account_db' => $accountDb,
+            'role' => $account->role,
+        ]);
 
         // Configure tenant connection to use this account's database
         $dbPath = database_path($accountDb);
 
         Config::set('database.connections.tenant.database', $dbPath);
 
-        // Purge existing connection and set tenant as default
+        // Purge existing connection to force reconnection
         DB::purge('tenant');
+
+        // Reconnect with new config
+        DB::reconnect('tenant');
+
+        // Set tenant as default connection
         DB::setDefaultConnection('tenant');
 
         return $next($request);
