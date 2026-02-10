@@ -399,21 +399,21 @@ class ReaderController extends Controller
      */
     public function generateConfigInstructions(int $eventId): JsonResponse
     {
-        // Get primary reader for this event
+        // Get primary reader for this event (ARRIVEE reader)
         $primaryReader = Reader::where('event_id', $eventId)
-                               ->where('is_primary', true)
+                               ->where('location', 'ARRIVEE')
                                ->first();
 
         if (!$primaryReader) {
             return response()->json([
                 'error' => 'No primary reader configured for this event',
-                'help' => 'Please select a primary reader (ARRIVÉE) first'
+                'help' => 'Please create an ARRIVÉE reader first'
             ], 404);
         }
 
-        // Get all secondary readers
+        // Get all secondary readers (all non-ARRIVEE readers)
         $secondaryReaders = Reader::where('event_id', $eventId)
-                                  ->where('is_primary', false)
+                                  ->where('location', '!=', 'ARRIVEE')
                                   ->orderBy('distance_from_start')
                                   ->get();
 

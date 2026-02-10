@@ -27,9 +27,9 @@ class Reader extends Model
         'date_min',
         'date_max',
         'is_active',
-        'is_primary',
-        'primary_reader_id',
-        'clone_reader_id',
+        // 'is_primary',  // Removed - column doesn't exist in tenant DBs
+        // 'primary_reader_id',  // Removed - column doesn't exist in tenant DBs
+        // 'clone_reader_id',  // Removed - column doesn't exist in tenant DBs
         'test_terrain',
         'date_test',
         'depart_time_start',
@@ -43,7 +43,7 @@ class Reader extends Model
         'date_max' => 'datetime',
         'date_test' => 'datetime',
         'is_active' => 'boolean',
-        'is_primary' => 'boolean',
+        // 'is_primary' => 'boolean',  // Removed - column doesn't exist in tenant DBs
         'test_terrain' => 'boolean',
         'anti_rebounce_seconds' => 'integer',
         'distance_from_start' => 'decimal:2',
