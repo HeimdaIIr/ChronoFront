@@ -33,8 +33,9 @@ Route::middleware(['rfid.tenant'])->group(function () {
     Route::put('rfid/detections', [RaspberryController::class, 'store']);
 });
 
-// Authenticated API Routes (use auth + tenant middleware)
-Route::middleware(['auth', 'tenant'])->group(function () {
+// Authenticated API Routes (use auth:web + tenant middleware)
+// auth:web uses web sessions (cookies) instead of API tokens
+Route::middleware(['auth:web', 'tenant'])->group(function () {
 
 // Events Routes
 Route::get('events/active/list', [EventController::class, 'activeEvents']);
