@@ -74,7 +74,7 @@ class ReaderController extends Controller
             'event_id' => 'required|exists:tenant.events,id',
             'race_id' => 'nullable|exists:tenant.races,id',
             'location' => 'required|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
-            // 'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',  // Removed - column doesn't exist
+            'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',
             'distance_from_start' => 'required|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',
@@ -134,7 +134,7 @@ class ReaderController extends Controller
             'event_id' => 'sometimes|exists:tenant.events,id',
             'race_id' => 'nullable|exists:tenant.races,id',
             'location' => 'sometimes|in:DEPART,Inter1,Inter2,Inter3,Inter4,Inter5,Inter6,Inter7,Inter8,Inter9,Inter10,ARRIVEE',
-            // 'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',  // Removed - column doesn't exist
+            'mode' => 'nullable|in:single_reader_simple,single_reader_waves,multi_reader,multi_reader_waves',
             'distance_from_start' => 'sometimes|numeric|min:0',
             'anti_rebounce_seconds' => 'nullable|integer|min:0',
             'date_min' => 'nullable|date',

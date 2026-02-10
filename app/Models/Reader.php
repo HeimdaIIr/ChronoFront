@@ -20,16 +20,16 @@ class Reader extends Model
         'event_id',
         'race_id',
         'location',
-        // 'mode',  // Removed - column doesn't exist in tenant DBs
+        'mode',
         'distance_from_start',
         'checkpoint_order',
         'anti_rebounce_seconds',
         'date_min',
         'date_max',
         'is_active',
-        // 'is_primary',  // Removed - column doesn't exist in tenant DBs
-        // 'primary_reader_id',  // Removed - column doesn't exist in tenant DBs
-        // 'clone_reader_id',  // Removed - column doesn't exist in tenant DBs
+        'is_primary',
+        'primary_reader_id',
+        'clone_reader_id',
         'test_terrain',
         'date_test',
         'depart_time_start',
@@ -43,7 +43,7 @@ class Reader extends Model
         'date_max' => 'datetime',
         'date_test' => 'datetime',
         'is_active' => 'boolean',
-        // 'is_primary' => 'boolean',  // Removed - column doesn't exist in tenant DBs
+        'is_primary' => 'boolean',
         'test_terrain' => 'boolean',
         'anti_rebounce_seconds' => 'integer',
         'distance_from_start' => 'decimal:2',
