@@ -22,6 +22,7 @@
         axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
         axios.defaults.baseURL = '/api';
+        axios.defaults.withCredentials = true; // Send cookies with requests for session auth
     </script>
 
     @yield('scripts')
