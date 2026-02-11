@@ -48,4 +48,18 @@ class Wave extends Model
     {
         return $this->hasMany(Result::class);
     }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     * Force ISO8601 format with timezone to prevent JavaScript timezone confusion.
+     *
+     * @param  \DateTimeInterface  $date
+     * @return string
+     */
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        // Convert to UTC and format as ISO8601 with Z suffix
+        // This ensures JavaScript always interprets the date correctly
+        return \Carbon\Carbon::instance($date)->utc()->format('Y-m-d\TH:i:s.v\Z');
+    }
 }
