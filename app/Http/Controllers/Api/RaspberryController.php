@@ -232,8 +232,8 @@ class RaspberryController extends Controller
                 }
             }
 
-            // Get passage number
-            $passageNumber = $this->getPassageNumber($entrant, $reader);
+            // Get passage number (must be called after determineEffectiveLocation)
+            $passageNumber = $this->getPassageNumber($entrant, $reader, $effectiveLocation);
 
             // Check if max laps exceeded for n_laps races
             if ($race && $race->type === 'n_laps' && $race->laps > 0) {
@@ -520,8 +520,9 @@ class RaspberryController extends Controller
         // For single-passage races, check anti-rebounce PER CHECKPOINT
         // This prevents duplicate detections at the SAME checkpoint, but allows
         // detections at DIFFERENT checkpoints (Inter1, Inter2, ARRIVEE, etc.)
+        // IMPORTANT: We only check reader_location (checkpoint), NOT reader_id
+        // This allows the same physical reader to serve multiple checkpoints (via time ranges)
         $lastResult = Result::where('entrant_id', $entrant->id)
-            ->where('reader_id', $reader->id)
             ->where('reader_location', $effectiveLocation)  // CRITICAL: same checkpoint only!
             ->orderBy('raw_time', 'desc')
             ->first();
@@ -537,12 +538,21 @@ class RaspberryController extends Controller
     }
 
     /**
-     * Get the next passage number for this entrant at this reader
+     * Get the next passage number for this entrant at this checkpoint
+     * For multi-lap races: counts laps at the SAME checkpoint (reader_location)
+     * For 1_passage races: always returns 1 (only one passage per checkpoint)
+     *
+     * @param Entrant $entrant
+     * @param Reader $reader
+     * @param string $effectiveLocation The checkpoint location (DEPART, Inter1, ARRIVEE, etc.)
+     * @return int Next passage number at this checkpoint
      */
-    private function getPassageNumber(Entrant $entrant, Reader $reader): int
+    private function getPassageNumber(Entrant $entrant, Reader $reader, string $effectiveLocation): int
     {
+        // Count passages at this specific checkpoint (not by physical reader)
+        // This allows the same physical reader to serve multiple checkpoints
         $lastPassage = Result::where('entrant_id', $entrant->id)
-            ->where('reader_id', $reader->id)
+            ->where('reader_location', $effectiveLocation)  // Count by checkpoint, not by physical reader
             ->max('lap_number');
 
         return ($lastPassage ?? 0) + 1;
