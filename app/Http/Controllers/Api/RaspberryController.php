@@ -129,98 +129,97 @@ class RaspberryController extends Controller
 
             if (!$entrant) {
     Log::warning("Entrant not found for bib {$bibNumber}");
-    
+
     // Store detection in database
     $this->storeRfidDetection(
-        $reader, 
-        $serial, 
-        $datetime, 
-        null, 
+        $reader,
+        $serial,
+        $datetime,
+        null,
         null,
         'skipped',
         null,
         "Entrant not found for bib {$bibNumber}"
     );
-    
+
     $skipped++;
     continue;
 }
 
 
-            // Check anti-rebounce (intelligent mode for multi-lap races)
-            $race = $entrant->race;
-            $lastResult = Result::where('entrant_id', $entrant->id)
-                ->where('reader_id', $reader->id)
-                ->orderBy('raw_time', 'desc')
-                ->first();
+            // ROUTING LOGIC - DETERMINE EFFECTIVE LOCATION FIRST
+            // ===================================================
+            // We need to know the effective location BEFORE checking anti-rebounce
+            // so we can check anti-rebounce per checkpoint, not per reader
 
-            $lastTime = $lastResult ? Carbon::parse($lastResult->raw_time) : null;
-            $secondsSinceLast = $lastTime ? $datetime->diffInSeconds($lastTime) : null;
+            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime, $entrant);
 
-            // Determine anti-rebounce seconds
-            $configuredAntiRebounce = $reader->anti_rebounce_seconds ?? 5;
-            $effectiveAntiRebounce = ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) ? 3 : $configuredAntiRebounce;
+            // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
+            if ($effectiveLocation === null) {
+                Log::info("Detection IGNORED - outside time ranges", [
+                    'bib' => $bibNumber,
+                    'detection_time' => $datetime->format('H:i:s'),
+                    'reader' => $reader->serial,
+                ]);
 
-            Log::info("Anti-rebounce check details", [
+                // Store detection in database
+                $this->storeRfidDetection(
+                    $reader,
+                    $serial,
+                    $datetime,
+                    $entrant,
+                    $entrant->wave_id,
+                    'ignored',
+                    null,
+                    "Outside configured time ranges"
+                );
+
+                $skipped++;
+                continue; // Skip this detection
+            }
+
+            Log::info("Effective location determined", [
                 'bib' => $bibNumber,
-                'race_type' => $race ? $race->type : 'null',
-                'configured_anti_rebounce' => $configuredAntiRebounce,
-                'effective_anti_rebounce' => $effectiveAntiRebounce,
-                'seconds_since_last' => $secondsSinceLast,
-                'will_pass' => !$lastTime || $secondsSinceLast >= $effectiveAntiRebounce,
+                'configured_location' => $reader->location,
+                'effective_location' => $effectiveLocation,
+                'detection_time' => $datetime->format('H:i:s'),
+                'wave_id' => $entrant->wave_id,
             ]);
 
-            $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime);
+            // Check anti-rebounce (now with effective location)
+            $race = $entrant->race;
+            $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime, $effectiveLocation);
             if (!$antiRebounceCheck) {
                 Log::warning("Detection BLOCKED by anti-rebounce", [
                     'bib' => $bibNumber,
                     'entrant_id' => $entrant->id,
                     'reader' => $reader->serial,
-                    'race_type' => $race ? $race->type : 'null',
-                    'configured_anti_rebounce' => $configuredAntiRebounce,
-                    'effective_anti_rebounce' => $effectiveAntiRebounce,
-                    'seconds_since_last' => $secondsSinceLast,
-                    'last_detection_time' => $lastTime ? $lastTime->format('Y-m-d H:i:s') : null,
+                    'location' => $effectiveLocation,
                     'current_detection_time' => $datetime->format('Y-m-d H:i:s'),
                 ]);
-                
+
                 // Store detection in database
                 $this->storeRfidDetection(
-                    $reader, 
-                    $serial, 
-                    $datetime, 
-                    $entrant, 
+                    $reader,
+                    $serial,
+                    $datetime,
+                    $entrant,
                     $entrant->wave_id,
                     'skipped',
                     null,
-                    "Blocked by anti-rebounce ({$effectiveAntiRebounce}s)"
+                    "Blocked by anti-rebounce at {$effectiveLocation}"
                 );
-                
+
                 $skipped++;
                 continue;
             }
 
 
             // Check race duration for infinite_loop type
-            $race = $entrant->race;
-            Log::info("Race type check", [
-                'bib' => $bibNumber,
-                'race_type' => $race ? $race->type : 'null',
-                'race_duration' => $race ? $race->duration : 'null',
-                'race_start_time' => $race && $race->start_time ? $race->start_time : 'null',
-            ]);
-
             if ($race && $race->type === 'infinite_loop' && $race->duration && $race->start_time) {
                 $raceStartTime = Carbon::parse($race->start_time);
                 $raceDurationSeconds = $race->duration * 60; // Convert minutes to seconds
                 $elapsedSeconds = $datetime->diffInSeconds($raceStartTime);
-
-                Log::info("Infinite loop duration check", [
-                    'bib' => $bibNumber,
-                    'elapsed_seconds' => $elapsedSeconds,
-                    'race_duration_seconds' => $raceDurationSeconds,
-                    'is_exceeded' => $elapsedSeconds > $raceDurationSeconds,
-                ]);
 
                 if ($elapsedSeconds > $raceDurationSeconds) {
                     Log::warning("Passage BLOCKED - race duration exceeded", [
@@ -236,14 +235,6 @@ class RaspberryController extends Controller
             // Get passage number
             $passageNumber = $this->getPassageNumber($entrant, $reader);
 
-            Log::info("About to create result", [
-                'bib' => $bibNumber,
-                'entrant_id' => $entrant->id,
-                'lap_number' => $passageNumber,
-                'reader' => $reader->serial,
-                'time' => $datetime->format('Y-m-d H:i:s'),
-            ]);
-
             // Check if max laps exceeded for n_laps races
             if ($race && $race->type === 'n_laps' && $race->laps > 0) {
                 if ($passageNumber > $race->laps) {
@@ -257,46 +248,6 @@ class RaspberryController extends Controller
                     continue;
                 }
             }
-
-            // ROUTING LOGIC BASED ON READER LOCATION AND TIME RANGES
-            // =======================================================
-
-            // Determine effective location based on wave TOP départ or time ranges
-            $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime, $entrant);
-
-            // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
-            if ($effectiveLocation === null) {
-                Log::info("Detection IGNORED - outside time ranges", [
-                    'bib' => $bibNumber,
-                    'detection_time' => $datetime->format('H:i:s'),
-                    'reader' => $reader->serial,
-                ]);
-                
-                // Store detection in database
-                $this->storeRfidDetection(
-                    $reader, 
-                    $serial, 
-                    $datetime, 
-                    $entrant, 
-                    $entrant->wave_id,
-                    'ignored',
-                    null,
-                    "Outside configured time ranges"
-                );
-                
-                $skipped++;
-                continue; // Skip this detection
-            }
-
-			
-			
-            Log::info("Effective location determined", [
-                'bib' => $bibNumber,
-                'configured_location' => $reader->location,
-                'effective_location' => $effectiveLocation,
-                'detection_time' => $datetime->format('H:i:s'),
-                'wave_id' => $entrant->wave_id,
-            ]);
 
             if ($effectiveLocation === 'DEPART') {
                 // DEPART: Update entrant's individual start time
@@ -551,9 +502,13 @@ class RaspberryController extends Controller
     /**
      * Check if enough time has passed since last read (anti-rebounce)
      * For multi-lap races: DISABLED - we rely on max_laps validation instead
-     * For single-passage races: uses configured anti-rebounce
+     * For single-passage races: uses configured anti-rebounce PER CHECKPOINT
+     *
+     * IMPORTANT: Anti-rebounce is now PER CHECKPOINT (reader_location), not per reader!
+     * This allows a runner to be detected at Inter1, then immediately at ARRIVEE
+     * even if both checkpoints use the same physical reader (with time ranges)
      */
-    private function checkAntiRebounce(Entrant $entrant, Reader $reader, Carbon $currentTime): bool
+    private function checkAntiRebounce(Entrant $entrant, Reader $reader, Carbon $currentTime, string $effectiveLocation): bool
     {
         // DISABLE anti-rebounce completely for multi-lap races
         // The max_laps validation handles race completion
@@ -562,14 +517,17 @@ class RaspberryController extends Controller
             return true; // Always allow for multi-lap races
         }
 
-        // For single-passage races, use normal anti-rebounce
+        // For single-passage races, check anti-rebounce PER CHECKPOINT
+        // This prevents duplicate detections at the SAME checkpoint, but allows
+        // detections at DIFFERENT checkpoints (Inter1, Inter2, ARRIVEE, etc.)
         $lastResult = Result::where('entrant_id', $entrant->id)
             ->where('reader_id', $reader->id)
+            ->where('reader_location', $effectiveLocation)  // CRITICAL: same checkpoint only!
             ->orderBy('raw_time', 'desc')
             ->first();
 
         if (!$lastResult) {
-            return true; // No previous passage, allow
+            return true; // No previous passage at this checkpoint, allow
         }
 
         $lastTime = Carbon::parse($lastResult->raw_time);
