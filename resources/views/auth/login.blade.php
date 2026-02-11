@@ -165,7 +165,7 @@
     <div class="login-container">
         <div class="login-card">
             <div class="logo">
-                <img src="{{ asset('resources/img/logo.jpg') }}" alt="ChronoFront Logo" style="width: 300px; height: auto; margin-bottom: 1rem;">
+                <img src="{{ asset('resources/img/logo.jpg') }}" alt="ChronoFront Logo" style="width: 250px !important; max-width: none !important; height: auto !important; margin-bottom: 1rem !important; display: block !important;">
                 <h1>ChronoFront</h1>
                 <p>Système de chronométrage professionnel</p>
             </div>
