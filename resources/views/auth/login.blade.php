@@ -165,7 +165,7 @@
     <div class="login-container">
         <div class="login-card">
             <div class="logo">
-                <i class="bi bi-stopwatch-fill"></i>
+                <img src="{{ asset('resources/img/logo.jpg') }}" alt="ChronoFront Logo" style="max-width: 120px; height: auto; margin-bottom: 1rem;">
                 <h1>ChronoFront</h1>
                 <p>Système de chronométrage professionnel</p>
             </div>
