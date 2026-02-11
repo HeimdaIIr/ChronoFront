@@ -130,87 +130,15 @@
         <div class="col-md-6">
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Format CSV</h5>
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Format fichier d'inscription</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Colonnes supportées :</h6>
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Colonne</th>
-                                <th>Variations</th>
-                                <th>Requis</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>dossard</code></td>
-                                <td>bib, bib_number</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>nom</code></td>
-                                <td>lastname, name</td>
-                                <td><span class="badge bg-danger">Requis</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>prenom</code></td>
-                                <td>firstname</td>
-                                <td><span class="badge bg-danger">Requis</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>sexe</code></td>
-                                <td>gender, sex</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>naissance</code></td>
-                                <td>birth_date, dob</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>parcours</code></td>
-                                <td>race</td>
-                                <td><span class="badge bg-danger">Requis</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>vague</code></td>
-                                <td>wave</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>cat</code></td>
-                                <td>category</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>club</code></td>
-                                <td>association</td>
-                                <td><span class="badge bg-warning">Optionnel</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <p><strong>En-tête supporté :</strong> dossard / nom / prenom / sexe / naissance / parcours / cat / vague / club</p>
 
                     <h6 class="mt-3">Exemple de fichier CSV :</h6>
-                    <pre class="bg-light p-3 rounded"><code>dossard,nom,prenom,sexe,naissance,parcours,vague,club
-3,DUPONT,Jean,M,15/05/1985,10km,Vague 1,AS SETE
-125,MARTIN,Sophie,F,22/03/1990,5km,Vague 2,RC MONTPELLIER</code></pre>
-
-                    <div class="alert alert-success mt-3">
-                        <i class="bi bi-magic"></i> <strong>Automatique :</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Création des parcours s'ils n'existent pas</li>
-                            <li><strong>Attribution automatique des participants aux parcours</strong> selon la colonne <code>parcours</code></li>
-                            <li>Création des vagues si elles n'existent pas</li>
-                            <li>Génération tags RFID (2000 + dossard)</li>
-                            <li>Attribution catégories FFA selon âge/sexe</li>
-                        </ul>
-                    </div>
-
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-pencil-square"></i> <strong>Modification manuelle :</strong>
-                        <p class="mb-0">Après l'import, vous pouvez modifier le parcours d'un participant dans la page <strong>"Gestion des Participants"</strong> en cas de changement de dernière minute demandé par le coureur.</p>
-                    </div>
+                    <pre class="bg-light p-3 rounded"><code>dossard,nom,prenom,sexe,naissance,parcours,cat,vague,club
+3,DUPONT,Jean,M,15/05/1985,10km,M0,Vague 1,AS SETE
+125,MARTIN,Sophie,F,22/03/1990,5km,F0,Vague 2,RC MONTPELLIER</code></pre>
                 </div>
             </div>
         </div>
