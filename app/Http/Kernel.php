@@ -66,4 +66,25 @@ class Kernel extends HttpKernel
         'tenant' => \App\Http\Middleware\TenantMiddleware::class,
         'rfid.tenant' => \App\Http\Middleware\RfidTenantMiddleware::class,
     ];
+
+    /**
+     * The priority-sorted list of middleware.
+     *
+     * Forces non-global middleware to execute in the given order.
+     *
+     * @var array<int, class-string|string>
+     */
+    protected $middlewarePriority = [
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\Authenticate::class,
+        \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        \Illuminate\Session\Middleware\AuthenticateSession::class,
+        // CRITICAL: Tenant middleware MUST run before SubstituteBindings
+        // so that model binding uses the correct tenant database connection
+        \App\Http\Middleware\TenantMiddleware::class,
+        \App\Http\Middleware\RfidTenantMiddleware::class,
+        \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        \Illuminate\Auth\Middleware\Authorize::class,
+    ];
 }
