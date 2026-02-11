@@ -13,13 +13,12 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #e4e4e7;
         }
 
         .login-container {
@@ -29,11 +28,11 @@
         }
 
         .login-card {
-            background: #1a1d2e;
-            border: 1px solid #2a2d3e;
+            background: white;
+            border: none;
             border-radius: 16px;
             padding: 3rem 2.5rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
         }
 
         .logo {
@@ -43,19 +42,19 @@
 
         .logo i {
             font-size: 3.5rem;
-            color: #10B981;
+            color: #3B82F6;
             margin-bottom: 1rem;
         }
 
         .logo h1 {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #e4e4e7;
+            color: #1e293b;
             margin-bottom: 0.5rem;
         }
 
         .logo p {
-            color: #71717a;
+            color: #64748b;
             font-size: 0.95rem;
         }
 
@@ -65,7 +64,7 @@
 
         .form-group label {
             display: block;
-            color: #a1a1aa;
+            color: #475569;
             font-size: 0.9rem;
             font-weight: 500;
             margin-bottom: 0.5rem;
@@ -74,22 +73,22 @@
         .form-control {
             width: 100%;
             padding: 0.875rem 1rem;
-            background: #0f1117;
-            border: 1px solid #2a2d3e;
+            background: white;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            color: #e4e4e7;
+            color: #1e293b;
             font-size: 1rem;
             transition: all 0.2s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #10B981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .form-control::placeholder {
-            color: #52525b;
+            color: #94a3b8;
         }
 
         .error-message {
@@ -112,10 +111,11 @@
             width: 18px;
             height: 18px;
             cursor: pointer;
+            accent-color: #3B82F6;
         }
 
         .remember-group label {
-            color: #a1a1aa;
+            color: #475569;
             font-size: 0.9rem;
             cursor: pointer;
             margin: 0;
@@ -124,7 +124,7 @@
         .btn-login {
             width: 100%;
             padding: 1rem;
-            background: #10B981;
+            background: #3B82F6;
             color: white;
             border: none;
             border-radius: 8px;
@@ -135,9 +135,9 @@
         }
 
         .btn-login:hover {
-            background: #059669;
+            background: #2563eb;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
         .btn-login:active {
@@ -147,12 +147,12 @@
         .footer {
             text-align: center;
             margin-top: 2rem;
-            color: #71717a;
+            color: #64748b;
             font-size: 0.85rem;
         }
 
         .footer a {
-            color: #10B981;
+            color: #3B82F6;
             text-decoration: none;
         }
 
