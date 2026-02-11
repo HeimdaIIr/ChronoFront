@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 
 class TenantMiddleware
 {
@@ -50,6 +51,19 @@ class TenantMiddleware
 
         // Set tenant as default connection
         DB::setDefaultConnection('tenant');
+
+        // Check and run any pending tenant-specific migrations
+        // This ensures new migrations are automatically applied to existing tenant databases
+        try {
+            Artisan::call('migrate', [
+                '--database' => 'tenant',
+                '--path' => 'database/migrations/tenant',
+                '--force' => true,
+            ]);
+        } catch (\Exception $e) {
+            // Log l'erreur mais continue (ne pas bloquer l'application)
+            \Log::error("Tenant migration check failed for account {$account->username}: " . $e->getMessage());
+        }
 
         return $next($request);
     }
