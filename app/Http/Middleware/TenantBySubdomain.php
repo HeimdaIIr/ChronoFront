@@ -58,16 +58,36 @@ class TenantBySubdomain
         DB::purge('tenant');
         DB::setDefaultConnection('tenant');
 
-        // Si c'est une nouvelle DB, lancer les migrations automatiquement
+        // Run migrations for new databases, and check for pending migrations on existing ones
         if ($isNewDatabase) {
             try {
+                // Run main migrations first
                 Artisan::call('migrate', [
                     '--database' => 'tenant',
+                    '--force' => true,
+                ]);
+
+                // Then run tenant-specific migrations
+                Artisan::call('migrate', [
+                    '--database' => 'tenant',
+                    '--path' => 'database/migrations/tenant',
                     '--force' => true,
                 ]);
             } catch (\Exception $e) {
                 // Log l'erreur mais continue
                 \Log::error("Migration failed for tenant {$tenant}: " . $e->getMessage());
+            }
+        } else {
+            // For existing databases, check and run any pending tenant-specific migrations
+            try {
+                Artisan::call('migrate', [
+                    '--database' => 'tenant',
+                    '--path' => 'database/migrations/tenant',
+                    '--force' => true,
+                ]);
+            } catch (\Exception $e) {
+                // Log l'erreur mais continue (ne pas bloquer l'application)
+                \Log::error("Tenant migration check failed for {$tenant}: " . $e->getMessage());
             }
         }
 
