@@ -340,17 +340,20 @@ class RaspberryController extends Controller
 
             // For ARRIVEE and Inter checkpoints: Create Result
 
-            // IMPORTANT: Pour ARRIVEE, ne garder que la PREMIÈRE détection
-            if ($effectiveLocation === 'ARRIVEE') {
+            // IMPORTANT: Pour les points de passage (ARRIVEE, Inter1, Inter2, etc.), ne garder que la PREMIÈRE détection
+            // Exception: Pour les courses multi-tours (n_laps, infinite_loop), on permet plusieurs passages
+            if ($race && !in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                // Pour les courses à 1 passage, vérifier si ce coureur a déjà été détecté à cet emplacement
                 $existingResult = Result::where('entrant_id', $entrant->id)
-                    ->where('reader_id', $reader->id)
-                    ->where('reader_location', 'ARRIVEE')
+                    ->where('reader_location', $effectiveLocation)
+                    ->where('race_id', $entrant->race_id)
                     ->first();
 
                 if ($existingResult) {
-                    Log::info("ARRIVEE already recorded - skipping", [
+                    Log::info("Checkpoint already recorded - skipping duplicate", [
                         'bib' => $bibNumber,
                         'entrant_id' => $entrant->id,
+                        'location' => $effectiveLocation,
                         'existing_time' => $existingResult->raw_time,
                         'current_time' => $datetime->format('Y-m-d H:i:s'),
                     ]);
@@ -364,7 +367,7 @@ class RaspberryController extends Controller
                         $entrant->wave_id,
                         'skipped',
                         null,
-                        "ARRIVEE already recorded"
+                        "Checkpoint {$effectiveLocation} already recorded (no duplicates for 1_passage races)"
                     );
 
                     $skipped++;
@@ -885,24 +888,51 @@ class RaspberryController extends Controller
         try {
             $race = \App\Models\Race::findOrFail($raceId);
 
-            // Get all results for this race, grouped by entrant
-            // For races with multiple laps, take best time or last lap depending on race type
-            $results = Result::where('race_id', $raceId)
+            // Check if race has intermediate checkpoints (readers with location other than ARRIVEE)
+            $hasIntermediateCheckpoints = Reader::where('event_id', $race->event_id)
+                ->where('location', '!=', 'ARRIVEE')
+                ->where('location', '!=', 'DEPART')
+                ->where('is_active', true)
+                ->exists();
+
+            // Get all results for this race
+            $allResults = Result::where('race_id', $raceId)
                 ->where('status', 'V')
                 ->with(['entrant.category'])
-                ->get()
-                ->groupBy('entrant_id')
-                ->map(function ($entrantResults) use ($race) {
-                    // For best_time races, keep best time
-                    // Otherwise keep last lap
-                    if ($race->best_time) {
-                        return $entrantResults->sortBy('calculated_time')->first();
-                    } else {
-                        return $entrantResults->sortByDesc('lap_number')->first();
-                    }
-                })
-                ->sortBy('calculated_time')
-                ->values();
+                ->get();
+
+            // If race has intermediate checkpoints (like Inter1, Inter2, etc.)
+            // ONLY rank runners who have an ARRIVEE time
+            if ($hasIntermediateCheckpoints && $race->type === '1_passage') {
+                // Get only ARRIVEE results for ranking
+                $results = $allResults
+                    ->where('reader_location', 'ARRIVEE')
+                    ->sortBy('calculated_time')
+                    ->values();
+
+                Log::info("Ranking with intermediate checkpoints", [
+                    'race_id' => $raceId,
+                    'race_type' => $race->type,
+                    'has_intermediates' => true,
+                    'total_results' => $allResults->count(),
+                    'arrivee_results' => $results->count(),
+                ]);
+            } else {
+                // Original logic for races without intermediate checkpoints or multi-lap races
+                $results = $allResults
+                    ->groupBy('entrant_id')
+                    ->map(function ($entrantResults) use ($race) {
+                        // For best_time races, keep best time
+                        // Otherwise keep last lap
+                        if ($race->best_time) {
+                            return $entrantResults->sortBy('calculated_time')->first();
+                        } else {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        }
+                    })
+                    ->sortBy('calculated_time')
+                    ->values();
+            }
 
             // Calculate overall positions
             $position = 1;

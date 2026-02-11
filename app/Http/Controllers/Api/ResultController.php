@@ -155,9 +155,40 @@ class ResultController extends Controller
     {
         $race = Race::find($raceId);
         $results = Result::where('race_id', $raceId)
-            ->with(['entrant.category', 'wave', 'race'])
+            ->with(['entrant.category', 'wave', 'race', 'reader'])
             ->orderBy('position')
             ->get();
+
+        // Check if race has intermediate checkpoints
+        $hasIntermediateCheckpoints = \App\Models\Reader::where('event_id', $race->event_id)
+            ->where('location', '!=', 'ARRIVEE')
+            ->where('location', '!=', 'DEPART')
+            ->where('is_active', true)
+            ->exists();
+
+        // If race has intermediate checkpoints, show only ARRIVEE results (ranked)
+        // But attach intermediate times to each runner
+        if ($race && $hasIntermediateCheckpoints && $race->type === '1_passage') {
+            // Get only ARRIVEE results (these have positions)
+            $arriveeResults = $results->where('reader_location', 'ARRIVEE')
+                ->sortBy('position')
+                ->values();
+
+            // For each ARRIVEE result, attach intermediate times
+            $arriveeResults = $arriveeResults->map(function ($result) use ($results) {
+                // Find all intermediate results for this entrant
+                $intermediates = $results
+                    ->where('entrant_id', $result->entrant_id)
+                    ->where('reader_location', '!=', 'ARRIVEE')
+                    ->where('reader_location', '!=', 'DEPART')
+                    ->values();
+
+                $result->intermediate_times = $intermediates;
+                return $result;
+            });
+
+            return response()->json($arriveeResults);
+        }
 
         // For multi-lap races, show only ONE result per runner (their latest/last lap)
         if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
@@ -519,24 +550,43 @@ class ResultController extends Controller
         DB::beginTransaction();
 
         try {
-            // Get all results for this race, grouped by entrant
-            // For races with multiple laps, take best time or last lap depending on race type
-            $results = Result::where('race_id', $raceId)
+            // Check if race has intermediate checkpoints (readers with location other than ARRIVEE)
+            $hasIntermediateCheckpoints = \App\Models\Reader::where('event_id', $race->event_id)
+                ->where('location', '!=', 'ARRIVEE')
+                ->where('location', '!=', 'DEPART')
+                ->where('is_active', true)
+                ->exists();
+
+            // Get all results for this race
+            $allResults = Result::where('race_id', $raceId)
                 ->where('status', 'V')
                 ->with(['entrant.category'])
-                ->get()
-                ->groupBy('entrant_id')
-                ->map(function ($entrantResults) use ($race) {
-                    // For best_time races, keep best time
-                    // Otherwise keep last lap
-                    if ($race->best_time) {
-                        return $entrantResults->sortBy('calculated_time')->first();
-                    } else {
-                        return $entrantResults->sortByDesc('lap_number')->first();
-                    }
-                })
-                ->sortBy('calculated_time')
-                ->values();
+                ->get();
+
+            // If race has intermediate checkpoints (like Inter1, Inter2, etc.)
+            // ONLY rank runners who have an ARRIVEE time
+            if ($hasIntermediateCheckpoints && $race->type === '1_passage') {
+                // Get only ARRIVEE results for ranking
+                $results = $allResults
+                    ->where('reader_location', 'ARRIVEE')
+                    ->sortBy('calculated_time')
+                    ->values();
+            } else {
+                // Original logic for races without intermediate checkpoints or multi-lap races
+                $results = $allResults
+                    ->groupBy('entrant_id')
+                    ->map(function ($entrantResults) use ($race) {
+                        // For best_time races, keep best time
+                        // Otherwise keep last lap
+                        if ($race->best_time) {
+                            return $entrantResults->sortBy('calculated_time')->first();
+                        } else {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        }
+                    })
+                    ->sortBy('calculated_time')
+                    ->values();
+            }
 
             // Calculate overall positions
             $position = 1;
@@ -604,23 +654,43 @@ class ResultController extends Controller
                     }
                 }
 
-                // Get all results for this race, grouped by entrant
-                $results = Result::where('race_id', $race->id)
+                // Check if race has intermediate checkpoints
+                $hasIntermediateCheckpoints = \App\Models\Reader::where('event_id', $race->event_id)
+                    ->where('location', '!=', 'ARRIVEE')
+                    ->where('location', '!=', 'DEPART')
+                    ->where('is_active', true)
+                    ->exists();
+
+                // Get all results for this race
+                $allRaceResults = Result::where('race_id', $race->id)
                     ->where('status', 'V')
                     ->with(['entrant.category'])
-                    ->get()
-                    ->groupBy('entrant_id')
-                    ->map(function ($entrantResults) use ($race) {
-                        // For best_time races, keep best time
-                        // Otherwise keep last lap
-                        if ($race->best_time) {
-                            return $entrantResults->sortBy('calculated_time')->first();
-                        } else {
-                            return $entrantResults->sortByDesc('lap_number')->first();
-                        }
-                    })
-                    ->sortBy('calculated_time')
-                    ->values();
+                    ->get();
+
+                // If race has intermediate checkpoints (like Inter1, Inter2, etc.)
+                // ONLY rank runners who have an ARRIVEE time
+                if ($hasIntermediateCheckpoints && $race->type === '1_passage') {
+                    // Get only ARRIVEE results for ranking
+                    $results = $allRaceResults
+                        ->where('reader_location', 'ARRIVEE')
+                        ->sortBy('calculated_time')
+                        ->values();
+                } else {
+                    // Original logic for races without intermediate checkpoints or multi-lap races
+                    $results = $allRaceResults
+                        ->groupBy('entrant_id')
+                        ->map(function ($entrantResults) use ($race) {
+                            // For best_time races, keep best time
+                            // Otherwise keep last lap
+                            if ($race->best_time) {
+                                return $entrantResults->sortBy('calculated_time')->first();
+                            } else {
+                                return $entrantResults->sortByDesc('lap_number')->first();
+                            }
+                        })
+                        ->sortBy('calculated_time')
+                        ->values();
+                }
 
                 // Calculate overall positions
                 $position = 1;
@@ -1402,25 +1472,31 @@ class ResultController extends Controller
                 return;
             }
 
-            // Get all results for this race, grouped by entrant
-            $entrantResults = Result::where('race_id', $raceId)
+            // Check if race has intermediate checkpoints (readers with location other than ARRIVEE)
+            $hasIntermediateCheckpoints = \App\Models\Reader::where('event_id', $race->event_id)
+                ->where('location', '!=', 'ARRIVEE')
+                ->where('location', '!=', 'DEPART')
+                ->where('is_active', true)
+                ->exists();
+
+            // Get all results for this race
+            $allResults = Result::where('race_id', $raceId)
                 ->where('status', 'V')
                 ->with(['entrant.category'])
-                ->get()
-                ->groupBy('entrant_id')
-                ->map(function ($entrantResults) use ($race) {
-                    // For best_time races, keep best time
-                    // Otherwise keep last lap
-                    if ($race->best_time) {
-                        return $entrantResults->sortBy('calculated_time')->first();
-                    } else {
-                        return $entrantResults->sortByDesc('lap_number')->first();
-                    }
-                });
+                ->get();
 
             // Sort based on race type
             if ($race->type === 'infinite_loop') {
                 // INFINITE LOOP: Sort by distance (laps × distance), then by time
+                $entrantResults = $allResults->groupBy('entrant_id')
+                    ->map(function ($entrantResults) use ($race) {
+                        if ($race->best_time) {
+                            return $entrantResults->sortBy('calculated_time')->first();
+                        } else {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        }
+                    });
+
                 $results = $entrantResults->sort(function ($a, $b) use ($race) {
                     $distanceA = $a->lap_number * ($race->distance ?? 0);
                     $distanceB = $b->lap_number * ($race->distance ?? 0);
@@ -1437,6 +1513,15 @@ class ResultController extends Controller
             } elseif ($race->type === 'n_laps') {
                 // N LAPS: Only include those who completed all laps, sort by time
                 $requiredLaps = $race->laps ?? 1;
+                $entrantResults = $allResults->groupBy('entrant_id')
+                    ->map(function ($entrantResults) use ($race) {
+                        if ($race->best_time) {
+                            return $entrantResults->sortBy('calculated_time')->first();
+                        } else {
+                            return $entrantResults->sortByDesc('lap_number')->first();
+                        }
+                    });
+
                 $results = $entrantResults
                     ->filter(function ($result) use ($requiredLaps) {
                         return $result->lap_number >= $requiredLaps;
@@ -1445,8 +1530,35 @@ class ResultController extends Controller
                     ->values();
 
             } else {
-                // 1_PASSAGE: Sort by time (original behavior)
-                $results = $entrantResults->sortBy('calculated_time')->values();
+                // 1_PASSAGE: Check if race has intermediate checkpoints
+                if ($hasIntermediateCheckpoints) {
+                    // If race has intermediate checkpoints (like Inter1, Inter2, etc.)
+                    // ONLY rank runners who have an ARRIVEE time
+                    $results = $allResults
+                        ->where('reader_location', 'ARRIVEE')
+                        ->sortBy('calculated_time')
+                        ->values();
+
+                    \Log::info("Ranking with intermediate checkpoints", [
+                        'race_id' => $raceId,
+                        'race_type' => $race->type,
+                        'has_intermediates' => true,
+                        'total_results' => $allResults->count(),
+                        'arrivee_results' => $results->count(),
+                    ]);
+                } else {
+                    // No intermediate checkpoints: use original logic
+                    $results = $allResults->groupBy('entrant_id')
+                        ->map(function ($entrantResults) use ($race) {
+                            if ($race->best_time) {
+                                return $entrantResults->sortBy('calculated_time')->first();
+                            } else {
+                                return $entrantResults->sortByDesc('lap_number')->first();
+                            }
+                        })
+                        ->sortBy('calculated_time')
+                        ->values();
+                }
             }
 
             // Calculate overall positions
