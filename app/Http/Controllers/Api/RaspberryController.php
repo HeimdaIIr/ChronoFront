@@ -683,14 +683,26 @@ class RaspberryController extends Controller
      * WAVE-BASED LOGIC (priority):
      * - If entrant has a wave with real_start_time set (TOP départ clicked):
      *   → Use ±depart_window_minutes around real_start_time for DEPART
-     *   → Everything after window = ARRIVEE
+     *   → Everything after window = ARRIVEE (ONLY if reader location is DEPART or ARRIVEE)
+     *   → For intermediate checkpoints (Inter1, Inter2, etc.), always use reader location
      *
      * FALLBACK (legacy time ranges):
      * - If no wave or no real_start_time: use reader time ranges
      */
     private function determineEffectiveLocation(Reader $reader, Carbon $datetime, ?Entrant $entrant = null): ?string
     {
-        // PRIORITY 1: Wave-based TOP départ system
+        // PRIORITY 0: If reader is configured with an intermediate checkpoint (not DEPART or ARRIVEE),
+        // always use that location directly, regardless of wave TOP départ logic
+        // This ensures Inter1, Inter2, etc. are never overridden
+        if ($reader->location !== 'DEPART' && $reader->location !== 'ARRIVEE') {
+            Log::info("Using intermediate checkpoint location directly", [
+                'reader_location' => $reader->location,
+                'reader_serial' => $reader->serial,
+            ]);
+            return $reader->location;
+        }
+
+        // PRIORITY 1: Wave-based TOP départ system (ONLY for DEPART/ARRIVEE readers)
         // =========================================
         if ($entrant && $entrant->wave_id) {
             $wave = $entrant->wave;
@@ -718,7 +730,7 @@ class RaspberryController extends Controller
                     return 'DEPART';
                 }
 
-                // After DEPART window = ARRIVEE
+                // After DEPART window = ARRIVEE (only if reader location is DEPART or ARRIVEE)
                 if ($datetime > $departWindowEnd) {
                     return 'ARRIVEE';
                 }
