@@ -80,7 +80,7 @@ class ResultController extends Controller
 
         // For multi-lap races, show only ONE result per runner (their latest/last lap)
         // This prevents showing duplicates in the results table
-        // EXCEPT in timing mode where we want to see ALL laps
+        // EXCEPT in timing mode where we want to see ALL laps AND ALL CHECKPOINTS
         $timingMode = $request->boolean('timing_mode', false);
 
         if (!$timingMode) {
@@ -98,6 +98,9 @@ class ResultController extends Controller
             })->values();
         }
 
+        // In timing mode, return ALL results without grouping or filtering
+        // This ensures the timing blade shows ALL detections at ALL checkpoints
+        // (Inter1, ARRIVEE, etc.) for ALL runners in real-time
         return response()->json($results);
     }
 

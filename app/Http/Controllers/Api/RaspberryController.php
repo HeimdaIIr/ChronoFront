@@ -342,10 +342,12 @@ class RaspberryController extends Controller
 
             // IMPORTANT: Pour les points de passage (ARRIVEE, Inter1, Inter2, etc.), ne garder que la PREMIÈRE détection
             // Exception: Pour les courses multi-tours (n_laps, infinite_loop), on permet plusieurs passages
+            // NOTE: Each checkpoint is independent - a runner can have both Inter1 AND ARRIVEE results
+            // The duplicate check only prevents multiple passages at the SAME checkpoint
             if ($race && !in_array($race->type, ['n_laps', 'infinite_loop'])) {
-                // Pour les courses à 1 passage, vérifier si ce coureur a déjà été détecté à cet emplacement
+                // Pour les courses à 1 passage, vérifier si ce coureur a déjà été détecté à cet emplacement SPÉCIFIQUE
                 $existingResult = Result::where('entrant_id', $entrant->id)
-                    ->where('reader_location', $effectiveLocation)
+                    ->where('reader_location', $effectiveLocation)  // IMPORTANT: same location only!
                     ->where('race_id', $entrant->race_id)
                     ->first();
 
@@ -374,6 +376,15 @@ class RaspberryController extends Controller
                     continue; // Skip this detection
                 }
             }
+
+            // Log result creation for debugging
+            Log::info("Creating result for checkpoint", [
+                'bib' => $bibNumber,
+                'entrant_id' => $entrant->id,
+                'location' => $effectiveLocation,
+                'time' => $datetime->format('Y-m-d H:i:s'),
+                'race_type' => $race ? $race->type : 'unknown',
+            ]);
 
                 $result = Result::create([
 			    'race_id' => $entrant->race_id,
