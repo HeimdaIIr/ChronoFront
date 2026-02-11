@@ -304,6 +304,23 @@
                                 <i class="bi bi-bar-chart"></i> Résultats
                             </a>
                         </li>
+
+                        @if(auth()->check() && auth()->user()->isAdmin())
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('accounts.*') ? 'active' : '' }}"
+                               href="{{ route('accounts.index') }}">
+                                <i class="bi bi-people-fill"></i> Comptes
+                            </a>
+                        </li>
+                        @endif
+
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> Déconnexion
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>

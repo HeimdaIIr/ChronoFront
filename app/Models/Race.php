@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\SyncToMainDatabase;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Race extends Model
 {
+    use SyncToMainDatabase;
+
     /**
      * The connection name for the model.
      */
@@ -100,5 +103,40 @@ class Race extends Model
     public function classements(): HasMany
     {
         return $this->hasMany(Classement::class);
+    }
+
+    /**
+     * Get the main database table name
+     */
+    protected function getMainTableName(): string
+    {
+        return 'main_races';
+    }
+
+    /**
+     * Get the main database sync ID field name
+     */
+    protected function getMainSyncIdField(): string
+    {
+        return 'tenant_race_id';
+    }
+
+    /**
+     * Get the data to sync to main database
+     */
+    protected function getMainSyncData(int $accountId): array
+    {
+        return [
+            'account_id' => $accountId,
+            'tenant_race_id' => $this->id,
+            'tenant_event_id' => $this->event_id,
+            'name' => $this->name,
+            'distance' => $this->distance,
+            'start_time' => $this->start_time,
+            'duration' => $this->duration,
+            'display_order' => $this->display_order ?? 0,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
     }
 }

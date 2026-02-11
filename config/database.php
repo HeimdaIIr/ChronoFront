@@ -64,6 +64,13 @@ return [
             'foreign_key_constraints' => true,
         ],
 
+        'main' => [
+            'driver' => 'sqlite',
+            'database' => database_path('main.sqlite'), // Main database for centralized data
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),

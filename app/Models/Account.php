@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasRolePermissions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Account extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, HasRolePermissions;
 
     /**
      * The connection name for the model.

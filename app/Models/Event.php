@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\SyncToMainDatabase;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
+    use SyncToMainDatabase;
+
     /**
      * The connection name for the model.
      */
@@ -91,5 +94,41 @@ class Event extends Model
         return $query->where('is_active', true)
                     ->where('date_start', '<=', now())
                     ->where('date_end', '>=', now());
+    }
+
+    /**
+     * Get the main database table name
+     */
+    protected function getMainTableName(): string
+    {
+        return 'main_events';
+    }
+
+    /**
+     * Get the main database sync ID field name
+     */
+    protected function getMainSyncIdField(): string
+    {
+        return 'tenant_event_id';
+    }
+
+    /**
+     * Get the data to sync to main database
+     */
+    protected function getMainSyncData(int $accountId): array
+    {
+        return [
+            'account_id' => $accountId,
+            'tenant_event_id' => $this->id,
+            'name' => $this->name,
+            'date' => $this->date_start,
+            'location' => $this->location,
+            'organizer' => null,
+            'notes' => $this->description,
+            'is_active' => $this->is_active,
+            'alert_threshold' => null,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
     }
 }

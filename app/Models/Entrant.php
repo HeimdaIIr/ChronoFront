@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\SyncToMainDatabase;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Carbon\Carbon;
 
 class Entrant extends Model
 {
+    use SyncToMainDatabase;
+
     /**
      * The connection name for the model.
      */
@@ -107,5 +110,45 @@ class Entrant extends Model
             $this->category_id = $category->id;
             $this->save();
         }
+    }
+
+    /**
+     * Get the main database table name
+     */
+    protected function getMainTableName(): string
+    {
+        return 'main_entrants';
+    }
+
+    /**
+     * Get the main database sync ID field name
+     */
+    protected function getMainSyncIdField(): string
+    {
+        return 'tenant_entrant_id';
+    }
+
+    /**
+     * Get the data to sync to main database
+     */
+    protected function getMainSyncData(int $accountId): array
+    {
+        return [
+            'account_id' => $accountId,
+            'tenant_entrant_id' => $this->id,
+            'tenant_event_id' => $this->event_id,
+            'first_name' => $this->firstname,
+            'last_name' => $this->lastname,
+            'bib_number' => $this->bib_number,
+            'gender' => $this->gender,
+            'age' => $this->age,
+            'category' => $this->category ? $this->category->name : null,
+            'club' => $this->club,
+            'team' => $this->team,
+            'rfid' => $this->rfid_tag,
+            'start_time' => $this->start_time,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
     }
 }

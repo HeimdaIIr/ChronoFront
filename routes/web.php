@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChronoFrontController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\AccountController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,21 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/logout', [AuthController::class, 'logout']);
+
+/*
+|--------------------------------------------------------------------------
+| Account Management Routes (Admin only)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:admin'])->prefix('accounts')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/create', [AccountController::class, 'create'])->name('accounts.create');
+    Route::post('/', [AccountController::class, 'store'])->name('accounts.store');
+    Route::get('/{account}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
+    Route::put('/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::post('/{account}/toggle', [AccountController::class, 'toggleStatus'])->name('accounts.toggle');
+    Route::delete('/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
+});
 
 /*
 |--------------------------------------------------------------------------
