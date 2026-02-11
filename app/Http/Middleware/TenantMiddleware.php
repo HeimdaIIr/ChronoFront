@@ -52,17 +52,22 @@ class TenantMiddleware
         // Set tenant as default connection
         DB::setDefaultConnection('tenant');
 
-        // Check and run any pending tenant-specific migrations
-        // This ensures new migrations are automatically applied to existing tenant databases
-        try {
-            Artisan::call('migrate', [
-                '--database' => 'tenant',
-                '--path' => 'database/migrations/tenant',
-                '--force' => true,
-            ]);
-        } catch (\Exception $e) {
-            // Log l'erreur mais continue (ne pas bloquer l'application)
-            \Log::error("Tenant migration check failed for account {$account->username}: " . $e->getMessage());
+        // Check and run any pending tenant-specific migrations ONCE per session
+        // This ensures new migrations are automatically applied without running on every request
+        $migrationKey = "tenant_migrations_checked_{$account->id}";
+        if (!session()->has($migrationKey)) {
+            try {
+                Artisan::call('migrate', [
+                    '--database' => 'tenant',
+                    '--path' => 'database/migrations/tenant',
+                    '--force' => true,
+                ]);
+                // Mark migrations as checked for this session
+                session()->put($migrationKey, true);
+            } catch (\Exception $e) {
+                // Log l'erreur mais continue (ne pas bloquer l'application)
+                \Log::error("Tenant migration check failed for account {$account->username}: " . $e->getMessage());
+            }
         }
 
         return $next($request);
