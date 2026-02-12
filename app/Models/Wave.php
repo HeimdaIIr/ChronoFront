@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -30,6 +32,14 @@ class Wave extends Model
         'real_start_time' => 'datetime',
         'is_started' => 'boolean',
     ];
+
+    /**
+     * Serialize dates with explicit timezone to prevent JS timezone mismatch.
+     */
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return Carbon::instance($date)->format('Y-m-d\TH:i:s.uP');
+    }
 
     /**
      * Get the race that owns the wave

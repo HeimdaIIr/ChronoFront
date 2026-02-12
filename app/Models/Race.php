@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Traits\SyncToMainDatabase;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -39,6 +41,14 @@ class Race extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
     ];
+
+    /**
+     * Serialize dates with explicit timezone to prevent JS timezone mismatch.
+     */
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return Carbon::instance($date)->format('Y-m-d\TH:i:s.uP');
+    }
 
 	protected static function boot()
 	{
