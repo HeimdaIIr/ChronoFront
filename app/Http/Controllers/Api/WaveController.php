@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Wave;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -197,7 +198,8 @@ public function topDepart(Request $request, Wave $wave)
         ]);
 
         $oldTime = $wave->real_start_time;
-        $newTime = $validated['real_start_time'];
+        // Convert to app timezone before storing to prevent double UTC conversion
+        $newTime = Carbon::parse($validated['real_start_time'])->timezone(config('app.timezone'));
 
         // Update the real_start_time
         $wave->real_start_time = $newTime;

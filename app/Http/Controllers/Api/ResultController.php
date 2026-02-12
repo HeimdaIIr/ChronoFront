@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Result;
 use App\Models\Entrant;
 use App\Models\Race;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -365,7 +366,7 @@ class ResultController extends Controller
                     'wave_id' => $entrant->wave_id,
                     'rfid_tag' => $entrant->rfid_tag,
                     'reader_location' => $readerLocation,
-                    'raw_time' => $timeData['timestamp'],
+                    'raw_time' => Carbon::parse($timeData['timestamp'])->timezone(config('app.timezone')),
                     'lap_number' => $lapNumber + 1,
                     'is_manual' => true,
                     'status' => 'V',
@@ -467,7 +468,7 @@ class ResultController extends Controller
                     if ($existingResult) {
                         // Update existing result
                         $existingResult->update([
-                            'raw_time' => $detection['timestamp'],
+                            'raw_time' => Carbon::parse($detection['timestamp'])->timezone(config('app.timezone')),
                             'is_manual' => false,
                         ]);
 
@@ -489,7 +490,7 @@ class ResultController extends Controller
                             'rfid_tag' => $entrant->rfid_tag,
                             'reader_id' => $reader->id,
                             'reader_location' => $reader->location,
-                            'raw_time' => $detection['timestamp'],
+                            'raw_time' => Carbon::parse($detection['timestamp'])->timezone(config('app.timezone')),
                             'lap_number' => $lapNumber + 1,
                             'is_manual' => false,
                             'status' => 'V',

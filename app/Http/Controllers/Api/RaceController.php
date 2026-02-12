@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Race;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -118,8 +119,11 @@ class RaceController extends Controller
             'start_time' => 'required|date'
         ]);
 
+        // Convert to app timezone before storing to prevent double UTC conversion
+        // (JS may send UTC with Z suffix, which Carbon parses as UTC, but SQLite
+        // stores without timezone info, so it must be in the app's timezone)
         $race->update([
-            'start_time' => $validated['start_time']
+            'start_time' => Carbon::parse($validated['start_time'])->timezone(config('app.timezone'))
         ]);
 
         // Recalculate all results for this race
