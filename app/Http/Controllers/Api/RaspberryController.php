@@ -678,36 +678,90 @@ class RaspberryController extends Controller
 
 	
     /**
-     * Determine effective location based on wave TOP départ or time ranges
+     * Determine effective location based on reader configuration
      *
-     * WAVE-BASED LOGIC (priority):
-     * - If entrant has a wave with real_start_time set (TOP départ clicked):
-     *   → Use ±depart_window_minutes around real_start_time for DEPART
-     *   → Everything after window = ARRIVEE (ONLY if reader location is DEPART or ARRIVEE)
-     *   → For intermediate checkpoints (Inter1, Inter2, etc.), always use reader location
-     *
-     * FALLBACK (legacy time ranges):
-     * - If no wave or no real_start_time: use reader time ranges
+     * CLEAR PRIORITY HIERARCHY:
+     * 1. TIME RANGES (if configured) - absolute priority, overrides everything
+     * 2. FIXED CHECKPOINTS (Inter1, Inter2, etc.) - never transformed, always use reader.location
+     * 3. WAVE TOP DÉPART (for DEPART/ARRIVEE only) - dynamic based on wave start time
+     * 4. FALLBACK - use reader.location as-is
      */
     private function determineEffectiveLocation(Reader $reader, Carbon $datetime, ?Entrant $entrant = null): ?string
     {
-        // PRIORITY 0: If reader is configured with an intermediate checkpoint (not DEPART or ARRIVEE),
-        // always use that location directly, regardless of wave TOP départ logic
-        // This ensures Inter1, Inter2, etc. are never overridden
+        $currentTime = $datetime->format('H:i:s');
+
+        // ========================================================================
+        // PRIORITY 1: TIME RANGES (if configured, use ONLY this, ignore everything else)
+        // ========================================================================
+        $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
+        $hasArrivalRange = $reader->arrival_time_start;
+
+        if ($hasDepartRange || $hasArrivalRange) {
+            Log::info("Using TIME RANGES mode", [
+                'reader' => $reader->serial,
+                'base_location' => $reader->location,
+                'time' => $currentTime,
+            ]);
+
+            // IMPORTANT: Add :00 seconds to database times for proper comparison
+            $departStart = $reader->depart_time_start ? $reader->depart_time_start . ':00' : null;
+            $departEnd = $reader->depart_time_end ? $reader->depart_time_end . ':00' : null;
+            $arrivalStart = $reader->arrival_time_start ? $reader->arrival_time_start . ':00' : null;
+            $arrivalEnd = $reader->arrival_time_end ? $reader->arrival_time_end . ':00' : null;
+
+            // Check DEPART time range
+            if ($hasDepartRange) {
+                $isInDepartRange = $currentTime >= $departStart && $currentTime <= $departEnd;
+                if ($isInDepartRange) {
+                    return 'DEPART';
+                }
+            }
+
+            // Check ARRIVEE time range
+            if ($hasArrivalRange) {
+                $isAfterArrivalStart = $currentTime >= $arrivalStart;
+
+                if ($arrivalEnd) {
+                    $isBeforeArrivalEnd = $currentTime <= $arrivalEnd;
+                    $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
+                } else {
+                    // No end time = active until end of day
+                    $isInArrivalRange = $isAfterArrivalStart;
+                }
+
+                if ($isInArrivalRange) {
+                    return 'ARRIVEE';
+                }
+            }
+
+            // Time ranges configured but none matches = gap → IGNORE
+            Log::warning("Detection outside configured time ranges", [
+                'reader' => $reader->serial,
+                'time' => $currentTime,
+            ]);
+            return null;
+        }
+
+        // ========================================================================
+        // PRIORITY 2: FIXED CHECKPOINTS (Inter1, Inter2, etc.)
+        // If reader location is NOT DEPART or ARRIVEE, it's a fixed checkpoint
+        // → ALWAYS return location as-is, never transform
+        // ========================================================================
         if ($reader->location !== 'DEPART' && $reader->location !== 'ARRIVEE') {
-            Log::info("Using intermediate checkpoint location directly", [
-                'reader_location' => $reader->location,
-                'reader_serial' => $reader->serial,
+            Log::info("Using FIXED CHECKPOINT mode", [
+                'reader' => $reader->serial,
+                'location' => $reader->location,
             ]);
             return $reader->location;
         }
 
-        // PRIORITY 1: Wave-based TOP départ system (ONLY for DEPART/ARRIVEE readers)
-        // =========================================
+        // ========================================================================
+        // PRIORITY 3: WAVE TOP DÉPART (ONLY for DEPART/ARRIVEE readers)
+        // Dynamic location based on wave real_start_time
+        // ========================================================================
         if ($entrant && $entrant->wave_id) {
             $wave = $entrant->wave;
 
-            // If TOP départ was clicked for this wave (real_start_time is set)
             if ($wave && $wave->real_start_time) {
                 $realStartTime = Carbon::parse($wave->real_start_time);
                 $windowMinutes = $wave->depart_window_minutes ?? 5;
@@ -715,14 +769,12 @@ class RaspberryController extends Controller
                 $departWindowStart = $realStartTime->copy()->subMinutes($windowMinutes);
                 $departWindowEnd = $realStartTime->copy()->addMinutes($windowMinutes);
 
-                Log::info("Wave-based TOP départ evaluation", [
-                    'wave_id' => $wave->id,
-                    'wave_name' => $wave->name,
-                    'real_start_time' => $realStartTime->format('Y-m-d H:i:s'),
-                    'window_minutes' => $windowMinutes,
-                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
-                    'window_end' => $departWindowEnd->format('Y-m-d H:i:s'),
-                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
+                Log::info("Using WAVE TOP DÉPART mode", [
+                    'reader' => $reader->serial,
+                    'wave' => $wave->name,
+                    'real_start_time' => $realStartTime->format('H:i:s'),
+                    'window' => "±{$windowMinutes}min",
+                    'detection_time' => $datetime->format('H:i:s'),
                 ]);
 
                 // Detection within DEPART window?
@@ -730,68 +782,29 @@ class RaspberryController extends Controller
                     return 'DEPART';
                 }
 
-                // After DEPART window = ARRIVEE (only if reader location is DEPART or ARRIVEE)
+                // After DEPART window = ARRIVEE
                 if ($datetime > $departWindowEnd) {
                     return 'ARRIVEE';
                 }
 
-                // Before window = IGNORE (détection trop tôt, probablement erreur)
+                // Before window = IGNORE (too early, probably error)
                 Log::warning("Detection BEFORE wave DEPART window - ignoring", [
-                    'wave_id' => $wave->id,
-                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
-                    'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
+                    'wave' => $wave->name,
+                    'detection_time' => $datetime->format('H:i:s'),
+                    'window_start' => $departWindowStart->format('H:i:s'),
                 ]);
                 return null;
             }
         }
 
-        // PRIORITY 2: Reader-based time ranges (legacy/fallback)
-        // =======================================================
-        $currentTime = $datetime->format('H:i:s');
-
-        // Check if reader has time ranges configured
-        $hasDepartRange = $reader->depart_time_start && $reader->depart_time_end;
-        $hasArrivalRange = $reader->arrival_time_start;
-
-        // If no time ranges configured, use the fixed location
-        if (!$hasDepartRange && !$hasArrivalRange) {
-            return $reader->location;
-        }
-
-        // IMPORTANT: Add :00 seconds to database times for proper comparison
-        $departStart = $reader->depart_time_start ? $reader->depart_time_start . ':00' : null;
-        $departEnd = $reader->depart_time_end ? $reader->depart_time_end . ':00' : null;
-        $arrivalStart = $reader->arrival_time_start ? $reader->arrival_time_start . ':00' : null;
-        $arrivalEnd = $reader->arrival_time_end ? $reader->arrival_time_end . ':00' : null;
-
-        // Check DEPART time range
-        if ($hasDepartRange) {
-            $isInDepartRange = $currentTime >= $departStart && $currentTime <= $departEnd;
-
-            if ($isInDepartRange) {
-                return 'DEPART';
-            }
-        }
-
-        // Check ARRIVEE time range
-        if ($hasArrivalRange) {
-            $isAfterArrivalStart = $currentTime >= $arrivalStart;
-
-            if ($arrivalEnd) {
-                $isBeforeArrivalEnd = $currentTime <= $arrivalEnd;
-                $isInArrivalRange = $isAfterArrivalStart && $isBeforeArrivalEnd;
-            } else {
-                // No end time = active until end of day
-                $isInArrivalRange = $isAfterArrivalStart;
-            }
-
-            if ($isInArrivalRange) {
-                return 'ARRIVEE';
-            }
-        }
-
-        // If time ranges ARE configured but none matches = we're in a "gap" → IGNORE detection
-        return null;
+        // ========================================================================
+        // PRIORITY 4: FALLBACK - use reader.location as-is
+        // ========================================================================
+        Log::info("Using FALLBACK mode (fixed location)", [
+            'reader' => $reader->serial,
+            'location' => $reader->location,
+        ]);
+        return $reader->location;
     }
 
 
