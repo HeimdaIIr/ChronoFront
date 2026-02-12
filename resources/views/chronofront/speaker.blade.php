@@ -88,7 +88,7 @@
         /* Grid layout for results */
         .results-grid {
             display: grid;
-            grid-template-columns: 6% 5% 7% 18% 6% 4% 15% 17% 10% 12%;
+            grid-template-columns: var(--grid-cols);
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -114,24 +114,6 @@
             text-overflow: ellipsis;
         }
 
-        /* Header alignment - match cell alignment */
-        .grid-header-cell:nth-child(1),
-        .grid-header-cell:nth-child(2),
-        .grid-header-cell:nth-child(3),
-        .grid-header-cell:nth-child(5),
-        .grid-header-cell:nth-child(6),
-        .grid-header-cell:nth-child(9),
-        .grid-header-cell:nth-child(10) {
-            justify-content: center;
-        }
-
-        .grid-header-cell:nth-child(4),
-        .grid-header-cell:nth-child(7),
-        .grid-header-cell:nth-child(8) {
-            justify-content: flex-start;
-            padding-left: 0.5rem;
-        }
-
         /* Body container */
         .grid-body {
             grid-column: 1 / -1;
@@ -143,7 +125,7 @@
         /* Body rows */
         .grid-row {
             display: grid;
-            grid-template-columns: 6% 5% 7% 18% 6% 4% 15% 17% 10% 12%;
+            grid-template-columns: var(--grid-cols);
             width: 100%;
             background: #0a0a0a;
             transition: all 0.2s;
@@ -290,10 +272,118 @@
             justify-content: center;
         }
 
+        .col-team {
+            color: #E91E63;
+            font-weight: 600;
+        }
+
+        .col-inter {
+            color: #888;
+            font-variant-numeric: tabular-nums;
+        }
+
         .col-intermediate {
             color: #888;
             font-size: 0.9em;
             font-variant-numeric: tabular-nums;
+        }
+
+        /* Settings button */
+        .settings-btn {
+            background: none;
+            border: 2px solid #FFD700;
+            color: #FFD700;
+            width: 38px;
+            height: 38px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-btn:hover {
+            background: #2a2a2a;
+        }
+
+        /* Settings panel */
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 70px;
+            right: 0;
+            width: 300px;
+            height: calc(100vh - 70px);
+            background: #1a1a1a;
+            border-left: 2px solid #FFD700;
+            z-index: 201;
+            padding: 1.2rem;
+            overflow-y: auto;
+            font-family: 'Roboto Condensed', sans-serif;
+        }
+
+        .settings-title {
+            font-size: 1.1rem;
+            color: #FFD700;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 0.2rem;
+            transition: background 0.15s;
+            font-size: 0.95rem;
+        }
+
+        .settings-item:hover {
+            background: #2a2a2a;
+        }
+
+        .settings-item.active {
+            color: #fff;
+        }
+
+        .settings-item.inactive {
+            color: #555;
+        }
+
+        .settings-check {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #FFD700;
+            border-radius: 3px;
+            margin-right: 0.7rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        .settings-check.checked {
+            background: #FFD700;
+            color: #000;
+        }
+
+        .settings-separator {
+            border-top: 1px solid #333;
+            margin: 0.6rem 0;
         }
 
         /* Loading indicator */
@@ -330,18 +420,51 @@
                     <option value="medium">10 Lignes (M)</option>
                     <option value="small">20 Lignes (S)</option>
                 </select>
+                <button class="settings-btn" @click="showSettings = !showSettings" title="Colonnes affichees">&#9881;</button>
             </div>
         </div>
 
+        <!-- Settings panel -->
+        <template x-if="showSettings">
+            <div>
+                <div class="settings-overlay" @click="showSettings = false"></div>
+                <div class="settings-panel">
+                    <div class="settings-title">Colonnes affichees</div>
+                    <template x-for="col in allColumns" :key="col.id">
+                        <div class="settings-item" :class="activeColumnIds.includes(col.id) ? 'active' : 'inactive'" @click="toggleColumn(col.id)">
+                            <div class="settings-check" :class="activeColumnIds.includes(col.id) ? 'checked' : ''">
+                                <span x-show="activeColumnIds.includes(col.id)">&#10003;</span>
+                            </div>
+                            <span x-text="col.label"></span>
+                        </div>
+                    </template>
+                    <template x-if="discoveredIntermediates.length > 0">
+                        <div>
+                            <div class="settings-separator"></div>
+                            <div class="settings-title">Intermediaires</div>
+                            <template x-for="inter in discoveredIntermediates" :key="inter.id">
+                                <div class="settings-item" :class="activeColumnIds.includes(inter.id) ? 'active' : 'inactive'" @click="toggleColumn(inter.id)">
+                                    <div class="settings-check" :class="activeColumnIds.includes(inter.id) ? 'checked' : ''">
+                                        <span x-show="activeColumnIds.includes(inter.id)">&#10003;</span>
+                                    </div>
+                                    <span x-text="inter.label"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
         <!-- Results -->
-        <div class="results-container" :class="'size-' + lineSize">
+        <div class="results-container" :class="'size-' + lineSize" :style="'--grid-cols: ' + gridTemplateColumns">
             <div x-show="loading && results.length === 0" class="loading">
                 Chargement...
             </div>
 
             <template x-if="results.length === 0 && !loading">
                 <div class="no-data">
-                    Aucun passage enregistré
+                    Aucun passage enregistre
                 </div>
             </template>
 
@@ -349,32 +472,20 @@
                 <div class="results-grid">
                     <!-- Header -->
                     <div class="grid-header">
-                        <div class="grid-header-cell">Dossard</div>
-                        <div class="grid-header-cell">Pos</div>
-                        <div class="grid-header-cell">Pos/Cat</div>
-                        <div class="grid-header-cell">Nom et Prénom</div>
-                        <div class="grid-header-cell">Cat.</div>
-                        <div class="grid-header-cell">Sexe</div>
-                        <div class="grid-header-cell">Parcours</div>
-                        <div class="grid-header-cell">Club</div>
-                        <div class="grid-header-cell">Vitesse</div>
-                        <div class="grid-header-cell">Temps</div>
+                        <template x-for="col in activeColumns" :key="col.id">
+                            <div class="grid-header-cell"
+                                 :style="'justify-content: ' + (col.align === 'center' ? 'center' : 'flex-start') + (col.align === 'left' ? '; padding-left: 0.5rem' : '')"
+                                 x-text="col.label"></div>
+                        </template>
                     </div>
 
                     <!-- Body -->
                     <div class="grid-body">
                         <template x-for="(result, index) in displayedResults" :key="result.id">
                             <div class="grid-row" :class="{ 'new-entry': result.is_new }">
-                                <div class="grid-cell col-bib" x-text="result.bib_number"></div>
-                                <div class="grid-cell col-position" x-text="result.position || '-'"></div>
-                                <div class="grid-cell col-category-pos" x-text="result.category_position || '-'"></div>
-                                <div class="grid-cell col-name" x-text="result.firstname + ' ' + result.lastname"></div>
-                                <div class="grid-cell col-category" x-text="result.category_name || '-'"></div>
-                                <div class="grid-cell col-gender" x-text="result.gender || '-'"></div>
-                                <div class="grid-cell col-race" x-text="result.race_name || '-'"></div>
-                                <div class="grid-cell col-club" x-text="result.club || '-'"></div>
-                                <div class="grid-cell col-speed" x-text="result.speed ? result.speed + ' km/h' : '-'"></div>
-                                <div class="grid-cell col-time" x-text="result.formatted_time || result.calculated_time_formatted || '-'"></div>
+                                <template x-for="col in activeColumns" :key="col.id">
+                                    <div class="grid-cell" :class="col.cssClass" x-text="getCellValue(result, col)"></div>
+                                </template>
                             </div>
                         </template>
                     </div>
@@ -392,7 +503,42 @@
                 loading: false,
                 lineSize: 'medium',
                 lastResultId: 0,
-                hasIntermediates: false,
+                showSettings: false,
+
+                // Column definitions (static columns)
+                allColumns: [
+                    { id: 'bib', label: 'Dossard', baseWidth: 6, cssClass: 'col-bib', align: 'center' },
+                    { id: 'position', label: 'Pos', baseWidth: 5, cssClass: 'col-position', align: 'center' },
+                    { id: 'category_pos', label: 'Pos/Cat', baseWidth: 7, cssClass: 'col-category-pos', align: 'center' },
+                    { id: 'name', label: 'Nom et Prenom', baseWidth: 20, cssClass: 'col-name', align: 'left' },
+                    { id: 'category', label: 'Cat.', baseWidth: 6, cssClass: 'col-category', align: 'center' },
+                    { id: 'gender', label: 'Sexe', baseWidth: 4, cssClass: 'col-gender', align: 'center' },
+                    { id: 'race', label: 'Parcours', baseWidth: 15, cssClass: 'col-race', align: 'left' },
+                    { id: 'club', label: 'Club', baseWidth: 15, cssClass: 'col-club', align: 'left' },
+                    { id: 'team', label: 'Equipe', baseWidth: 15, cssClass: 'col-team', align: 'left' },
+                    { id: 'speed', label: 'Vitesse', baseWidth: 10, cssClass: 'col-speed', align: 'center' },
+                    { id: 'time', label: 'Temps', baseWidth: 12, cssClass: 'col-time', align: 'center' },
+                ],
+
+                // Intermediate columns discovered from data
+                discoveredIntermediates: [],
+
+                // Active column IDs
+                activeColumnIds: ['bib', 'position', 'category_pos', 'name', 'category', 'gender', 'race', 'club', 'speed', 'time'],
+
+                get activeColumns() {
+                    const all = [...this.allColumns, ...this.discoveredIntermediates];
+                    return this.activeColumnIds
+                        .map(id => all.find(c => c.id === id))
+                        .filter(Boolean);
+                },
+
+                get gridTemplateColumns() {
+                    const cols = this.activeColumns;
+                    if (cols.length === 0) return '1fr';
+                    const total = cols.reduce((sum, c) => sum + c.baseWidth, 0);
+                    return cols.map(c => (c.baseWidth / total * 100).toFixed(1) + '%').join(' ');
+                },
 
                 get displayedResults() {
                     const maxLines = {
@@ -400,11 +546,60 @@
                         'medium': 10,
                         'small': 20
                     }[this.lineSize] || 10;
-
                     return this.results.slice(0, maxLines);
                 },
 
+                getCellValue(result, col) {
+                    if (col.id.startsWith('inter_')) {
+                        const order = parseInt(col.id.split('_')[1]);
+                        const inter = result.intermediates?.find(i => i.order === order);
+                        return inter ? inter.time : '-';
+                    }
+                    switch (col.id) {
+                        case 'bib': return result.bib_number;
+                        case 'position': return result.position || '-';
+                        case 'category_pos': return result.category_position || '-';
+                        case 'name': return result.firstname + ' ' + result.lastname;
+                        case 'category': return result.category_name || '-';
+                        case 'gender': return result.gender || '-';
+                        case 'race': return result.race_name || '-';
+                        case 'club': return result.club || '-';
+                        case 'team': return result.team || '-';
+                        case 'speed': return result.speed ? result.speed + ' km/h' : '-';
+                        case 'time': return result.formatted_time || result.calculated_time_formatted || '-';
+                        default: return '-';
+                    }
+                },
+
+                toggleColumn(id) {
+                    const idx = this.activeColumnIds.indexOf(id);
+                    if (idx >= 0) {
+                        if (this.activeColumnIds.length <= 1) return;
+                        this.activeColumnIds.splice(idx, 1);
+                    } else {
+                        this.activeColumnIds.push(id);
+                    }
+                    this.saveSettings();
+                },
+
+                saveSettings() {
+                    localStorage.setItem('speaker_columns', JSON.stringify(this.activeColumnIds));
+                },
+
+                loadSettings() {
+                    const saved = localStorage.getItem('speaker_columns');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                this.activeColumnIds = parsed;
+                            }
+                        } catch (e) {}
+                    }
+                },
+
                 init() {
+                    this.loadSettings();
                     this.loadEventInfo();
                     this.loadResults();
                     this.startClock();
@@ -421,15 +616,11 @@
                 async loadEventInfo() {
                     try {
                         const response = await axios.get('/api/events');
-                        console.log('Events response:', response.data);
-
                         if (response.data) {
                             const events = Array.isArray(response.data) ? response.data : (response.data.data || []);
-
                             if (events.length > 0) {
                                 const activeEvent = events.find(e => e.is_active === true || e.is_active === 1) || events[0];
                                 this.eventName = activeEvent.name || 'ChronoFront Live';
-                                console.log('Event name loaded:', this.eventName);
                             }
                         }
                     } catch (error) {
@@ -453,6 +644,7 @@
                             category_position: r.category_position,
                             race_name: r.race?.name || '',
                             club: r.entrant?.club || '',
+                            team: r.entrant?.team || '',
                             calculated_time_formatted: this.formatSeconds(r.calculated_time),
                             intermediates: r.intermediates || [],
                             is_new: r.id > this.lastResultId
@@ -462,7 +654,32 @@
                             this.lastResultId = Math.max(...newResults.map(r => r.id));
                         }
 
-                        this.hasIntermediates = newResults.some(r => r.intermediates && r.intermediates.length > 0);
+                        // Discover intermediate checkpoints from data
+                        const interMap = new Map();
+                        newResults.forEach(r => {
+                            (r.intermediates || []).forEach(inter => {
+                                if (!interMap.has(inter.order)) {
+                                    interMap.set(inter.order, inter.checkpoint);
+                                }
+                            });
+                        });
+                        const newIntermediates = [];
+                        interMap.forEach((checkpoint, order) => {
+                            const id = 'inter_' + order;
+                            if (!this.discoveredIntermediates.find(c => c.id === id)) {
+                                newIntermediates.push({
+                                    id: id,
+                                    label: checkpoint,
+                                    baseWidth: 12,
+                                    cssClass: 'col-inter',
+                                    align: 'center'
+                                });
+                            }
+                        });
+                        if (newIntermediates.length > 0) {
+                            this.discoveredIntermediates = [...this.discoveredIntermediates, ...newIntermediates];
+                        }
+
                         this.results = newResults;
 
                         setTimeout(() => {
