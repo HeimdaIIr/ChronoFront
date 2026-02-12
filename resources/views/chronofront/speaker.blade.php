@@ -147,6 +147,8 @@
             width: 100%;
             background: #0a0a0a;
             transition: all 0.2s;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .grid-row:hover {
@@ -167,13 +169,14 @@
             align-items: center;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* Dynamic sizing based on line count */
         /* 5 LIGNES (XL) */
         .size-large .grid-header-cell {
-            padding: 0.4rem 0.8rem;
-            font-size: 1.6rem;
+            padding: 0.2rem 0.5rem;
+            font-size: 2rem;
             line-height: 1.2;
         }
 
@@ -182,16 +185,16 @@
         }
 
         .size-large .grid-cell {
-            padding: 0.3rem 0.8rem;
-            font-size: 1.4rem;
+            padding: 0 0.5rem;
+            font-size: 2.8rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
         /* 10 LIGNES (M) */
         .size-medium .grid-header-cell {
-            padding: 0.3rem 0.6rem;
-            font-size: 1.2rem;
+            padding: 0.15rem 0.4rem;
+            font-size: 1.4rem;
             line-height: 1.2;
         }
 
@@ -200,16 +203,16 @@
         }
 
         .size-medium .grid-cell {
-            padding: 0.25rem 0.6rem;
-            font-size: 1rem;
+            padding: 0 0.4rem;
+            font-size: 1.6rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
         /* 20 LIGNES (S) */
         .size-small .grid-header-cell {
-            padding: 0.2rem 0.4rem;
-            font-size: 0.85rem;
+            padding: 0.1rem 0.3rem;
+            font-size: 1rem;
             line-height: 1.2;
         }
 
@@ -218,10 +221,10 @@
         }
 
         .size-small .grid-cell {
-            padding: 0.15rem 0.4rem;
-            font-size: 0.75rem;
+            padding: 0 0.3rem;
+            font-size: 1rem;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
         /* Column specific styles */
@@ -248,9 +251,6 @@
         .col-name {
             color: #fff;
             font-weight: 600;
-            white-space: normal;
-            word-wrap: break-word;
-            padding-left: 0.5rem;
         }
 
         .col-category {
@@ -268,17 +268,11 @@
         .col-race {
             color: #00BCD4;
             font-weight: 600;
-            white-space: normal;
-            word-wrap: break-word;
-            padding-left: 0.5rem;
         }
 
         .col-club {
             color: #999;
             font-style: italic;
-            white-space: normal;
-            word-wrap: break-word;
-            padding-left: 0.5rem;
         }
 
         .col-speed {
@@ -300,8 +294,6 @@
             color: #888;
             font-size: 0.9em;
             font-variant-numeric: tabular-nums;
-            white-space: normal;
-            word-wrap: break-word;
         }
 
         /* Loading indicator */
