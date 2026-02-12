@@ -2236,7 +2236,7 @@ function chronoApp() {
                 return;
             }
 
-            const startTime = new Date(race.start_time);
+            const startTime = this.parseServerDate(race.start_time);
             const now = new Date();
             const elapsed = Math.floor((now - startTime) / 1000); // seconds
 
@@ -2252,7 +2252,7 @@ function chronoApp() {
                 return '-- : -- : --';
             }
 
-            const startTime = new Date(wave.real_start_time);
+            const startTime = this.parseServerDate(wave.real_start_time);
             const now = new Date();
             const elapsed = Math.floor((now - startTime) / 1000); // seconds
 
@@ -3344,7 +3344,7 @@ function chronoApp() {
         startEditingStartTime(race) {
             // Parse current start time to populate inputs
             if (race.start_time) {
-                const startDate = new Date(race.start_time);
+                const startDate = this.parseServerDate(race.start_time);
                 const year = startDate.getFullYear();
                 const month = String(startDate.getMonth() + 1).padStart(2, '0');
                 const day = String(startDate.getDate()).padStart(2, '0');
@@ -3522,7 +3522,7 @@ function chronoApp() {
         startEditingWaveStartTime(wave) {
             // Parse current start time to populate inputs
             if (wave.real_start_time) {
-                const startDate = new Date(wave.real_start_time);
+                const startDate = this.parseServerDate(wave.real_start_time);
                 const year = startDate.getFullYear();
                 const month = String(startDate.getMonth() + 1).padStart(2, '0');
                 const day = String(startDate.getDate()).padStart(2, '0');
@@ -3747,9 +3747,21 @@ function chronoApp() {
             setTimeout(() => this.toastMessage = null, 3000);
         },
 
+        /**
+         * Parse server datetime string, normalizing microseconds for cross-browser compatibility.
+         * Laravel returns 6-digit microseconds (e.g. .000000Z) but ECMAScript only supports 3-digit
+         * milliseconds. Some browsers don't parse the Z suffix correctly with 6 digits, causing
+         * the date to be interpreted as local time instead of UTC.
+         */
+        parseServerDate(datetime) {
+            if (!datetime) return null;
+            const str = String(datetime).replace(/(\.\d{3})\d+/, '$1');
+            return new Date(str);
+        },
+
         formatTime(datetime) {
             if (!datetime) return '-';
-            return new Date(datetime).toLocaleTimeString('fr-FR');
+            return this.parseServerDate(datetime).toLocaleTimeString('fr-FR');
         },
 
         formatDuration(seconds) {
