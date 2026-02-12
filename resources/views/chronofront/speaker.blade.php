@@ -175,8 +175,8 @@
         /* Dynamic sizing based on line count */
         /* 5 LIGNES (XL) */
         .size-large .grid-header-cell {
-            padding: 0.2rem 0.5rem;
-            font-size: 2rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 1.6rem;
             line-height: 1.2;
         }
 
@@ -185,7 +185,7 @@
         }
 
         .size-large .grid-cell {
-            padding: 0 0.5rem;
+            padding: 0.3rem 0.8rem;
             font-size: 2.8rem;
             font-weight: 500;
             line-height: 1.1;
@@ -193,8 +193,8 @@
 
         /* 10 LIGNES (M) */
         .size-medium .grid-header-cell {
-            padding: 0.15rem 0.4rem;
-            font-size: 1.4rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 1.2rem;
             line-height: 1.2;
         }
 
@@ -203,7 +203,7 @@
         }
 
         .size-medium .grid-cell {
-            padding: 0 0.4rem;
+            padding: 0.25rem 0.6rem;
             font-size: 1.6rem;
             font-weight: 500;
             line-height: 1.1;
@@ -211,8 +211,8 @@
 
         /* 20 LIGNES (S) */
         .size-small .grid-header-cell {
-            padding: 0.1rem 0.3rem;
-            font-size: 1rem;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.85rem;
             line-height: 1.2;
         }
 
@@ -221,7 +221,7 @@
         }
 
         .size-small .grid-cell {
-            padding: 0 0.3rem;
+            padding: 0.15rem 0.4rem;
             font-size: 1rem;
             font-weight: 500;
             line-height: 1.1;
