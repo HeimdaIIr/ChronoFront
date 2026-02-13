@@ -42,6 +42,7 @@ class RaceController extends Controller
             'type' => 'required|in:1_passage,n_laps,infinite_loop',
             'distance' => 'required|numeric|min:0',
             'laps' => 'nullable|integer|min:1',
+            'duration' => 'nullable|integer|min:1',
             'best_time' => 'boolean',
             'description' => 'nullable|string',
         ]);
@@ -70,6 +71,7 @@ class RaceController extends Controller
             'type' => 'sometimes|in:1_passage,n_laps,infinite_loop',
             'distance' => 'sometimes|numeric|min:0',
             'laps' => 'integer|min:1',
+            'duration' => 'nullable|integer|min:1',
             'best_time' => 'boolean',
             'description' => 'nullable|string',
         ]);

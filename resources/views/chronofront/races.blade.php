@@ -66,7 +66,7 @@
                             <th>Événement</th>
                             <th>Type</th>
                             <th>Distance</th>
-                            <th>Tours</th>
+                            <th>Tours / Durée</th>
                             <th>Statut</th>
                             <th>Actions</th>
                         </tr>
@@ -98,7 +98,8 @@
                                     <span x-text="race.distance ? race.distance + ' km' : 'N/A'"></span>
                                 </td>
                                 <td>
-                                    <span x-text="race.laps || 'N/A'"></span>
+                                    <span x-show="race.type === 'infinite_loop'" x-text="race.duration ? race.duration + ' min' : 'N/A'"></span>
+                                    <span x-show="race.type !== 'infinite_loop'" x-text="race.laps || 'N/A'"></span>
                                 </td>
                                 <td>
                                     <span x-show="race.start_time && !race.end_time" class="badge bg-success">
@@ -275,6 +276,7 @@ function racesManager() {
                 type: '1_passage',
                 distance: null,
                 laps: null,
+                duration: null,
                 description: ''
             };
             this.showModal = true;
