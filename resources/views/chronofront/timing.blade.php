@@ -379,111 +379,6 @@ body {
     animation: greenFlash 0.8s ease-out;
 }
 
-/* Alert Badge */
-.alert-badge {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-}
-
-.alert-badge:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-}
-
-.alert-badge.no-alerts {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-/* Alert section in runner panel */
-.runner-alerts {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.runner-alerts h4 {
-    margin: 0 0 0.75rem 0;
-    color: #ef4444;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.alert-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.alert-detail {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
-}
-
-.alert-detail-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.alert-detail-text {
-    color: #d1d5db;
-    margin-bottom: 0.75rem;
-    line-height: 1.4;
-}
-
-.alert-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.alert-btn {
-    flex: 1;
-    padding: 0.4rem 0.8rem;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.alert-btn-verify {
-    background: #22c55e;
-    color: white;
-}
-
-.alert-btn-verify:hover {
-    background: #16a34a;
-}
-
-.alert-btn-ignore {
-    background: #71717a;
-    color: white;
-}
-
-.alert-btn-ignore:hover {
-    background: #52525b;
-}
-
 /* Table */
 .table-wrapper {
     flex: 1;
@@ -527,20 +422,6 @@ body {
     background: #1e3a5f;
 }
 
-.chrono-table tbody tr.has-alert-duplicate {
-    border-left: 3px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.05);
-}
-
-.chrono-table tbody tr.has-alert-speed {
-    border-left: 3px solid #ef4444;
-    background: rgba(239, 68, 68, 0.05);
-}
-
-.chrono-table tbody tr.has-alert-negative-time {
-    border-left: 3px solid #dc2626;
-    background: rgba(220, 38, 38, 0.08);
-}
 
 .chrono-table tbody td {
     padding: 1.1rem 1.5rem;
@@ -704,25 +585,6 @@ body {
 
 .btn-manual:hover {
     background: #2563eb;
-}
-
-/* Alert */
-.alert-bar {
-    position: fixed;
-    bottom: 0;
-    left: 70px;
-    right: 0;
-    padding: 1.25rem 2rem;
-    background: #92400e;
-    border-top: 1px solid #b45309;
-    z-index: 100;
-}
-
-.alert-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: #fef3c7;
 }
 
 /* Toast */
@@ -1017,10 +879,6 @@ body {
         height: 18px;
     }
 
-    .alert-bar {
-        left: 50px;
-        padding: 0.7rem 1.2rem;
-    }
 }
 
 /* Responsive pour écrans ≤ 1440px (laptops standards) */
@@ -1244,10 +1102,6 @@ body {
         font-size: 1.15rem;
     }
 
-    .alert-bar {
-        left: 55px;
-        padding: 1rem 1.5rem;
-    }
 }
 </style>
 @endsection
@@ -1334,10 +1188,6 @@ body {
                     <i class="bi bi-trash-fill"></i>
                     SUPPRIMER ARRIVÉES
                 </button>
-                <div class="alert-badge" :class="{ 'no-alerts': getPendingAlertsCount() === 0 }" style="margin-left: 1rem;">
-                    <i class="bi bi-bell-fill"></i>
-                    <span x-text="getPendingAlertsCount() + ' alerte' + (getPendingAlertsCount() > 1 ? 's' : '')"></span>
-                </div>
                 <div style="font-size: 1.1rem; font-variant-numeric: tabular-nums; color: #a1a1aa; margin-left: 1rem;" x-text="currentTime"></div>
                 <a href="{{ route('dashboard') }}" class="icon-btn"><i class="bi bi-x-lg"></i></a>
             </div>
@@ -1481,7 +1331,7 @@ body {
                         </thead>
                         <tbody>
                             <template x-for="result in displayedResults" :key="result.id">
-                                <tr :class="{ 'selected': selectedResult?.id === result.id, [getResultAlertClass(result)]: true }" @click="selectResult(result)">
+                                <tr :class="{ 'selected': selectedResult?.id === result.id }" @click="selectResult(result)">
                                     <td><strong x-text="result.position || '-'"></strong></td>
                                     <td><strong x-text="result.category_position || '-'"></strong></td>
                                     <td><strong x-text="result.entrant?.bib_number"></strong></td>
@@ -1582,33 +1432,6 @@ body {
                 </div>
 
                 <div class="detail-body">
-                    <!-- Alerts Section -->
-                    <div x-show="selectedResult?.alerts && selectedResult.alerts.filter(a => a.status === 'pending').length > 0" class="runner-alerts">
-                        <h4>
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                            <span x-text="(selectedResult?.alerts?.filter(a => a.status === 'pending').length || 0) + ' alerte' + ((selectedResult?.alerts?.filter(a => a.status === 'pending').length || 0) > 1 ? 's' : '')"></span>
-                        </h4>
-                        <div class="alert-list">
-                            <template x-for="alert in (selectedResult?.alerts || []).filter(a => a.status === 'pending')" :key="alert.id">
-                                <div class="alert-detail">
-                                    <div class="alert-detail-header">
-                                        <span x-text="alert.icon"></span>
-                                        <span x-text="alert.title"></span>
-                                    </div>
-                                    <div class="alert-detail-text" x-text="alert.details"></div>
-                                    <div class="alert-actions">
-                                        <button class="alert-btn alert-btn-verify" @click="markAlertAsVerified(selectedResult, alert.id)">
-                                            <i class="bi bi-check-circle-fill"></i> Vérifier
-                                        </button>
-                                        <button class="alert-btn alert-btn-ignore" @click="markAlertAsIgnored(selectedResult, alert.id)">
-                                            <i class="bi bi-x-circle-fill"></i> Ignorer
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
                     <!-- Info de base -->
                     <div class="mb-3">
                         <!-- Épreuve -->
@@ -1789,16 +1612,7 @@ body {
         </div>
     </div>
 
-    <!-- Alert Bar - Only show if there are real issues -->
-    <div class="alert-bar" x-show="alertMessage">
-        <div class="alert-content">
-            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
-            <span x-text="alertMessage"></span>
-            <button @click="alertMessage = null" style="background: none; border: none; color: #fef3c7; margin-left: auto; cursor: pointer;">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-    </div>
+
 
     <!-- Toast -->
     <div x-show="toastMessage" class="toast" :class="toastType">
@@ -2099,7 +1913,6 @@ function chronoApp() {
         eventName: '',
         currentEventId: null,
         currentEvent: null,
-        alertThreshold: 5,
         currentTime: '00:00:00',
         raceChrono: '00:00:00',
         selectedRaceId: null,
@@ -2125,7 +1938,6 @@ function chronoApp() {
         loading: false,
         saving: false,
         startingRace: false,
-        alertMessage: null,
         toastMessage: null,
         toastType: 'success',
         showTopDepartModal: false,
@@ -2167,17 +1979,13 @@ function chronoApp() {
             this.loadEvent().then(() => {
                 // Only load races, results, etc. if we have an active event
                 if (this.currentEventId) {
-                    this.loadAlertThreshold();
                     this.loadManualTimestampsFromStorage();
                     this.loadRaces().then(() => this.autoSelectLastStartedRace());
                     this.loadCategories();
-                    this.loadAllResults().then(() => {
-                        this.loadAlertsFromStorage();
-                    });
+                    this.loadAllResults();
                 }
             });
             this.startAutoRefresh();
-            this.startAlertCheck();
             this.setupKeyboardNavigation();
         },
 
@@ -2317,7 +2125,7 @@ function chronoApp() {
                     this.runnerCheckpoints = [];
                     this.runnerAverageSpeed = null;
                     this.raceChrono = '00:00:00';
-                    this.alertMessage = null;
+
 
                     // Clear filters
                     this.searchQuery = '';
@@ -2345,14 +2153,6 @@ function chronoApp() {
                 this.loadManualCheckpointFromStorage();
             } catch (error) {
                 console.error('Erreur chargement événement', error);
-            }
-        },
-
-        loadAlertThreshold() {
-            if (this.currentEvent && this.currentEvent.alert_threshold_minutes) {
-                this.alertThreshold = this.currentEvent.alert_threshold_minutes;
-            } else {
-                this.alertThreshold = 5; // default
             }
         },
 
@@ -2444,14 +2244,6 @@ function chronoApp() {
 
             this.loading = true;
             try {
-                // Save existing alerts before reload
-                const alertsMap = new Map();
-                this.results.forEach(r => {
-                    if (r.alerts && r.alerts.length > 0) {
-                        alertsMap.set(r.id, r.alerts);
-                    }
-                });
-
                 // Add timestamp to prevent caching
                 const response = await axios.get('/results', {
                     params: {
@@ -2460,13 +2252,6 @@ function chronoApp() {
                     }
                 });
                 this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
-
-                // Restore alerts after reload
-                this.results.forEach(r => {
-                    if (alertsMap.has(r.id)) {
-                        r.alerts = alertsMap.get(r.id);
-                    }
-                });
 
                 this.filterResults();
             } catch (error) {
@@ -2509,12 +2294,6 @@ function chronoApp() {
 
                     // Trigger green flash animation
                     this.triggerDetectionFlash();
-
-                    // Check for duplicates and aberrant times
-                    addedResults.forEach(result => {
-                        this.checkForDuplicates(result);
-                        this.checkForAberrantTimes(result);
-                    });
                 }
 
                 // Update existing results that may have changed (e.g., positions recalculated)
@@ -2528,20 +2307,10 @@ function chronoApp() {
                 });
 
                 if (updatedResults.length > 0) {
-                    // Update changed results while preserving alerts
                     updatedResults.forEach(nr => {
                         const index = this.results.findIndex(r => r.id === nr.id);
                         if (index !== -1) {
-                            // Save alerts before update
-                            const existingAlerts = this.results[index].alerts;
-
-                            // Update result with new data
                             this.results[index] = nr;
-
-                            // Restore alerts
-                            if (existingAlerts && existingAlerts.length > 0) {
-                                this.results[index].alerts = existingAlerts;
-                            }
                         }
                     });
                     this.filterResults();
@@ -2560,276 +2329,6 @@ function chronoApp() {
             }, 800); // Match animation duration
         },
 
-        checkForDuplicates(newResult) {
-            // Check if there's a duplicate detection (same runner, same checkpoint, <10 seconds apart)
-            if (!newResult.entrant_id || !newResult.reader_location) {
-                return;
-            }
-
-            const duplicates = this.results.filter(r => {
-                if (r.id === newResult.id) return false; // Don't compare with itself
-                if (r.entrant_id !== newResult.entrant_id) return false;
-                if (r.reader_location !== newResult.reader_location) return false;
-
-                // Calculate time difference in seconds
-                const timeDiff = Math.abs(new Date(newResult.raw_time) - new Date(r.raw_time)) / 1000;
-                return timeDiff < 10;
-            });
-
-            if (duplicates.length > 0) {
-                const duplicate = duplicates[0];
-                const timeDiff = Math.abs(new Date(newResult.raw_time) - new Date(duplicate.raw_time)) / 1000;
-
-                this.addAlertToResult(newResult, {
-                    type: 'duplicate',
-                    icon: '!',
-                    title: 'Passage multiple détecté',
-                    details: `Détection multiple au point "${newResult.reader_location}" (intervalle: ${timeDiff.toFixed(1)}s). Vérifier si doublon ou erreur antenne.`,
-                    status: 'pending'
-                });
-            }
-        },
-
-        checkForAberrantTimes(result) {
-            // Check for negative times
-            if (result.calculated_time && result.calculated_time < 0) {
-                this.addAlertToResult(result, {
-                    type: 'negative-time',
-                    icon: '×',
-                    title: 'Temps négatif détecté',
-                    details: `Temps calculé négatif (${result.calculated_time}s). Le TOP DÉPART semble postérieur à cette détection. Vérifier l'heure de départ de la course.`,
-                    status: 'pending'
-                });
-            }
-
-            // Calculate adaptive speed threshold based on exact race distance
-            // 4-zone formula calibrated on REAL race data from actual events
-            // Goal: Alert on suspicious speeds without constant false positives
-            let speedThreshold = 18.0; // Default if distance unknown
-            let distanceLabel = 'estimée';
-            const speedAbsoluteMax = 35.0; // Sprint WR peak ~37 km/h, impossible to sustain
-
-            if (result.race?.distance) {
-                const distance = parseFloat(result.race.distance);
-
-                // 4-zone adaptive formula based on real winner speeds + 10% margin:
-                // Real data: 5km→21.1, 10km→19.7, 18km→16.9, 20km→18.5, 100km→7.41 km/h
-                if (distance <= 2) {
-                    // Zone 1: Middle-distance (800m-2km) - No real data, extrapolated
-                    // Examples: 0.8km→27, 1km→26.5, 1.5km→25.8, 2km→25
-                    speedThreshold = 28 - (1.5 * distance);
-                } else if (distance < 10) {
-                    // Zone 2: Short endurance (2-10km)
-                    // Real: 5km→21.1 (threshold 23), 10km→19.7 (threshold 22)
-                    // Examples: 2km→25, 5km→24, 8km→22.6, 10km→22
-                    speedThreshold = 25 - (0.4 * (distance - 2));
-                } else if (distance < 30) {
-                    // Zone 3a: Medium endurance (10-30km)
-                    // Real: 10km→19.7 (threshold 22), 18km→16.9 (threshold 21), 20km→18.5 (threshold 20)
-                    // Examples: 10km→22, 15km→21.2, 20km→20.5, 25km→19.8, 30km→19
-                    speedThreshold = 22 - (0.15 * (distance - 10));
-                } else {
-                    // Zone 3b: Ultra-endurance (30km+)
-                    // Real: 100km→7.41 (threshold 8.5)
-                    // Examples: 30km→19, 42km→17.2, 60km→14.5, 100km→8.5
-                    speedThreshold = 19 - (0.15 * (distance - 30));
-                }
-
-                // Minimum threshold for ultra-long distances (100km+)
-                speedThreshold = Math.max(speedThreshold, 8.0);
-
-                // Round to 1 decimal for display
-                speedThreshold = Math.round(speedThreshold * 10) / 10;
-                distanceLabel = distance + ' km';
-            }
-
-            // Check speed from result.speed field (if available)
-            if (result.speed) {
-                const speed = parseFloat(result.speed);
-
-                if (speed > speedAbsoluteMax) {
-                    // Critical: Physically impossible for any sustained running
-                    this.addAlertToResult(result, {
-                        type: 'speed',
-                        icon: '⚠',
-                        title: 'Vitesse physiquement impossible',
-                        details: `Vitesse de ${speed.toFixed(1)} km/h détectée (seuil absolu: ${speedAbsoluteMax} km/h). Vitesse impossible pour un humain sur longue distance. Erreur certaine dans les horaires de passage ou confusion de coureur.`,
-                        status: 'pending'
-                    });
-                } else if (speed > speedThreshold) {
-                    // Warning: Exceptional for this distance
-                    this.addAlertToResult(result, {
-                        type: 'speed',
-                        icon: '▲',
-                        title: 'Vitesse élevée pour la distance',
-                        details: `Vitesse moyenne de ${speed.toFixed(1)} km/h (seuil ${distanceLabel}: ${speedThreshold} km/h). Vitesse au-delà d'un excellent coureur amateur pour cette distance. Vérifier les horaires de passage.`,
-                        status: 'pending'
-                    });
-                }
-            }
-
-            // Additional check: calculate speed between checkpoints if we have previous results
-            if (result.entrant_id && result.reader_id) {
-                const runnerResults = this.results
-                    .filter(r => r.entrant_id === result.entrant_id && r.reader_id !== result.reader_id)
-                    .sort((a, b) => new Date(a.raw_time) - new Date(b.raw_time));
-
-                if (runnerResults.length > 0) {
-                    const previousResult = runnerResults[runnerResults.length - 1];
-                    const currentReader = this.readers.find(r => r.id === result.reader_id);
-                    const previousReader = this.readers.find(r => r.id === previousResult.reader_id);
-
-                    if (currentReader && previousReader && currentReader.distance_from_start && previousReader.distance_from_start) {
-                        const distance = Math.abs(currentReader.distance_from_start - previousReader.distance_from_start);
-                        const timeMs = new Date(result.raw_time) - new Date(previousResult.raw_time);
-                        const timeHours = timeMs / (1000 * 60 * 60);
-
-                        if (timeHours > 0) {
-                            const calculatedSpeed = distance / timeHours;
-
-                            if (calculatedSpeed > speedAbsoluteMax) {
-                                // Critical: Physically impossible
-                                this.addAlertToResult(result, {
-                                    type: 'speed',
-                                    icon: '⚠',
-                                    title: 'Vitesse physiquement impossible',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil absolu: ${speedAbsoluteMax} km/h). Erreur certaine dans les horaires ou confusion de coureur.`,
-                                    status: 'pending'
-                                });
-                            } else if (calculatedSpeed > speedThreshold) {
-                                // Warning: Exceptional
-                                this.addAlertToResult(result, {
-                                    type: 'speed',
-                                    icon: '▲',
-                                    title: 'Vitesse élevée entre points de passage',
-                                    details: `Vitesse calculée de ${calculatedSpeed.toFixed(1)} km/h entre "${previousReader.location}" et "${currentReader.location}" (seuil ${distanceLabel}: ${speedThreshold} km/h). Vérifier les horaires de passage.`,
-                                    status: 'pending'
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        addAlertToResult(result, alert) {
-            // Initialize alerts array if it doesn't exist
-            if (!result.alerts) {
-                result.alerts = [];
-            }
-
-            // Check if this alert type already exists for this result
-            const existingAlert = result.alerts.find(a => a.type === alert.type && a.details === alert.details);
-            if (!existingAlert) {
-                result.alerts.push({
-                    id: Date.now() + Math.random(),
-                    ...alert
-                });
-                this.saveAlertsToStorage(); // Persist to localStorage
-            }
-        },
-
-        getPendingAlertsCount() {
-            let count = 0;
-            this.results.forEach(result => {
-                if (result.alerts && result.alerts.length > 0) {
-                    count += result.alerts.filter(a => a.status === 'pending').length;
-                }
-            });
-            return count;
-        },
-
-        getResultAlertClass(result) {
-            if (!result.alerts || result.alerts.length === 0) return '';
-
-            const pendingAlerts = result.alerts.filter(a => a.status === 'pending');
-            if (pendingAlerts.length === 0) return '';
-
-            // Priority: negative-time > speed > duplicate
-            if (pendingAlerts.some(a => a.type === 'negative-time')) return 'has-alert-negative-time';
-            if (pendingAlerts.some(a => a.type === 'speed')) return 'has-alert-speed';
-            if (pendingAlerts.some(a => a.type === 'duplicate')) return 'has-alert-duplicate';
-            return '';
-        },
-
-        markAlertAsVerified(result, alertId) {
-            if (!result.alerts) return;
-            const alert = result.alerts.find(a => a.id === alertId);
-            if (alert) {
-                alert.status = 'verified';
-                this.saveAlertsToStorage(); // Persist to localStorage
-                this.filterResults(); // Refresh display
-            }
-        },
-
-        markAlertAsIgnored(result, alertId) {
-            if (!result.alerts) return;
-            const alert = result.alerts.find(a => a.id === alertId);
-            if (alert) {
-                alert.status = 'ignored';
-                this.saveAlertsToStorage(); // Persist to localStorage
-                this.filterResults(); // Refresh display
-            }
-        },
-
-        saveAlertsToStorage() {
-            // Save all alerts to localStorage
-            const alertsData = {};
-            this.results.forEach(result => {
-                if (result.alerts && result.alerts.length > 0) {
-                    alertsData[result.id] = result.alerts;
-                }
-            });
-            try {
-                localStorage.setItem('chronofront_alerts', JSON.stringify(alertsData));
-            } catch (error) {
-                console.error('Erreur sauvegarde alertes localStorage:', error);
-            }
-        },
-
-        loadAlertsFromStorage() {
-            // Restore alerts from localStorage
-            try {
-                const alertsJson = localStorage.getItem('chronofront_alerts');
-                if (!alertsJson) return;
-
-                const alertsData = JSON.parse(alertsJson);
-                this.results.forEach(result => {
-                    if (alertsData[result.id]) {
-                        result.alerts = alertsData[result.id];
-                    }
-                });
-                this.filterResults(); // Refresh display with alerts
-            } catch (error) {
-                console.error('Erreur chargement alertes localStorage:', error);
-            }
-        },
-
-        recalculateAllAlerts() {
-            // Clear all existing alerts and recalculate based on current data
-            // This is called after TOP DEPART modification to re-evaluate anomalies
-            console.log('Recalcul de toutes les alertes...');
-
-            // Clear all alerts
-            this.results.forEach(result => {
-                result.alerts = [];
-            });
-
-            // Recalculate alerts for all results
-            this.results.forEach(result => {
-                this.checkForDuplicates(result);
-                this.checkForAberrantTimes(result);
-            });
-
-            // Save to localStorage
-            this.saveAlertsToStorage();
-
-            // Refresh display
-            this.filterResults();
-
-            const alertCount = this.getPendingAlertsCount();
-            console.log(`Recalcul terminé: ${alertCount} alerte(s) détectée(s)`);
-        },
 
         normalizeString(str) {
             if (!str) return '';
@@ -3385,8 +2884,6 @@ function chronoApp() {
                 await this.loadRaces();
                 await this.loadAllResults();
 
-                // Recalculate all alerts with new start time
-                this.recalculateAllAlerts();
 
                 this.cancelEditingStartTime();
 
@@ -3563,8 +3060,6 @@ function chronoApp() {
                 await this.loadAllWavesForModal();
                 await this.loadAllResults();
 
-                // Recalculate all alerts with new start time
-                this.recalculateAllAlerts();
 
                 this.cancelEditingWaveStartTime();
 
@@ -3617,7 +3112,7 @@ function chronoApp() {
                     this.runnerCheckpoints = [];
                     this.runnerAverageSpeed = null;
                     this.raceChrono = '00:00:00';
-                    this.alertMessage = null;
+
 
                     // Clear filters
                     this.searchQuery = '';
@@ -3642,102 +3137,6 @@ function chronoApp() {
                 }
             } catch (error) {
                 console.error('Erreur vérification statut événement:', error);
-            }
-        },
-
-        startAlertCheck() {
-            // Check for late runners every minute
-            setInterval(() => this.checkForLateRunners(), 60000);
-            // Run once immediately after 10 seconds
-            setTimeout(() => this.checkForLateRunners(), 10000);
-        },
-
-        checkForLateRunners() {
-            if (!this.hasOngoingRaces() || this.readers.length === 0) {
-                return;
-            }
-
-            // Get all entrants from results who have at least one detection
-            const entrantIds = [...new Set(this.results.map(r => r.entrant_id).filter(Boolean))];
-
-            let lateRunners = [];
-
-            for (let entrantId of entrantIds) {
-                const runnerResults = this.results.filter(r => r.entrant_id === entrantId);
-                if (runnerResults.length === 0) continue;
-
-                // Get the entrant info from the first result
-                const entrant = runnerResults[0].entrant;
-                if (!entrant) continue;
-
-                // Sort results by reader distance
-                const sortedResults = runnerResults
-                    .filter(r => r.reader_id)
-                    .map(r => {
-                        const reader = this.readers.find(rd => rd.id === r.reader_id);
-                        return {
-                            ...r,
-                            distance: reader ? reader.distance_from_start : 0
-                        };
-                    })
-                    .sort((a, b) => a.distance - b.distance);
-
-                if (sortedResults.length < 2) continue;
-
-                // Calculate average speed from last two checkpoints
-                const last = sortedResults[sortedResults.length - 1];
-                const secondLast = sortedResults[sortedResults.length - 2];
-
-                const distance = last.distance - secondLast.distance;
-                const timeMs = new Date(last.raw_time) - new Date(secondLast.raw_time);
-                const timeHours = timeMs / (1000 * 60 * 60);
-                const avgSpeed = distance / timeHours; // km/h
-
-                if (avgSpeed <= 0) continue;
-
-                // Find next checkpoint after last detection
-                const nextCheckpoint = this.readers
-                    .filter(r => r.distance_from_start > last.distance)
-                    .sort((a, b) => a.distance_from_start - b.distance_from_start)[0];
-
-                if (!nextCheckpoint) continue;
-
-                // Calculate expected arrival time at next checkpoint
-                const distanceToNext = nextCheckpoint.distance_from_start - last.distance;
-                const timeNeededHours = distanceToNext / avgSpeed;
-                const timeNeededMs = timeNeededHours * 60 * 60 * 1000;
-                const expectedArrival = new Date(new Date(last.raw_time).getTime() + timeNeededMs);
-
-                // Check if runner is late
-                const now = new Date();
-                const delayMinutes = (now - expectedArrival) / (1000 * 60);
-
-                if (delayMinutes > this.alertThreshold) {
-                    const severity = delayMinutes > 15 ? 'critical' : 'warning';
-                    lateRunners.push({
-                        entrant,
-                        checkpoint: nextCheckpoint.location,
-                        delayMinutes: Math.floor(delayMinutes),
-                        severity
-                    });
-                }
-            }
-
-            // Update alert message
-            if (lateRunners.length > 0) {
-                const critical = lateRunners.filter(r => r.severity === 'critical');
-                const warning = lateRunners.filter(r => r.severity === 'warning');
-
-                let message = '';
-                if (critical.length > 0) {
-                    const runner = critical[0];
-                    message = `🚨 CRITIQUE: Dossard #${runner.entrant.bib_number} (${runner.entrant.firstname} ${runner.entrant.lastname}) devrait être à ${runner.checkpoint} (retard ${runner.delayMinutes} min)`;
-                } else if (warning.length > 0) {
-                    const runner = warning[0];
-                    message = `⚠️ Attention: Dossard #${runner.entrant.bib_number} (${runner.entrant.firstname} ${runner.entrant.lastname}) devrait être à ${runner.checkpoint} (retard ${runner.delayMinutes} min)`;
-                }
-
-                this.alertMessage = message;
             }
         },
 
