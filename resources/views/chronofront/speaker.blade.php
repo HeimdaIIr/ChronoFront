@@ -470,9 +470,9 @@
                                 <span x-show="visibleColumnIds.includes(colId)">&#10003;</span>
                             </div>
                             <span x-text="getColumnLabel(colId)" @click="toggleColumn(colId)" style="cursor:pointer"></span>
-                            <div class="settings-arrows">
-                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, -1)" :disabled="idx === 0" title="Monter">&#9650;</button>
-                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, 1)" :disabled="idx === columnOrder.length - 1" title="Descendre">&#9660;</button>
+                            <div class="settings-arrows" x-show="visibleColumnIds.includes(colId)">
+                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, -1)" :disabled="isFirstVisible(colId)" title="Monter">&#9650;</button>
+                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, 1)" :disabled="isLastVisible(colId)" title="Descendre">&#9660;</button>
                             </div>
                         </div>
                     </template>
@@ -578,6 +578,16 @@
                     return this.results.slice(0, maxLines);
                 },
 
+                isFirstVisible(id) {
+                    const visibleInOrder = this.columnOrder.filter(cid => this.visibleColumnIds.includes(cid));
+                    return visibleInOrder[0] === id;
+                },
+
+                isLastVisible(id) {
+                    const visibleInOrder = this.columnOrder.filter(cid => this.visibleColumnIds.includes(cid));
+                    return visibleInOrder[visibleInOrder.length - 1] === id;
+                },
+
                 getColumnLabel(id) {
                     const all = [...this.allColumns, ...this.discoveredIntermediates];
                     const col = all.find(c => c.id === id);
@@ -619,12 +629,23 @@
 
                 moveColumn(id, direction) {
                     const idx = this.columnOrder.indexOf(id);
-                    const newIdx = idx + direction;
-                    if (newIdx < 0 || newIdx >= this.columnOrder.length) return;
-                    const temp = this.columnOrder[newIdx];
-                    this.columnOrder[newIdx] = this.columnOrder[idx];
-                    this.columnOrder[idx] = temp;
-                    this.columnOrder = [...this.columnOrder];
+                    if (idx < 0) return;
+
+                    // Find the next visible neighbor in the given direction
+                    let targetIdx = idx + direction;
+                    while (targetIdx >= 0 && targetIdx < this.columnOrder.length) {
+                        if (this.visibleColumnIds.includes(this.columnOrder[targetIdx])) {
+                            break;
+                        }
+                        targetIdx += direction;
+                    }
+                    if (targetIdx < 0 || targetIdx >= this.columnOrder.length) return;
+
+                    // Remove item from current position and insert at target
+                    const arr = [...this.columnOrder];
+                    arr.splice(idx, 1);
+                    arr.splice(targetIdx > idx ? targetIdx : targetIdx, 0, id);
+                    this.columnOrder = arr;
                     this.saveSettings();
                 },
 
