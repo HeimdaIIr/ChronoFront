@@ -386,6 +386,37 @@
             margin: 0.6rem 0;
         }
 
+        .settings-arrows {
+            margin-left: auto;
+            display: flex;
+            gap: 0.2rem;
+        }
+
+        .settings-arrow-btn {
+            background: none;
+            border: 1px solid #555;
+            color: #888;
+            width: 22px;
+            height: 22px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .settings-arrow-btn:hover {
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
+        .settings-arrow-btn:disabled {
+            opacity: 0.2;
+            cursor: default;
+        }
+
         /* Loading indicator */
         .loading {
             position: fixed;
@@ -430,26 +461,16 @@
                 <div class="settings-overlay" @click="showSettings = false"></div>
                 <div class="settings-panel">
                     <div class="settings-title">Colonnes affichees</div>
-                    <template x-for="col in allColumns" :key="col.id">
-                        <div class="settings-item" :class="activeColumnIds.includes(col.id) ? 'active' : 'inactive'" @click="toggleColumn(col.id)">
-                            <div class="settings-check" :class="activeColumnIds.includes(col.id) ? 'checked' : ''">
-                                <span x-show="activeColumnIds.includes(col.id)">&#10003;</span>
+                    <template x-for="(col, idx) in orderedColumns" :key="col.id">
+                        <div class="settings-item" :class="visibleColumnIds.includes(col.id) ? 'active' : 'inactive'">
+                            <div class="settings-check" :class="visibleColumnIds.includes(col.id) ? 'checked' : ''" @click="toggleColumn(col.id)">
+                                <span x-show="visibleColumnIds.includes(col.id)">&#10003;</span>
                             </div>
-                            <span x-text="col.label"></span>
-                        </div>
-                    </template>
-                    <template x-if="discoveredIntermediates.length > 0">
-                        <div>
-                            <div class="settings-separator"></div>
-                            <div class="settings-title">Intermediaires</div>
-                            <template x-for="inter in discoveredIntermediates" :key="inter.id">
-                                <div class="settings-item" :class="activeColumnIds.includes(inter.id) ? 'active' : 'inactive'" @click="toggleColumn(inter.id)">
-                                    <div class="settings-check" :class="activeColumnIds.includes(inter.id) ? 'checked' : ''">
-                                        <span x-show="activeColumnIds.includes(inter.id)">&#10003;</span>
-                                    </div>
-                                    <span x-text="inter.label"></span>
-                                </div>
-                            </template>
+                            <span x-text="col.label" @click="toggleColumn(col.id)" style="cursor:pointer"></span>
+                            <div class="settings-arrows">
+                                <button class="settings-arrow-btn" @click.stop="moveColumn(col.id, -1)" :disabled="idx === 0" title="Monter">&#9650;</button>
+                                <button class="settings-arrow-btn" @click.stop="moveColumn(col.id, 1)" :disabled="idx === orderedColumns.length - 1" title="Descendre">&#9660;</button>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -523,14 +544,21 @@
                 // Intermediate columns discovered from data
                 discoveredIntermediates: [],
 
-                // Active column IDs
-                activeColumnIds: ['bib', 'position', 'category_pos', 'name', 'category', 'gender', 'race', 'club', 'speed', 'time'],
+                // Master order of ALL columns (drives display order)
+                columnOrder: ['bib', 'position', 'category_pos', 'name', 'category', 'gender', 'race', 'club', 'team', 'speed', 'time'],
 
-                get activeColumns() {
+                // Which columns are currently visible
+                visibleColumnIds: ['bib', 'position', 'category_pos', 'name', 'category', 'gender', 'race', 'club', 'speed', 'time'],
+
+                // All columns in their configured order (for settings panel)
+                get orderedColumns() {
                     const all = [...this.allColumns, ...this.discoveredIntermediates];
-                    return this.activeColumnIds
-                        .map(id => all.find(c => c.id === id))
-                        .filter(Boolean);
+                    return this.columnOrder.map(id => all.find(c => c.id === id)).filter(Boolean);
+                },
+
+                // Only visible columns, in configured order (for grid)
+                get activeColumns() {
+                    return this.orderedColumns.filter(c => this.visibleColumnIds.includes(c.id));
                 },
 
                 get gridTemplateColumns() {
@@ -572,18 +600,32 @@
                 },
 
                 toggleColumn(id) {
-                    const idx = this.activeColumnIds.indexOf(id);
+                    const idx = this.visibleColumnIds.indexOf(id);
                     if (idx >= 0) {
-                        if (this.activeColumnIds.length <= 1) return;
-                        this.activeColumnIds.splice(idx, 1);
+                        if (this.visibleColumnIds.length <= 1) return;
+                        this.visibleColumnIds.splice(idx, 1);
                     } else {
-                        this.activeColumnIds.push(id);
+                        this.visibleColumnIds.push(id);
                     }
                     this.saveSettings();
                 },
 
+                moveColumn(id, direction) {
+                    const idx = this.columnOrder.indexOf(id);
+                    const newIdx = idx + direction;
+                    if (newIdx < 0 || newIdx >= this.columnOrder.length) return;
+                    const temp = this.columnOrder[newIdx];
+                    this.columnOrder[newIdx] = this.columnOrder[idx];
+                    this.columnOrder[idx] = temp;
+                    this.columnOrder = [...this.columnOrder];
+                    this.saveSettings();
+                },
+
                 saveSettings() {
-                    localStorage.setItem('speaker_columns', JSON.stringify(this.activeColumnIds));
+                    localStorage.setItem('speaker_columns', JSON.stringify({
+                        order: this.columnOrder,
+                        visible: this.visibleColumnIds
+                    }));
                 },
 
                 loadSettings() {
@@ -591,8 +633,14 @@
                     if (saved) {
                         try {
                             const parsed = JSON.parse(saved);
-                            if (Array.isArray(parsed) && parsed.length > 0) {
-                                this.activeColumnIds = parsed;
+                            if (parsed && parsed.order && Array.isArray(parsed.order)) {
+                                this.columnOrder = parsed.order;
+                                if (parsed.visible && Array.isArray(parsed.visible) && parsed.visible.length > 0) {
+                                    this.visibleColumnIds = parsed.visible;
+                                }
+                            } else if (Array.isArray(parsed) && parsed.length > 0) {
+                                // Legacy format migration
+                                this.visibleColumnIds = parsed;
                             }
                         } catch (e) {}
                     }
@@ -678,6 +726,12 @@
                         });
                         if (newIntermediates.length > 0) {
                             this.discoveredIntermediates = [...this.discoveredIntermediates, ...newIntermediates];
+                            // Add to columnOrder if not already present
+                            newIntermediates.forEach(inter => {
+                                if (!this.columnOrder.includes(inter.id)) {
+                                    this.columnOrder.push(inter.id);
+                                }
+                            });
                         }
 
                         this.results = newResults;
