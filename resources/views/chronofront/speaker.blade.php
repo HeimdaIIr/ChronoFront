@@ -163,7 +163,8 @@
         }
 
         .size-large .grid-row {
-            flex: 1;
+            flex: 0 0 calc(100% / 5);
+            max-height: calc(100% / 5);
         }
 
         .size-large .grid-cell {
@@ -181,7 +182,8 @@
         }
 
         .size-medium .grid-row {
-            flex: 1;
+            flex: 0 0 calc(100% / 10);
+            max-height: calc(100% / 10);
         }
 
         .size-medium .grid-cell {
@@ -199,7 +201,8 @@
         }
 
         .size-small .grid-row {
-            flex: 1;
+            flex: 0 0 calc(100% / 20);
+            max-height: calc(100% / 20);
         }
 
         .size-small .grid-cell {
@@ -461,15 +464,15 @@
                 <div class="settings-overlay" @click="showSettings = false"></div>
                 <div class="settings-panel">
                     <div class="settings-title">Colonnes affichees</div>
-                    <template x-for="(col, idx) in orderedColumns" :key="col.id">
-                        <div class="settings-item" :class="visibleColumnIds.includes(col.id) ? 'active' : 'inactive'">
-                            <div class="settings-check" :class="visibleColumnIds.includes(col.id) ? 'checked' : ''" @click="toggleColumn(col.id)">
-                                <span x-show="visibleColumnIds.includes(col.id)">&#10003;</span>
+                    <template x-for="(colId, idx) in columnOrder" :key="colId">
+                        <div class="settings-item" :class="visibleColumnIds.includes(colId) ? 'active' : 'inactive'">
+                            <div class="settings-check" :class="visibleColumnIds.includes(colId) ? 'checked' : ''" @click="toggleColumn(colId)">
+                                <span x-show="visibleColumnIds.includes(colId)">&#10003;</span>
                             </div>
-                            <span x-text="col.label" @click="toggleColumn(col.id)" style="cursor:pointer"></span>
+                            <span x-text="getColumnLabel(colId)" @click="toggleColumn(colId)" style="cursor:pointer"></span>
                             <div class="settings-arrows">
-                                <button class="settings-arrow-btn" @click.stop="moveColumn(col.id, -1)" :disabled="idx === 0" title="Monter">&#9650;</button>
-                                <button class="settings-arrow-btn" @click.stop="moveColumn(col.id, 1)" :disabled="idx === orderedColumns.length - 1" title="Descendre">&#9660;</button>
+                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, -1)" :disabled="idx === 0" title="Monter">&#9650;</button>
+                                <button type="button" class="settings-arrow-btn" @click.prevent.stop="moveColumn(colId, 1)" :disabled="idx === columnOrder.length - 1" title="Descendre">&#9660;</button>
                             </div>
                         </div>
                     </template>
@@ -550,15 +553,13 @@
                 // Which columns are currently visible
                 visibleColumnIds: ['bib', 'position', 'category_pos', 'name', 'category', 'gender', 'race', 'club', 'speed', 'time'],
 
-                // All columns in their configured order (for settings panel)
-                get orderedColumns() {
-                    const all = [...this.allColumns, ...this.discoveredIntermediates];
-                    return this.columnOrder.map(id => all.find(c => c.id === id)).filter(Boolean);
-                },
-
                 // Only visible columns, in configured order (for grid)
                 get activeColumns() {
-                    return this.orderedColumns.filter(c => this.visibleColumnIds.includes(c.id));
+                    const all = [...this.allColumns, ...this.discoveredIntermediates];
+                    return this.columnOrder
+                        .filter(id => this.visibleColumnIds.includes(id))
+                        .map(id => all.find(c => c.id === id))
+                        .filter(Boolean);
                 },
 
                 get gridTemplateColumns() {
@@ -575,6 +576,12 @@
                         'small': 20
                     }[this.lineSize] || 10;
                     return this.results.slice(0, maxLines);
+                },
+
+                getColumnLabel(id) {
+                    const all = [...this.allColumns, ...this.discoveredIntermediates];
+                    const col = all.find(c => c.id === id);
+                    return col ? col.label : id;
                 },
 
                 getCellValue(result, col) {
