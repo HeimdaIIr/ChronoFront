@@ -676,13 +676,31 @@ class ResultController extends Controller
                         ->where('reader_location', 'ARRIVEE')
                         ->sortBy('calculated_time')
                         ->values();
+                } elseif (in_array($race->type, ['n_laps', 'infinite_loop'])) {
+                    // N LAPS / INFINITE LOOP: Sort by lap count descending, then by time ascending
+                    // Runners with more laps are always ranked above runners with fewer laps
+                    $entrantResults = $allRaceResults->groupBy('entrant_id')
+                        ->map(function ($entrantResults) use ($race) {
+                            if ($race->best_time) {
+                                return $entrantResults->sortBy('calculated_time')->first();
+                            } else {
+                                return $entrantResults->sortByDesc('lap_number')->first();
+                            }
+                        });
+
+                    $results = $entrantResults->sort(function ($a, $b) {
+                        // Primary: lap count (descending - more laps = better)
+                        if ($a->lap_number != $b->lap_number) {
+                            return $b->lap_number <=> $a->lap_number;
+                        }
+                        // Secondary: time (ascending - faster is better)
+                        return $a->calculated_time <=> $b->calculated_time;
+                    })->values();
                 } else {
-                    // Original logic for races without intermediate checkpoints or multi-lap races
+                    // 1_PASSAGE without intermediate checkpoints
                     $results = $allRaceResults
                         ->groupBy('entrant_id')
                         ->map(function ($entrantResults) use ($race) {
-                            // For best_time races, keep best time
-                            // Otherwise keep last lap
                             if ($race->best_time) {
                                 return $entrantResults->sortBy('calculated_time')->first();
                             } else {
