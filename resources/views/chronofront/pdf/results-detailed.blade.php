@@ -79,6 +79,10 @@
             background-color: #f8f9fa;
         }
 
+        tr {
+            page-break-inside: avoid;
+        }
+
         .pos {
             text-align: center;
             width: 20px;
@@ -117,7 +121,7 @@
         .lap-time {
             text-align: center;
             font-size: 5pt;
-            width: 35px;
+            width: 30px;
         }
 
         .footer {
@@ -153,160 +157,272 @@
     @endif
 </head>
 <body>
-    <div class="header">
-        <h1>{{ $race->event->name ?? 'Événement' }}</h1>
-        <h2>{{ $race->name }} - Résultats Détaillés</h2>
-        <div class="header-info">
-            <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
-            @if($race->distance)
-                | <strong>Distance :</strong> {{ $race->distance }} km
-            @endif
-            @if(in_array($race->type, ['n_laps', 'infinite_loop']) && $race->laps > 0)
-                | <strong>Tours :</strong> {{ $race->laps }}
-            @endif
-        </div>
-    </div>
+    @php
+        $runnersPerPage = 50;
+        $maxLapsPerPage = 20;
+
+        // Build lap column chunks for horizontal pagination
+        // $isMultiLap and $maxLaps come from the controller
+        $lapColumnChunks = [];
+        if ($isMultiLap && $maxLaps > 0) {
+            for ($s = 1; $s <= $maxLaps; $s += $maxLapsPerPage) {
+                $e = min($s + $maxLapsPerPage - 1, $maxLaps);
+                $lapColumnChunks[] = ['start' => $s, 'end' => $e];
+            }
+        }
+        $hasLapColumns = !empty($lapColumnChunks);
+        $multipleLapPages = count($lapColumnChunks) > 1;
+    @endphp
 
     @if($displayMode === 'general')
-        <!-- Classement Général -->
-        <div class="total-participants">{{ $results->count() }} participant(s)</div>
-
+        {{-- ===== CLASSEMENT GÉNÉRAL ===== --}}
         @php
-            $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
-            $maxLaps = $isMultiLap && $race->laps > 0 ? $race->laps : 0;
+            $runnerChunks = $results->chunk($runnersPerPage);
+            $isFirstPage = true;
         @endphp
 
-        <table>
-            <thead>
-                <tr>
-                    <th class="pos">Pos.</th>
-                    <th class="bib">Dos.</th>
-                    <th class="name">Nom</th>
-                    <th class="firstname">Prénom</th>
-                    @if($isMultiLap && $maxLaps > 0)
-                        @for($i = 1; $i <= $maxLaps; $i++)
-                            <th class="lap-time">T{{ $i }}</th>
-                        @endfor
-                    @endif
-                    <th class="time">Temps Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($results as $index => $result)
-                    <tr>
-                        <td class="pos">{{ $result->position ?? '-' }}</td>
-                        <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                        <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                        <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
-                        @if($isMultiLap && $maxLaps > 0)
-                            @php
-                                $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
-                            @endphp
-                            @for($i = 1; $i <= $maxLaps; $i++)
-                                @php
-                                    $lap = $entrantLaps->firstWhere('lap_number', $i);
-                                    if ($lap && $lap->lap_time) {
-                                        $hours = floor($lap->lap_time / 3600);
-                                        $minutes = floor(($lap->lap_time % 3600) / 60);
-                                        $seconds = floor($lap->lap_time % 60);
-                                        $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
-                                    } else {
-                                        $lapTime = '-';
-                                    }
-                                @endphp
-                                <td class="lap-time">{{ $lapTime }}</td>
-                            @endfor
-                        @endif
-                        <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                    </tr>
-                    @if(($index + 1) % 60 === 0 && !$loop->last)
-                        </tbody>
-                        </table>
+        @foreach($runnerChunks as $runnerChunk)
+            @if($hasLapColumns)
+                @foreach($lapColumnChunks as $lapRange)
+                    @if(!$isFirstPage)
                         <div class="page-break"></div>
+                    @endif
+                    @php $isFirstPage = false; @endphp
+
+                    <div class="header">
+                        <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                        <h2>{{ $race->name }} - Résultats Détaillés</h2>
+                        <div class="header-info">
+                            <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                            @if($race->distance)
+                                | <strong>Distance :</strong> {{ $race->distance }} km
+                            @endif
+                            | <strong>Tours :</strong> {{ $maxLaps }}
+                            @if($multipleLapPages)
+                                (T{{ $lapRange['start'] }} à T{{ $lapRange['end'] }})
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="total-participants">{{ $results->count() }} participant(s)</div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="pos">Pos.</th>
+                                <th class="bib">Dos.</th>
+                                <th class="name">Nom</th>
+                                <th class="firstname">Prénom</th>
+                                @for($i = $lapRange['start']; $i <= $lapRange['end']; $i++)
+                                    <th class="lap-time">T{{ $i }}</th>
+                                @endfor
+                                <th class="time">Temps Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($runnerChunk as $result)
+                                <tr>
+                                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                    <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
+                                    @php
+                                        $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                                    @endphp
+                                    @for($i = $lapRange['start']; $i <= $lapRange['end']; $i++)
+                                        @php
+                                            $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                            if ($lap && $lap->lap_time) {
+                                                $hours = floor($lap->lap_time / 3600);
+                                                $minutes = floor(($lap->lap_time % 3600) / 60);
+                                                $seconds = floor($lap->lap_time % 60);
+                                                $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                            } else {
+                                                $lapTime = '-';
+                                            }
+                                        @endphp
+                                        <td class="lap-time">{{ $lapTime }}</td>
+                                    @endfor
+                                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endforeach
+            @else
+                {{-- Pas de colonnes tours (course simple) --}}
+                @if(!$isFirstPage)
+                    <div class="page-break"></div>
+                @endif
+                @php $isFirstPage = false; @endphp
+
+                <div class="header">
+                    <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                    <h2>{{ $race->name }} - Résultats Détaillés</h2>
+                    <div class="header-info">
+                        <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                        @if($race->distance)
+                            | <strong>Distance :</strong> {{ $race->distance }} km
+                        @endif
+                    </div>
+                </div>
+
+                <div class="total-participants">{{ $results->count() }} participant(s)</div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="pos">Pos.</th>
+                            <th class="bib">Dos.</th>
+                            <th class="name">Nom</th>
+                            <th class="firstname">Prénom</th>
+                            <th class="time">Temps Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($runnerChunk as $result)
+                            <tr>
+                                <td class="pos">{{ $result->position ?? '-' }}</td>
+                                <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
+                                <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        @endforeach
+
+    @else
+        {{-- ===== CLASSEMENT PAR CATÉGORIE ===== --}}
+        @php $isFirstPage = true; @endphp
+
+        @foreach($resultsByCategory as $categoryName => $categoryResults)
+            @php
+                $catRunnerChunks = $categoryResults->chunk($runnersPerPage);
+            @endphp
+
+            @foreach($catRunnerChunks as $catChunk)
+                @if($hasLapColumns)
+                    @foreach($lapColumnChunks as $lapRange)
+                        @if(!$isFirstPage)
+                            <div class="page-break"></div>
+                        @endif
+                        @php $isFirstPage = false; @endphp
+
+                        <div class="header">
+                            <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                            <h2>{{ $race->name }} - Résultats Détaillés</h2>
+                            <div class="header-info">
+                                <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                                @if($race->distance)
+                                    | <strong>Distance :</strong> {{ $race->distance }} km
+                                @endif
+                                | <strong>Tours :</strong> {{ $maxLaps }}
+                                @if($multipleLapPages)
+                                    (T{{ $lapRange['start'] }} à T{{ $lapRange['end'] }})
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="category-title">
+                            {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
+                        </div>
+
                         <table>
                             <thead>
                                 <tr>
-                                    <th class="pos">Pos.</th>
+                                    <th class="pos">Pos. Cat.</th>
+                                    <th class="pos">Pos. Gén.</th>
                                     <th class="bib">Dos.</th>
                                     <th class="name">Nom</th>
                                     <th class="firstname">Prénom</th>
-                                    @if($isMultiLap && $maxLaps > 0)
-                                        @for($i = 1; $i <= $maxLaps; $i++)
-                                            <th class="lap-time">T{{ $i }}</th>
-                                        @endfor
-                                    @endif
+                                    @for($i = $lapRange['start']; $i <= $lapRange['end']; $i++)
+                                        <th class="lap-time">T{{ $i }}</th>
+                                    @endfor
                                     <th class="time">Temps Total</th>
                                 </tr>
                             </thead>
                             <tbody>
-                    @endif
-                @endforeach
-            </tbody>
-        </table>
-    @else
-        <!-- Classement par Catégorie -->
-        @php
-            $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
-            $maxLaps = $isMultiLap && $race->laps > 0 ? $race->laps : 0;
-        @endphp
-
-        @foreach($resultsByCategory as $categoryName => $categoryResults)
-            <div class="category-title">
-                {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th class="pos">Pos. Cat.</th>
-                        <th class="pos">Pos. Gén.</th>
-                        <th class="bib">Dos.</th>
-                        <th class="name">Nom</th>
-                        <th class="firstname">Prénom</th>
-                        @if($isMultiLap && $maxLaps > 0)
-                            @for($i = 1; $i <= $maxLaps; $i++)
-                                <th class="lap-time">T{{ $i }}</th>
-                            @endfor
-                        @endif
-                        <th class="time">Temps Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($categoryResults as $result)
-                        <tr>
-                            <td class="pos">{{ $result->category_position ?? '-' }}</td>
-                            <td class="pos">{{ $result->position ?? '-' }}</td>
-                            <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                            <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                            <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
-                            @if($isMultiLap && $maxLaps > 0)
-                                @php
-                                    $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
-                                @endphp
-                                @for($i = 1; $i <= $maxLaps; $i++)
-                                    @php
-                                        $lap = $entrantLaps->firstWhere('lap_number', $i);
-                                        if ($lap && $lap->lap_time) {
-                                            $hours = floor($lap->lap_time / 3600);
-                                            $minutes = floor(($lap->lap_time % 3600) / 60);
-                                            $seconds = floor($lap->lap_time % 60);
-                                            $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
-                                        } else {
-                                            $lapTime = '-';
-                                        }
-                                    @endphp
-                                    <td class="lap-time">{{ $lapTime }}</td>
-                                @endfor
-                            @endif
-                            <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                        </tr>
+                                @foreach($catChunk as $result)
+                                    <tr>
+                                        <td class="pos">{{ $result->category_position ?? '-' }}</td>
+                                        <td class="pos">{{ $result->position ?? '-' }}</td>
+                                        <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                        <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                        <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
+                                        @php
+                                            $entrantLaps = $lapsByEntrant[$result->entrant_id] ?? collect();
+                                        @endphp
+                                        @for($i = $lapRange['start']; $i <= $lapRange['end']; $i++)
+                                            @php
+                                                $lap = $entrantLaps->firstWhere('lap_number', $i);
+                                                if ($lap && $lap->lap_time) {
+                                                    $hours = floor($lap->lap_time / 3600);
+                                                    $minutes = floor(($lap->lap_time % 3600) / 60);
+                                                    $seconds = floor($lap->lap_time % 60);
+                                                    $lapTime = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
+                                                } else {
+                                                    $lapTime = '-';
+                                                }
+                                            @endphp
+                                            <td class="lap-time">{{ $lapTime }}</td>
+                                        @endfor
+                                        <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     @endforeach
-                </tbody>
-            </table>
+                @else
+                    {{-- Pas de colonnes tours --}}
+                    @if(!$isFirstPage)
+                        <div class="page-break"></div>
+                    @endif
+                    @php $isFirstPage = false; @endphp
 
-            @if(!$loop->last)
-                <div class="page-break"></div>
-            @endif
+                    <div class="header">
+                        <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                        <h2>{{ $race->name }} - Résultats Détaillés</h2>
+                        <div class="header-info">
+                            <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                            @if($race->distance)
+                                | <strong>Distance :</strong> {{ $race->distance }} km
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="category-title">
+                        {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="pos">Pos. Cat.</th>
+                                <th class="pos">Pos. Gén.</th>
+                                <th class="bib">Dos.</th>
+                                <th class="name">Nom</th>
+                                <th class="firstname">Prénom</th>
+                                <th class="time">Temps Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($catChunk as $result)
+                                <tr>
+                                    <td class="pos">{{ $result->category_position ?? '-' }}</td>
+                                    <td class="pos">{{ $result->position ?? '-' }}</td>
+                                    <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                    <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                    <td class="firstname">{{ $result->entrant->firstname ?? '' }}</td>
+                                    <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            @endforeach
         @endforeach
     @endif
 

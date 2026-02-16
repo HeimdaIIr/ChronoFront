@@ -79,6 +79,10 @@
             background-color: #f8f9fa;
         }
 
+        tr {
+            page-break-inside: avoid;
+        }
+
         .pos {
             text-align: center;
             width: 28px;
@@ -175,123 +179,133 @@
     @endif
 </head>
 <body>
-    <div class="header">
-        <h1>{{ $race->event->name ?? 'Événement' }}</h1>
-        <h2>{{ $race->name }}</h2>
-        <div class="header-info">
-            <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
-            @if($race->distance)
-                | <strong>Distance :</strong> {{ $race->distance }} km
-            @endif
-        </div>
-    </div>
+    @php
+        $runnersPerPage = 50;
+    @endphp
 
     @if($displayMode === 'general')
-        <!-- Classement Général -->
-        <div class="total-participants">{{ $results->count() }} participant(s)</div>
+        {{-- ===== CLASSEMENT GÉNÉRAL ===== --}}
+        @php
+            $runnerChunks = $results->chunk($runnersPerPage);
+            $isFirstPage = true;
+        @endphp
 
-        <table>
-            <thead>
-                <tr>
-                    <th class="pos">Pos.</th>
-                    <th class="bib">Dos.</th>
-                    <th>Nom</th>
-                    <th>Prénom</th>
-                    <th style="width: 22px; text-align: center;">Sexe</th>
-                    <th class="category">Catégorie</th>
-                    <th>Club</th>
-                    <th class="time">Temps</th>
-                    <th class="speed">Vitesse</th>
-                    <th class="pos">Pos. Cat.</th>
-                    <th class="status">Statut</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($results as $index => $result)
-                    <tr>
-                        <td class="pos">{{ $result->position ?? '-' }}</td>
-                        <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
-                        <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
-                        <td>{{ $result->entrant->firstname ?? '' }}</td>
-                        <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
-                        <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
-                        <td>{{ $result->entrant->club ?? '-' }}</td>
-                        <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
-                        <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
-                        <td class="pos">{{ $result->category_position ?? '-' }}</td>
-                        <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
-                    </tr>
-                    @if(($index + 1) % 50 === 0 && !$loop->last)
-                        </tbody>
-                        </table>
-                        <div class="page-break"></div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th class="pos">Pos.</th>
-                                    <th class="bib">Dos.</th>
-                                    <th>Nom</th>
-                                    <th>Prénom</th>
-                                    <th style="width: 22px; text-align: center;">Sexe</th>
-                                    <th class="category">Catégorie</th>
-                                    <th>Club</th>
-                                    @if($isMultiLap && $maxLaps > 0)
-                                        @for($i = 1; $i <= $maxLaps; $i++)
-                                            <th class="time" style="width: 42px;">T{{ $i }}</th>
-                                        @endfor
-                                    @endif
-                                    <th class="time">Temps</th>
-                                    <th class="speed">Vitesse</th>
-                                    <th class="pos">Pos. Cat.</th>
-                                    <th class="status">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+        @foreach($runnerChunks as $runnerChunk)
+            @if(!$isFirstPage)
+                <div class="page-break"></div>
+            @endif
+            @php $isFirstPage = false; @endphp
+
+            <div class="header">
+                <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                <h2>{{ $race->name }}</h2>
+                <div class="header-info">
+                    <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                    @if($race->distance)
+                        | <strong>Distance :</strong> {{ $race->distance }} km
                     @endif
-                @endforeach
-            </tbody>
-        </table>
-    @else
-        <!-- Classement par Catégorie -->
-        @foreach($resultsByCategory as $categoryName => $categoryResults)
-            <div class="category-title">
-                {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
+                </div>
             </div>
+
+            <div class="total-participants">{{ $results->count() }} participant(s)</div>
 
             <table>
                 <thead>
                     <tr>
-                        <th class="pos">Pos. Cat.</th>
-                        <th class="pos">Pos. Gén.</th>
+                        <th class="pos">Pos.</th>
                         <th class="bib">Dos.</th>
                         <th>Nom</th>
                         <th>Prénom</th>
+                        <th style="width: 22px; text-align: center;">Sexe</th>
+                        <th class="category">Catégorie</th>
                         <th>Club</th>
                         <th class="time">Temps</th>
                         <th class="speed">Vitesse</th>
+                        <th class="pos">Pos. Cat.</th>
                         <th class="status">Statut</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($categoryResults as $result)
+                    @foreach($runnerChunk as $result)
                         <tr>
-                            <td class="pos">{{ $result->category_position ?? '-' }}</td>
                             <td class="pos">{{ $result->position ?? '-' }}</td>
                             <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
                             <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
                             <td>{{ $result->entrant->firstname ?? '' }}</td>
+                            <td style="text-align: center;">{{ $result->entrant->gender ?? '' }}</td>
+                            <td class="category">{{ $result->entrant->category->name ?? 'N/A' }}</td>
                             <td>{{ $result->entrant->club ?? '-' }}</td>
                             <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
                             <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
+                            <td class="pos">{{ $result->category_position ?? '-' }}</td>
                             <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+        @endforeach
 
-            @if(!$loop->last)
-                <div class="page-break"></div>
-            @endif
+    @else
+        {{-- ===== CLASSEMENT PAR CATÉGORIE ===== --}}
+        @php $isFirstPage = true; @endphp
+
+        @foreach($resultsByCategory as $categoryName => $categoryResults)
+            @php
+                $catRunnerChunks = $categoryResults->chunk($runnersPerPage);
+            @endphp
+
+            @foreach($catRunnerChunks as $catChunk)
+                @if(!$isFirstPage)
+                    <div class="page-break"></div>
+                @endif
+                @php $isFirstPage = false; @endphp
+
+                <div class="header">
+                    <h1>{{ $race->event->name ?? 'Événement' }}</h1>
+                    <h2>{{ $race->name }}</h2>
+                    <div class="header-info">
+                        <strong>Date d'édition :</strong> {{ now()->format('d/m/Y à H:i') }}
+                        @if($race->distance)
+                            | <strong>Distance :</strong> {{ $race->distance }} km
+                        @endif
+                    </div>
+                </div>
+
+                <div class="category-title">
+                    {{ $categoryName }} - {{ $categoryResults->count() }} participant(s)
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="pos">Pos. Cat.</th>
+                            <th class="pos">Pos. Gén.</th>
+                            <th class="bib">Dos.</th>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Club</th>
+                            <th class="time">Temps</th>
+                            <th class="speed">Vitesse</th>
+                            <th class="status">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($catChunk as $result)
+                            <tr>
+                                <td class="pos">{{ $result->category_position ?? '-' }}</td>
+                                <td class="pos">{{ $result->position ?? '-' }}</td>
+                                <td class="bib">{{ $result->entrant->bib_number ?? '' }}</td>
+                                <td class="name">{{ strtoupper($result->entrant->lastname ?? '') }}</td>
+                                <td>{{ $result->entrant->firstname ?? '' }}</td>
+                                <td>{{ $result->entrant->club ?? '-' }}</td>
+                                <td class="time">{{ $result->formatted_time ?? 'N/A' }}</td>
+                                <td class="speed">{{ $result->speed ? number_format($result->speed, 2) : '-' }}</td>
+                                <td class="status status-{{ strtolower($result->status) }}">{{ $result->status }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endforeach
         @endforeach
     @endif
 

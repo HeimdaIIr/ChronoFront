@@ -774,8 +774,14 @@ class ResultController extends Controller
             // Group by entrant
             $groupedResults = $allResults->groupBy('entrant_id');
 
-            // Determine number of laps (either configured or max found)
-            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+            // Determine number of laps
+            // For infinite_loop: always use actual max from data (runners do variable laps)
+            // For n_laps: use configured value if set, otherwise actual max
+            if ($race->type === 'infinite_loop') {
+                $maxLaps = $allResults->max('lap_number') ?? 0;
+            } else {
+                $maxLaps = $race->laps > 0 ? $race->laps : ($allResults->max('lap_number') ?? 0);
+            }
 
             // Build dynamic header
             $header = "Position;Dossard;Nom;Prénom;Sexe;Catégorie;Club;";
@@ -1022,7 +1028,13 @@ class ResultController extends Controller
         $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
         $maxLaps = 0;
         if ($isMultiLap) {
-            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+            // For infinite_loop: always use actual max from data (runners do variable laps)
+            // For n_laps: use configured value if set, otherwise actual max
+            if ($race->type === 'infinite_loop') {
+                $maxLaps = $allResults->max('lap_number') ?? 0;
+            } else {
+                $maxLaps = $race->laps > 0 ? $race->laps : ($allResults->max('lap_number') ?? 0);
+            }
         }
 
         // Prepare data for PDF
@@ -1111,7 +1123,13 @@ class ResultController extends Controller
         $isMultiLap = in_array($race->type, ['n_laps', 'infinite_loop']);
         $maxLaps = 0;
         if ($isMultiLap) {
-            $maxLaps = $race->laps > 0 ? $race->laps : $allResults->max('lap_number');
+            // For infinite_loop: always use actual max from data (runners do variable laps)
+            // For n_laps: use configured value if set, otherwise actual max
+            if ($race->type === 'infinite_loop') {
+                $maxLaps = $allResults->max('lap_number') ?? 0;
+            } else {
+                $maxLaps = $race->laps > 0 ? $race->laps : ($allResults->max('lap_number') ?? 0);
+            }
         }
 
         // Prepare data for PDF
