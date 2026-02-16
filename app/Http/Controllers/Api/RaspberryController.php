@@ -186,8 +186,34 @@ class RaspberryController extends Controller
                 'wave_id' => $entrant->wave_id,
             ]);
 
-            // Check anti-rebounce (now with effective location)
+            // Check if detection is from before the race start (stale/cached RFID data)
             $race = $entrant->race;
+            if ($race && $race->start_time) {
+                $raceStart = Carbon::parse($race->start_time);
+                if ($datetime->lt($raceStart)) {
+                    Log::warning("Detection BLOCKED - timestamp before race start (stale cache)", [
+                        'bib' => $bibNumber,
+                        'detection_time' => $datetime->format('Y-m-d H:i:s'),
+                        'race_start' => $raceStart->format('Y-m-d H:i:s'),
+                    ]);
+
+                    $this->storeRfidDetection(
+                        $reader,
+                        $serial,
+                        $datetime,
+                        $entrant,
+                        $entrant->wave_id,
+                        'skipped',
+                        null,
+                        "Detection before race start (stale cache)"
+                    );
+
+                    $skipped++;
+                    continue;
+                }
+            }
+
+            // Check anti-rebounce (now with effective location)
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime, $effectiveLocation);
             if (!$antiRebounceCheck) {
                 Log::warning("Detection BLOCKED by anti-rebounce", [
