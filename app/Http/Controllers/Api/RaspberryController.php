@@ -521,19 +521,14 @@ class RaspberryController extends Controller
      */
     private function checkAntiRebounce(Entrant $entrant, Reader $reader, Carbon $currentTime, string $effectiveLocation): bool
     {
-        // DISABLE anti-rebounce completely for multi-lap races
-        // The max_laps validation handles race completion
-        $race = $entrant->race;
-        if ($race && in_array($race->type, ['n_laps', 'infinite_loop'])) {
-            return true; // Always allow for multi-lap races
-        }
-
-        // For single-passage races, check anti-rebounce PER CHECKPOINT
+        // Check anti-rebounce PER CHECKPOINT for all race types
         // This prevents duplicate detections at the SAME checkpoint, but allows
         // detections at DIFFERENT checkpoints (Inter1, Inter2, ARRIVEE, etc.)
+        // For multi-lap races, this also prevents duplicate RFID reads within
+        // the anti-rebounce window while allowing legitimate successive laps
         $lastResult = Result::where('entrant_id', $entrant->id)
             ->where('reader_id', $reader->id)
-            ->where('reader_location', $effectiveLocation)  // CRITICAL: same checkpoint only!
+            ->where('reader_location', $effectiveLocation)
             ->orderBy('raw_time', 'desc')
             ->first();
 
