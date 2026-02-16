@@ -1512,8 +1512,8 @@ class ResultController extends Controller
                 })->values();
 
             } elseif ($race->type === 'n_laps') {
-                // N LAPS: Only include those who completed all laps, sort by time
-                $requiredLaps = $race->laps ?? 1;
+                // N LAPS: Sort by lap count descending, then by time ascending
+                // Runners with more laps are always ranked above runners with fewer laps
                 $entrantResults = $allResults->groupBy('entrant_id')
                     ->map(function ($entrantResults) use ($race) {
                         if ($race->best_time) {
@@ -1523,12 +1523,14 @@ class ResultController extends Controller
                         }
                     });
 
-                $results = $entrantResults
-                    ->filter(function ($result) use ($requiredLaps) {
-                        return $result->lap_number >= $requiredLaps;
-                    })
-                    ->sortBy('calculated_time')
-                    ->values();
+                $results = $entrantResults->sort(function ($a, $b) {
+                    // Primary: lap count (descending - more laps = better)
+                    if ($a->lap_number != $b->lap_number) {
+                        return $b->lap_number <=> $a->lap_number;
+                    }
+                    // Secondary: time (ascending - faster is better)
+                    return $a->calculated_time <=> $b->calculated_time;
+                })->values();
 
             } else {
                 // 1_PASSAGE: Check if race has intermediate checkpoints
