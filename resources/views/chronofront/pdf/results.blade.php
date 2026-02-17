@@ -5,41 +5,41 @@
     <title>Résultats {{ $race->name }}</title>
     <style>
         @page {
-            margin: 1cm 0.8cm;
+            margin: 0.7cm 0.8cm;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 7pt;
             color: #000;
-            line-height: 1.1;
+            line-height: 1.05;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 3px solid #1e3a8a;
+            margin-bottom: 5px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #1e3a8a;
         }
 
         .header h1 {
-            font-size: 16pt;
+            font-size: 14pt;
             color: #1e3a8a;
-            margin: 0 0 2px 0;
+            margin: 0 0 1px 0;
             font-weight: bold;
         }
 
         .header h2 {
-            font-size: 13pt;
+            font-size: 11pt;
             color: #3B82F6;
-            margin: 0 0 4px 0;
+            margin: 0 0 2px 0;
             font-weight: normal;
         }
 
         .header-info {
-            font-size: 7pt;
+            font-size: 6.5pt;
             color: #666;
-            margin: 2px 0;
+            margin: 1px 0;
         }
 
         .category-title {
@@ -55,13 +55,13 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         th {
             background-color: #1e3a8a;
             color: white !important;
-            padding: 4px 2px;
+            padding: 3px 2px;
             text-align: left;
             font-size: 6.5pt;
             font-weight: bold;
@@ -69,10 +69,10 @@
         }
 
         td {
-            padding: 2px 2px;
+            padding: 1.5px 2px;
             border: 1px solid #ddd;
             font-size: 6.5pt;
-            line-height: 1.05;
+            line-height: 1.0;
         }
 
         tr:nth-child(even) {
@@ -164,9 +164,9 @@
 
         .total-participants {
             text-align: right;
-            font-size: 7pt;
+            font-size: 6.5pt;
             color: #666;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             font-style: italic;
         }
     </style>

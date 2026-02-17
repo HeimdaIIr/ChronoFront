@@ -5,39 +5,39 @@
     <title>Résultats Détaillés {{ $race->name }}</title>
     <style>
         @page {
-            margin: 0.8cm 0.5cm;
+            margin: 0.5cm 0.5cm;
         }
 
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 6pt;
             color: #000;
-            line-height: 1.05;
+            line-height: 1.0;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 8px;
-            padding-bottom: 5px;
+            margin-bottom: 4px;
+            padding-bottom: 3px;
             border-bottom: 2px solid #1e3a8a;
         }
 
         .header h1 {
-            font-size: 13pt;
+            font-size: 11pt;
             color: #1e3a8a;
-            margin: 0 0 2px 0;
+            margin: 0 0 1px 0;
             font-weight: bold;
         }
 
         .header h2 {
-            font-size: 10pt;
+            font-size: 9pt;
             color: #3B82F6;
-            margin: 0 0 3px 0;
+            margin: 0 0 2px 0;
             font-weight: normal;
         }
 
         .header-info {
-            font-size: 6pt;
+            font-size: 5.5pt;
             color: #666;
             margin: 1px 0;
         }
@@ -55,13 +55,13 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         th {
             background-color: #1e3a8a;
             color: white !important;
-            padding: 3px 1px;
+            padding: 2px 1px;
             text-align: left;
             font-size: 5.5pt;
             font-weight: bold;
@@ -69,7 +69,7 @@
         }
 
         td {
-            padding: 1.5px 1px;
+            padding: 1px 1px;
             border: 1px solid #ddd;
             font-size: 5.5pt;
             line-height: 1.0;
@@ -142,9 +142,9 @@
 
         .total-participants {
             text-align: right;
-            font-size: 6pt;
+            font-size: 5.5pt;
             color: #666;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             font-style: italic;
         }
     </style>
