@@ -122,23 +122,10 @@ class RaspberryController extends Controller
                 ->first();
 
             if (!$entrant) {
-    Log::warning("Entrant not found for bib {$bibNumber}");
-
-    // Store detection in database
-    $this->storeRfidDetection(
-        $reader,
-        $serial,
-        $datetime,
-        null,
-        null,
-        'skipped',
-        null,
-        "Entrant not found for bib {$bibNumber}"
-    );
-
-    $skipped++;
-    continue;
-}
+                // Unknown tag - not in inscription file, skip immediately (no DB write)
+                $skipped++;
+                continue;
+            }
 
 
             // ROUTING LOGIC - DETERMINE EFFECTIVE LOCATION FIRST
@@ -150,25 +137,8 @@ class RaspberryController extends Controller
 
             // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
             if ($effectiveLocation === null) {
-                Log::debug("Detection IGNORED - outside time ranges", [
-                    'bib' => $bibNumber,
-                    'detection_time' => $datetime->format('H:i:s'),
-                ]);
-
-                // Store detection in database
-                $this->storeRfidDetection(
-                    $reader,
-                    $serial,
-                    $datetime,
-                    $entrant,
-                    $entrant->wave_id,
-                    'ignored',
-                    null,
-                    "Outside configured time ranges"
-                );
-
                 $skipped++;
-                continue; // Skip this detection
+                continue;
             }
 
             Log::debug("Effective location determined", [
@@ -181,23 +151,6 @@ class RaspberryController extends Controller
             if ($race && $race->start_time) {
                 $raceStart = Carbon::parse($race->start_time);
                 if ($datetime->lt($raceStart)) {
-                    Log::warning("Detection BLOCKED - timestamp before race start (stale cache)", [
-                        'bib' => $bibNumber,
-                        'detection_time' => $datetime->format('Y-m-d H:i:s'),
-                        'race_start' => $raceStart->format('Y-m-d H:i:s'),
-                    ]);
-
-                    $this->storeRfidDetection(
-                        $reader,
-                        $serial,
-                        $datetime,
-                        $entrant,
-                        $entrant->wave_id,
-                        'skipped',
-                        null,
-                        "Detection before race start (stale cache)"
-                    );
-
                     $skipped++;
                     continue;
                 }
@@ -206,23 +159,6 @@ class RaspberryController extends Controller
             // Block non-DEPART detections if race hasn't started yet (no TOP départ)
             // This is a safety net for all modes: no ARRIVEE/intermediate results before race start
             if ($race && !$race->start_time && $effectiveLocation !== 'DEPART') {
-                Log::warning("Detection BLOCKED - race not started yet (no TOP départ)", [
-                    'bib' => $bibNumber,
-                    'location' => $effectiveLocation,
-                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
-                ]);
-
-                $this->storeRfidDetection(
-                    $reader,
-                    $serial,
-                    $datetime,
-                    $entrant,
-                    $entrant->wave_id,
-                    'skipped',
-                    null,
-                    "Race not started yet (no TOP départ)"
-                );
-
                 $skipped++;
                 continue;
             }
@@ -230,26 +166,6 @@ class RaspberryController extends Controller
             // Check anti-rebounce (now with effective location)
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime, $effectiveLocation);
             if (!$antiRebounceCheck) {
-                Log::warning("Detection BLOCKED by anti-rebounce", [
-                    'bib' => $bibNumber,
-                    'entrant_id' => $entrant->id,
-                    'reader' => $reader->serial,
-                    'location' => $effectiveLocation,
-                    'current_detection_time' => $datetime->format('Y-m-d H:i:s'),
-                ]);
-
-                // Store detection in database
-                $this->storeRfidDetection(
-                    $reader,
-                    $serial,
-                    $datetime,
-                    $entrant,
-                    $entrant->wave_id,
-                    'skipped',
-                    null,
-                    "Blocked by anti-rebounce at {$effectiveLocation}"
-                );
-
                 $skipped++;
                 continue;
             }
@@ -338,25 +254,8 @@ class RaspberryController extends Controller
                     ->first();
 
                 if ($existingResult) {
-                    Log::debug("Checkpoint already recorded - skipping duplicate", [
-                        'bib' => $bibNumber,
-                        'location' => $effectiveLocation,
-                    ]);
-
-                    // Store detection in database
-                    $this->storeRfidDetection(
-                        $reader,
-                        $serial,
-                        $datetime,
-                        $entrant,
-                        $entrant->wave_id,
-                        'skipped',
-                        null,
-                        "Checkpoint {$effectiveLocation} already recorded (no duplicates for 1_passage races)"
-                    );
-
                     $skipped++;
-                    continue; // Skip this detection
+                    continue;
                 }
 
                 // FALLBACK: For Mode 2 (single_reader_waves), if entrant has no start_time,
