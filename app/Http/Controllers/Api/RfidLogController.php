@@ -16,7 +16,7 @@ use Carbon\Carbon;
 class RfidLogController extends Controller
 {
     private const CACHE_KEY = 'rfid_raw_logs';
-    private const MAX_LOGS = 1000; // Keep last 1000 logs in memory
+    private const MAX_LOGS = 200; // Keep last 200 logs (reduced for SD card performance)
 
     /**
      * Log an incoming RFID request (called by RaspberryController)
@@ -85,6 +85,49 @@ class RfidLogController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+        }
+    }
+
+    /**
+     * Log an RFID request after HTTP response is sent (non-blocking)
+     * Uses pre-extracted request data instead of Request object
+     */
+    public static function logRequestDeferred(array $requestData, int $statusCode, array $responseData = null): void
+    {
+        try {
+            $logs = Cache::get(self::CACHE_KEY, []);
+
+            $lastId = !empty($logs) ? max(array_column($logs, 'id')) : 0;
+            $newId = $lastId + 1;
+
+            $readerSerial = $requestData['serial'] ?? null;
+            if (!$readerSerial && $responseData && isset($responseData['reader'])) {
+                $readerSerial = $responseData['reader'];
+            }
+
+            $logEntry = [
+                'id' => $newId,
+                'timestamp' => Carbon::now()->toIso8601String(),
+                'created_at' => Carbon::now()->format('Y-m-d H:i:s'),
+                'method' => $requestData['method'] ?? 'POST',
+                'url' => $requestData['url'] ?? '',
+                'ip' => $requestData['ip'] ?? '',
+                'status_code' => $statusCode,
+                'data' => $requestData['json_data'] ?? [],
+                'serial' => $readerSerial,
+                'response_data' => $responseData,
+                'user_agent' => $requestData['user_agent'] ?? '',
+            ];
+
+            $logs[] = $logEntry;
+
+            if (count($logs) > self::MAX_LOGS) {
+                $logs = array_slice($logs, -self::MAX_LOGS);
+            }
+
+            Cache::put(self::CACHE_KEY, $logs, now()->addHours(24));
+        } catch (\Exception $e) {
+            Log::error('Failed to log RFID request (deferred)', ['error' => $e->getMessage()]);
         }
     }
 

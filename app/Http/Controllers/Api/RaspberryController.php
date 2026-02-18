@@ -88,6 +88,12 @@ class RaspberryController extends Controller
         $skipped = 0;
         $racesToRecalculate = [];
 
+        ob_start();
+
+        // Single DB transaction for the entire batch (1 commit instead of N)
+        \DB::beginTransaction();
+        try {
+
         foreach ($detections as $detection) {
             $serial = trim($detection['serial'] ?? '', '[]');
             $timestamp = $detection['timestamp'] ?? null;
@@ -334,21 +340,20 @@ class RaspberryController extends Controller
             echo $logEntry . "\n";
         }
 
-        // Log to file (optional, for debugging)
-        $this->logToFile($readerSerial, $reader->location, ob_get_clean());
-
-        // Recalculate positions ONCE for all affected races (not per detection)
+        // Recalculate positions ONCE for all affected races (inside transaction)
         foreach ($racesToRecalculate as $raceId => $raceObj) {
             $this->recalculateRacePositions($raceId);
         }
 
-        Log::info('RFID detections processed', [
-            'reader' => $readerSerial,
-            'location' => $reader->location,
-            'processed' => $processed,
-            'skipped' => $skipped,
-            'total_detections' => count($detections),
-        ]);
+        \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            Log::error('RFID batch processing failed', ['error' => $e->getMessage()]);
+            ob_end_clean();
+            return response()->json(['error' => 'Processing failed'], 500);
+        }
+
+        $bufferedOutput = ob_get_clean();
 
         $responseData = [
             'success' => true,
@@ -359,10 +364,40 @@ class RaspberryController extends Controller
             'results' => $results
         ];
 
-        // Log to RFID raw logs for /rfidlive-ultra display (only if there were detections)
-        if (count($detections) > 0) {
-            RfidLogController::logRequest($request, 200, $responseData);
-        }
+        // Defer non-critical work AFTER the HTTP response is sent
+        $logReaderSerial = $readerSerial;
+        $logReaderLocation = $reader->location;
+        $logDetectionCount = count($detections);
+        $requestData = [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'ip' => $request->ip(),
+            'serial' => $request->header('Serial'),
+            'json_data' => $request->json() ? $request->json()->all() : [],
+            'user_agent' => $request->userAgent(),
+        ];
+
+        app()->terminating(function () use (
+            $logReaderSerial, $logReaderLocation, $processed, $skipped,
+            $logDetectionCount, $bufferedOutput, $requestData, $responseData
+        ) {
+            // Log to file
+            $this->logToFile($logReaderSerial, $logReaderLocation, $bufferedOutput);
+
+            // Log summary
+            Log::info('RFID detections processed', [
+                'reader' => $logReaderSerial,
+                'location' => $logReaderLocation,
+                'processed' => $processed,
+                'skipped' => $skipped,
+                'total_detections' => $logDetectionCount,
+            ]);
+
+            // Log to RFID raw logs for /rfidlive-ultra display
+            if ($logDetectionCount > 0) {
+                RfidLogController::logRequestDeferred($requestData, 200, $responseData);
+            }
+        });
 
         return response()->json($responseData);
     }

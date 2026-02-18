@@ -127,7 +127,7 @@ class ResultController extends Controller
     public function allDetections(Request $request): JsonResponse
     {
         $query = Result::with(['entrant.category', 'wave', 'race', 'reader'])
-            ->orderBy('id', 'desc');
+            ->orderBy('raw_time', 'desc');
 
         // If since_id provided, only get newer detections (for live updates)
         if ($request->has('since_id') && $request->since_id) {
@@ -1891,7 +1891,7 @@ class ResultController extends Controller
         try {
             $results = Result::with(['entrant.category', 'race', 'reader'])
                 ->where('status', 'V') // Only validated results
-                ->orderBy('created_at', 'desc')
+                ->orderBy('raw_time', 'desc')
                 ->limit(50) // Last 50 results
                 ->get();
 

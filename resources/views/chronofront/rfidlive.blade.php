@@ -193,7 +193,7 @@
                         <template x-for="(detection, index) in filteredDetections" :key="detection.id">
                             <tr :class="{ 'new-detection': detection.is_new }">
                                 <td class="text-muted" x-text="index + 1"></td>
-                                <td class="detection-time" x-text="formatTimestamp(detection.created_at)"></td>
+                                <td class="detection-time" x-text="formatTimestamp(detection.raw_time)"></td>
                                 <td class="rfid-tag" x-text="detection.rfid_tag || '-'"></td>
                                 <td x-text="detection.entrant?.bib_number || '-'"></td>
                                 <td x-text="detection.entrant ? (detection.entrant.firstname + ' ' + detection.entrant.lastname) : '-'"></td>
