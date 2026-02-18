@@ -213,6 +213,30 @@ class RaspberryController extends Controller
                 }
             }
 
+            // Block non-DEPART detections if race hasn't started yet (no TOP départ)
+            // This is a safety net for all modes: no ARRIVEE/intermediate results before race start
+            if ($race && !$race->start_time && $effectiveLocation !== 'DEPART') {
+                Log::warning("Detection BLOCKED - race not started yet (no TOP départ)", [
+                    'bib' => $bibNumber,
+                    'location' => $effectiveLocation,
+                    'detection_time' => $datetime->format('Y-m-d H:i:s'),
+                ]);
+
+                $this->storeRfidDetection(
+                    $reader,
+                    $serial,
+                    $datetime,
+                    $entrant,
+                    $entrant->wave_id,
+                    'skipped',
+                    null,
+                    "Race not started yet (no TOP départ)"
+                );
+
+                $skipped++;
+                continue;
+            }
+
             // Check anti-rebounce (now with effective location)
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime, $effectiveLocation);
             if (!$antiRebounceCheck) {
@@ -753,6 +777,18 @@ class RaspberryController extends Controller
                 // Chaque lecteur retourne toujours sa location fixe
                 // Pour le lecteur DEPART: on n'enregistre PAS de start_time individuel
                 // On utilisera real_start_time de la vague pour tous les coureurs
+                // Block non-DEPART detections if wave hasn't had TOP départ yet
+                if ($reader->location !== 'DEPART' && $entrant && $entrant->wave_id) {
+                    $wave = $entrant->wave;
+                    if ($wave && !$wave->real_start_time) {
+                        Log::info("Detection IGNORED - wave not started yet (mode 4)", [
+                            'wave_id' => $wave->id,
+                            'wave_name' => $wave->name,
+                            'reader_location' => $reader->location,
+                        ]);
+                        return null;
+                    }
+                }
                 return $reader->location;
 
             default:
