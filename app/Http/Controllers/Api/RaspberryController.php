@@ -74,12 +74,16 @@ class RaspberryController extends Controller
             ->map(fn($d) => $this->serialToBib(trim($d['serial'] ?? '', '[]')))
             ->filter(fn($bib) => $bib && $bib > 0)
             ->unique()
-            ->values();
+            ->values()
+            ->map(fn($bib) => (string) $bib); // Cast to string to match DB column type
 
         $entrantsQuery = Entrant::whereIn('bib_number', $allBibs->toArray())
             ->with(['race', 'wave']);
         if ($reader->race_id) {
             $entrantsQuery->where('race_id', $reader->race_id);
+        } elseif ($reader->event_id) {
+            // Scope to this reader's event to avoid loading entrants from other events
+            $entrantsQuery->where('event_id', $reader->event_id);
         }
         $entrantsMap = $entrantsQuery->get()->keyBy('bib_number');
 
@@ -111,7 +115,7 @@ class RaspberryController extends Controller
             $milliseconds = $this->extractMilliseconds($timestamp);
 
             // Find entrant from pre-loaded map (0 queries)
-            $entrant = $entrantsMap[$bibNumber] ?? null;
+            $entrant = $entrantsMap[(string) $bibNumber] ?? null;
 
             if (!$entrant) {
                 $skipped++;
@@ -292,9 +296,9 @@ class RaspberryController extends Controller
         }
 
         \DB::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \DB::rollBack();
-            Log::error('RFID batch processing failed', ['error' => $e->getMessage()]);
+            Log::error('RFID batch processing failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             ob_end_clean();
             return response()->json(['error' => 'Processing failed'], 500);
         }
@@ -806,7 +810,7 @@ class RaspberryController extends Controller
                 }
 
                 // Calculate category positions
-                $resultsByCategory = $results->groupBy(fn($r) => $r->entrant->category_id);
+                $resultsByCategory = $results->groupBy(fn($r) => $r->entrant ? $r->entrant->category_id : null);
                 foreach ($resultsByCategory as $categoryId => $categoryResults) {
                     $catPos = 1;
                     foreach ($categoryResults as $result) {
@@ -819,9 +823,9 @@ class RaspberryController extends Controller
                 $posCases = implode(' ', $positionCases);
                 $catCases = implode(' ', $catPositionCases);
 
-                \DB::statement("UPDATE results SET position = CASE id {$posCases} END, category_position = CASE id {$catCases} END WHERE id IN ({$idList})");
+                \DB::connection('tenant')->statement("UPDATE results SET position = CASE id {$posCases} END, category_position = CASE id {$catCases} END WHERE id IN ({$idList})");
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Failed to recalculate positions", [
                 'race_id' => $raceId,
                 'error' => $e->getMessage()

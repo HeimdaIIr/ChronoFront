@@ -39,8 +39,9 @@ class ResultController extends Controller
             });
         }
 
-        $count = $query->count();
+        // Clone BEFORE any aggregate to avoid query state mutation
         $maxId = (clone $query)->max('id') ?? 0;
+        $count = (clone $query)->count();
 
         return response()->json([
             'count' => $count,
