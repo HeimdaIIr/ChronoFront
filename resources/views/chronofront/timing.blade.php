@@ -1973,6 +1973,9 @@ function chronoApp() {
         clockInterval: null,
         autoRefreshInterval: null,
         detectionFlash: false,
+        pollMaxId: 0,
+        pollCount: 0,
+        pollBusy: false,
 
         init() {
             this.startClock();
@@ -2239,6 +2242,8 @@ function chronoApp() {
             if (!this.currentEventId) {
                 this.results = [];
                 this.displayedResults = [];
+                this.pollMaxId = 0;
+                this.pollCount = 0;
                 return;
             }
 
@@ -2253,6 +2258,10 @@ function chronoApp() {
                 });
                 this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
 
+                // Update poll tracking state
+                this.pollCount = this.results.length;
+                this.pollMaxId = this.results.reduce((max, r) => Math.max(max, r.id), 0);
+
                 this.filterResults();
             } catch (error) {
                 console.error('Erreur', error);
@@ -2262,62 +2271,69 @@ function chronoApp() {
         },
 
         async checkForNewResults() {
-            // Don't check for results if no active event
-            if (!this.currentEventId) {
+            // Don't check if no active event or already polling
+            if (!this.currentEventId || this.pollBusy) {
                 return;
             }
 
-            // Silent check for new results without loading spinner
+            this.pollBusy = true;
             try {
-                // Add timestamp to prevent caching
-                const response = await axios.get('/results', {
-                    params: {
-                        timing_mode: true,
-                        _t: Date.now()
-                    }
+                // Step 1: Lightweight check - just get count + max_id
+                const check = await axios.get('/results/poll-check', {
+                    params: { timing_mode: true, _t: Date.now() }
                 });
-                const newResults = response.data;
+                const serverCount = check.data.count;
+                const serverMaxId = check.data.max_id;
 
-                // Find truly new results (not in current array)
-                const existingIds = new Set(this.results.map(r => r.id));
-                const addedResults = newResults.filter(r => !existingIds.has(r.id));
-
-                if (addedResults.length > 0) {
-                    // Add new results to beginning of array (most recent first)
-                    this.results = [...addedResults, ...this.results];
-
-                    // Sort all results by raw_time
-                    this.results.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
-
-                    // Re-filter to update display
-                    this.filterResults();
-
-                    // Trigger green flash animation
-                    this.triggerDetectionFlash();
+                // Nothing changed at all - skip
+                if (serverCount === this.pollCount && serverMaxId === this.pollMaxId) {
+                    return;
                 }
 
-                // Update existing results that may have changed (e.g., positions recalculated)
-                const updatedResults = newResults.filter(nr => {
-                    const existing = this.results.find(r => r.id === nr.id);
-                    return existing && (
-                        existing.position !== nr.position ||
-                        existing.category_position !== nr.category_position ||
-                        existing.calculated_time !== nr.calculated_time
-                    );
-                });
+                // Deletions detected (count decreased) - full reload needed
+                if (serverCount < this.pollCount) {
+                    this.pollCount = serverCount;
+                    this.pollMaxId = serverMaxId;
+                    await this.loadAllResults();
+                    return;
+                }
 
-                if (updatedResults.length > 0) {
-                    updatedResults.forEach(nr => {
-                        const index = this.results.findIndex(r => r.id === nr.id);
-                        if (index !== -1) {
-                            this.results[index] = nr;
+                // New results added - fetch only the new ones
+                if (serverMaxId > this.pollMaxId) {
+                    const response = await axios.get('/results', {
+                        params: {
+                            timing_mode: true,
+                            since_id: this.pollMaxId,
+                            _t: Date.now()
                         }
                     });
-                    this.filterResults();
+                    const addedResults = response.data;
+
+                    if (addedResults.length > 0) {
+                        // Merge new results
+                        this.results = [...addedResults, ...this.results];
+                        this.results.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+                        this.filterResults();
+                        this.triggerDetectionFlash();
+                    }
+
+                    this.pollMaxId = serverMaxId;
+                    this.pollCount = serverCount;
+                    return;
+                }
+
+                // Count increased but max_id unchanged (shouldn't happen, but handle gracefully)
+                // Or positions may have been recalculated - do a full reload
+                if (serverCount !== this.pollCount) {
+                    this.pollCount = serverCount;
+                    this.pollMaxId = serverMaxId;
+                    await this.loadAllResults();
                 }
 
             } catch (error) {
                 console.error('Erreur vérification nouveaux résultats:', error);
+            } finally {
+                this.pollBusy = false;
             }
         },
 
@@ -3105,6 +3121,8 @@ function chronoApp() {
                     this.detections = [];
                     this.results = [];
                     this.displayedResults = [];
+                    this.pollMaxId = 0;
+                    this.pollCount = 0;
                     this.selectedRaceId = null;
                     this.selectedCheckpointId = null;
                     this.liveResults = [];
@@ -3865,15 +3883,22 @@ function chronoApp() {
             }
 
             try {
+                // Immediately remove from local state for instant UI feedback
+                this.results = this.results.filter(r => r.id !== result.id);
+                this.displayedResults = this.displayedResults.filter(r => r.id !== result.id);
+                this.selectedResult = null;
+                this.pollCount = Math.max(0, this.pollCount - 1);
+
                 await axios.delete(`/results/${result.id}`);
                 this.showToast('Détection supprimée', 'success');
 
-                // Close panel and reload
-                this.selectedResult = null;
+                // Reload to get updated positions
                 await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur suppression:', error);
                 this.showToast('Erreur lors de la suppression', 'error');
+                // Reload to restore correct state on error
+                await this.loadAllResults();
             }
         },
 
@@ -3884,12 +3909,16 @@ function chronoApp() {
             }
 
             try {
+                // Immediately clear local state for instant UI feedback
+                this.results = [];
+                this.displayedResults = [];
+                this.selectedResult = null;
+                this.pollMaxId = 0;
+                this.pollCount = 0;
+
                 const response = await axios.post('/results/clear-arrivals');
 
                 this.showToast(response.data.message || 'Table results vidée', 'success');
-
-                // Reload results
-                await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur lors de la suppression des arrivées:', error);
                 console.error('Error response:', error.response?.data);

@@ -24,8 +24,34 @@ class ResultController extends Controller
     }
 
     /**
+     * Lightweight poll check - returns only count and max_id
+     * Used by timing-blade to decide if a full fetch is needed
+     */
+    public function pollCheck(Request $request): JsonResponse
+    {
+        $query = Result::query();
+
+        if ($request->boolean('timing_mode', false)) {
+            $query->whereHas('race.event', function($q) {
+                $q->where('is_active', true)
+                  ->where('date_start', '<=', now())
+                  ->where('date_end', '>=', now());
+            });
+        }
+
+        $count = $query->count();
+        $maxId = (clone $query)->max('id') ?? 0;
+
+        return response()->json([
+            'count' => $count,
+            'max_id' => $maxId,
+        ]);
+    }
+
+    /**
      * Display all results across all races
      * Supports filtering via query parameters
+     * Supports since_id for incremental polling (only returns results with id > since_id)
      */
     public function index(Request $request): JsonResponse
     {
@@ -39,6 +65,14 @@ class ResultController extends Controller
                   ->where('date_start', '<=', now())
                   ->where('date_end', '>=', now());
             });
+        }
+
+        // Incremental polling: only return results newer than since_id
+        $sinceId = $request->input('since_id');
+        if ($sinceId) {
+            $query->where('id', '>', $sinceId);
+            $query->orderBy('raw_time', 'desc');
+            return response()->json($query->get());
         }
 
         // Apply filters if provided
