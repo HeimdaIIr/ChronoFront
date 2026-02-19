@@ -248,16 +248,43 @@ php artisan route:cache
 php artisan view:cache
 log_success "Laravel optimized"
 
-# Step 15: Create systemd service for auto-start
-log_info "Step 15: Creating systemd service..."
+# Step 15: Create startup script and systemd service
+log_info "Step 15: Creating startup script and systemd service..."
+
+# Create startup script that fixes permissions on every boot
+cat > "${INSTALL_DIR}/fix-permissions.sh" << 'SCRIPT'
+#!/bin/bash
+# ChronoFront - Fix database and storage permissions
+# Runs automatically on boot via systemd
+
+INSTALL_DIR="/var/www/chronofront"
+DB_PATH="${INSTALL_DIR}/database/database.sqlite"
+
+# Fix database permissions
+if [ -f "$DB_PATH" ]; then
+    chown www-data:www-data "$DB_PATH"
+    chmod 664 "$DB_PATH"
+fi
+chown www-data:www-data "${INSTALL_DIR}/database"
+chmod 775 "${INSTALL_DIR}/database"
+
+# Fix storage and cache permissions
+chown -R www-data:www-data "${INSTALL_DIR}/storage"
+chmod -R 775 "${INSTALL_DIR}/storage"
+chown -R www-data:www-data "${INSTALL_DIR}/bootstrap/cache"
+chmod -R 775 "${INSTALL_DIR}/bootstrap/cache"
+SCRIPT
+
+chmod +x "${INSTALL_DIR}/fix-permissions.sh"
+
 cat > /etc/systemd/system/chronofront.service << EOF
 [Unit]
-Description=ChronoFront Laravel Application
-After=network.target nginx.service php7.3-fpm.service
+Description=ChronoFront - Fix permissions on boot
+After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/true
+ExecStart=${INSTALL_DIR}/fix-permissions.sh
 RemainAfterExit=yes
 
 [Install]
@@ -266,7 +293,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable chronofront.service
-log_success "Systemd service created"
+log_success "Startup script and systemd service created"
 
 # Step 16: Final checks
 log_info "Step 16: Running final checks..."
