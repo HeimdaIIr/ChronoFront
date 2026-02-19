@@ -258,15 +258,15 @@ cat > "${INSTALL_DIR}/fix-permissions.sh" << 'SCRIPT'
 # Runs automatically on boot via systemd
 
 INSTALL_DIR="/var/www/chronofront"
-DB_PATH="${INSTALL_DIR}/database/database.sqlite"
+DB_DIR="${INSTALL_DIR}/database"
 
-# Fix database permissions
-if [ -f "$DB_PATH" ]; then
-    chown www-data:www-data "$DB_PATH"
-    chmod 664 "$DB_PATH"
-fi
-chown www-data:www-data "${INSTALL_DIR}/database"
-chmod 775 "${INSTALL_DIR}/database"
+# Fix database directory permissions
+chown www-data:www-data "$DB_DIR"
+chmod 775 "$DB_DIR"
+
+# Fix ALL sqlite files (account_*.sqlite, ats_*.sqlite, database.sqlite, system.sqlite, etc.)
+find "$DB_DIR" -maxdepth 1 -name "*.sqlite*" -exec chown www-data:www-data {} \;
+find "$DB_DIR" -maxdepth 1 -name "*.sqlite*" -exec chmod 664 {} \;
 
 # Fix storage and cache permissions
 chown -R www-data:www-data "${INSTALL_DIR}/storage"
