@@ -71,11 +71,11 @@ class RaspberryController extends Controller
 
         // PRE-LOAD: Batch fetch all entrants for this batch (1 query instead of N)
         $allBibs = collect($detections)
-            ->map(fn($d) => $this->serialToBib(trim($d['serial'] ?? '', '[]')))
-            ->filter(fn($bib) => $bib && $bib > 0)
+            ->map(function($d) { return $this->serialToBib(trim($d['serial'] ?? '', '[]')); })
+            ->filter(function($bib) { return $bib && $bib > 0; })
             ->unique()
             ->values()
-            ->map(fn($bib) => (string) $bib); // Cast to string to match DB column type
+            ->map(function($bib) { return (string) $bib; }); // Cast to string to match DB column type
 
         $entrantsQuery = Entrant::whereIn('bib_number', $allBibs->toArray())
             ->with(['race', 'wave']);
@@ -810,7 +810,7 @@ class RaspberryController extends Controller
                 }
 
                 // Calculate category positions
-                $resultsByCategory = $results->groupBy(fn($r) => $r->entrant ? $r->entrant->category_id : null);
+                $resultsByCategory = $results->groupBy(function($r) { return $r->entrant ? $r->entrant->category_id : null; });
                 foreach ($resultsByCategory as $categoryId => $categoryResults) {
                     $catPos = 1;
                     foreach ($categoryResults as $result) {
