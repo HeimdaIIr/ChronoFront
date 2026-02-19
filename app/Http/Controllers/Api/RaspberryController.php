@@ -29,47 +29,25 @@ class RaspberryController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // Log all incoming requests for debugging
-        Log::debug('RFID Detection Request', [
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'serial_header' => $request->header('Serial'),
-        ]);
-
         // Get reader serial from header
         $readerSerial = $request->header('Serial');
 
         if (!$readerSerial) {
-            Log::warning('RFID request missing Serial header');
-
-            // Log to RFID raw logs for debugging
             RfidLogController::logRequest($request, 400);
-
-            return response()->json([
-                'error' => 'Missing Serial header'
-            ], 400);
+            return response()->json(['error' => 'Missing Serial header'], 400);
         }
 
         // Get reader configuration
         $reader = Reader::getActiveConfig($readerSerial);
 
         if (!$reader) {
-            Log::error('Reader not found or not active', [
-                'serial' => $readerSerial,
-            ]);
-
             $errorResponse = [
                 'error' => 'Reader not configured or not active',
                 'serial' => $readerSerial
             ];
-
-            // Log to RFID raw logs for debugging
             RfidLogController::logRequest($request, 404, $errorResponse);
-
             return response()->json($errorResponse, 404);
         }
-
-        Log::debug('Reader found and active', ['serial' => $readerSerial]);
 
         // Mark reader as tested
         $reader->markAsTested();
@@ -87,8 +65,23 @@ class RaspberryController extends Controller
         $processed = 0;
         $skipped = 0;
         $racesToRecalculate = [];
+        $rfidDetectionsToStore = []; // Collect audit data, bulk insert after commit
 
         ob_start();
+
+        // PRE-LOAD: Batch fetch all entrants for this batch (1 query instead of N)
+        $allBibs = collect($detections)
+            ->map(fn($d) => $this->serialToBib(trim($d['serial'] ?? '', '[]')))
+            ->filter(fn($bib) => $bib && $bib > 0)
+            ->unique()
+            ->values();
+
+        $entrantsQuery = Entrant::whereIn('bib_number', $allBibs->toArray())
+            ->with(['race', 'wave']);
+        if ($reader->race_id) {
+            $entrantsQuery->where('race_id', $reader->race_id);
+        }
+        $entrantsMap = $entrantsQuery->get()->keyBy('bib_number');
 
         // Single DB transaction for the entire batch (1 commit instead of N)
         \DB::beginTransaction();
@@ -117,40 +110,21 @@ class RaspberryController extends Controller
             // Get milliseconds
             $milliseconds = $this->extractMilliseconds($timestamp);
 
-            // Find entrant
-            $entrant = Entrant::where('bib_number', $bibNumber)
-                ->where(function($q) use ($reader) {
-                    // Match by race_id if reader has one, otherwise just by event
-                    if ($reader->race_id) {
-                        $q->where('race_id', $reader->race_id);
-                    }
-                })
-                ->first();
+            // Find entrant from pre-loaded map (0 queries)
+            $entrant = $entrantsMap[$bibNumber] ?? null;
 
             if (!$entrant) {
-                // Unknown tag - not in inscription file, skip immediately (no DB write)
                 $skipped++;
                 continue;
             }
 
-
-            // ROUTING LOGIC - DETERMINE EFFECTIVE LOCATION FIRST
-            // ===================================================
-            // We need to know the effective location BEFORE checking anti-rebounce
-            // so we can check anti-rebounce per checkpoint, not per reader
-
+            // Determine effective location
             $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime, $entrant);
 
-            // If effectiveLocation is null, it means detection is outside all configured time ranges - IGNORE it
             if ($effectiveLocation === null) {
                 $skipped++;
                 continue;
             }
-
-            Log::debug("Effective location determined", [
-                'bib' => $bibNumber,
-                'effective_location' => $effectiveLocation,
-            ]);
 
             // Check if detection is from before the race start (stale/cached RFID data)
             $race = $entrant->race;
@@ -163,7 +137,6 @@ class RaspberryController extends Controller
             }
 
             // Block non-DEPART detections if race hasn't started yet (no TOP départ)
-            // This is a safety net for all modes: no ARRIVEE/intermediate results before race start
             if ($race && !$race->start_time && $effectiveLocation !== 'DEPART') {
                 $skipped++;
                 continue;
@@ -176,19 +149,13 @@ class RaspberryController extends Controller
                 continue;
             }
 
-
             // Check race duration for infinite_loop type
             if ($race && $race->type === 'infinite_loop' && $race->duration && $race->start_time) {
                 $raceStartTime = Carbon::parse($race->start_time);
-                $raceDurationSeconds = $race->duration * 60; // Convert minutes to seconds
+                $raceDurationSeconds = $race->duration * 60;
                 $elapsedSeconds = $datetime->diffInSeconds($raceStartTime);
 
                 if ($elapsedSeconds > $raceDurationSeconds) {
-                    Log::warning("Passage BLOCKED - race duration exceeded", [
-                        'bib' => $bibNumber,
-                        'elapsed_seconds' => $elapsedSeconds,
-                        'race_duration_seconds' => $raceDurationSeconds,
-                    ]);
                     $skipped++;
                     continue;
                 }
@@ -200,12 +167,6 @@ class RaspberryController extends Controller
             // Check if max laps exceeded for n_laps races
             if ($race && $race->type === 'n_laps' && $race->laps > 0) {
                 if ($passageNumber > $race->laps) {
-                    Log::warning("Passage BLOCKED - max laps exceeded", [
-                        'bib' => $bibNumber,
-                        'lap_number' => $passageNumber,
-                        'max_laps' => $race->laps,
-                        'race_name' => $race->name,
-                    ]);
                     $skipped++;
                     continue;
                 }
@@ -213,14 +174,8 @@ class RaspberryController extends Controller
 
             if ($effectiveLocation === 'DEPART') {
                 // DEPART: Update entrant's individual start time
-                // Keep last detection as start time (useful for time trials)
                 $entrant->start_time = $datetime->format('H:i:s');
                 $entrant->save();
-
-                Log::debug("Start time updated", [
-                    'bib' => $bibNumber,
-                    'start_time' => $entrant->start_time,
-                ]);
 
                 $results[] = [
                     'bib' => $bibNumber,
@@ -231,29 +186,26 @@ class RaspberryController extends Controller
 
                 $processed++;
 
-                // Store detection in database
-                $this->storeRfidDetection(
-                    $reader, 
-                    $serial, 
-                    $datetime, 
-                    $entrant, 
-                    $entrant->wave_id,
-                    'start_time_updated',
-                    null,
-                    null
-                );
+                // Collect audit data (will be bulk inserted after commit)
+                $rfidDetectionsToStore[] = [
+                    'reader_id' => $reader->id,
+                    'serial' => $serial,
+                    'raw_time' => $datetime->format('Y-m-d H:i:s'),
+                    'entrant_id' => $entrant->id,
+                    'wave_id' => $entrant->wave_id,
+                    'processed' => true,
+                    'created_result_id' => null,
+                    'action_taken' => 'start_time_updated',
+                    'error_message' => null,
+                    'created_at' => now()->format('Y-m-d H:i:s'),
+                    'updated_at' => now()->format('Y-m-d H:i:s'),
+                ];
 
-                // Continue to next detection (no Result created for DEPART)
                 continue;
             }
 
-
             // For ARRIVEE and Inter checkpoints: Create Result
-
-            // IMPORTANT: Pour les points de passage (ARRIVEE, Inter1, Inter2, etc.), ne garder que la PREMIÈRE détection
-            // Exception: Pour les courses multi-tours (n_laps, infinite_loop), on permet plusieurs passages
             if ($race && !in_array($race->type, ['n_laps', 'infinite_loop'])) {
-                // Pour les courses à 1 passage, vérifier si ce coureur a déjà été détecté à cet emplacement
                 $existingResult = Result::where('entrant_id', $entrant->id)
                     ->where('reader_location', $effectiveLocation)
                     ->where('race_id', $entrant->race_id)
@@ -264,26 +216,19 @@ class RaspberryController extends Controller
                     continue;
                 }
 
-                // FALLBACK: For Mode 2 (single_reader_waves), if entrant has no start_time,
-                // use wave's real_start_time as fallback (runner never detected during DEPART window)
+                // FALLBACK: For Mode 2, if entrant has no start_time, use wave's real_start_time
                 if ($reader->mode === 'single_reader_waves' && !$entrant->start_time) {
                     $wave = $entrant->wave;
                     if ($wave && $wave->real_start_time) {
-                        // Extract time portion from wave's real_start_time
                         $realStartTime = Carbon::parse($wave->real_start_time);
                         $entrant->start_time = $realStartTime->format('H:i:s');
                         $entrant->save();
-
-                        Log::debug("Fallback start_time assigned from wave TOP départ", [
-                            'bib' => $bibNumber,
-                            'assigned_start_time' => $entrant->start_time,
-                        ]);
                     }
                 }
             }
 
-                $result = Result::create([
-			    'race_id' => $entrant->race_id,
+            $result = Result::create([
+                'race_id' => $entrant->race_id,
                 'entrant_id' => $entrant->id,
                 'wave_id' => $entrant->wave_id,
                 'reader_id' => $reader->id,
@@ -296,32 +241,33 @@ class RaspberryController extends Controller
                 'status' => 'V',
             ]);
 
-            // Calculate time and speed
+            // Set relations from pre-loaded data (avoid re-querying DB)
+            $result->setRelation('race', $entrant->race);
+            $result->setRelation('wave', $entrant->wave);
+            $result->setRelation('entrant', $entrant);
+
+            // Calculate time and speed (uses pre-set relations, no extra queries)
             $this->calculateResult($result);
 
-            // Store detection in database
-            $this->storeRfidDetection(
-                $reader, 
-                $serial, 
-                $datetime, 
-                $entrant, 
-                $entrant->wave_id,
-                'result_created',
-                $result->id,
-                null
-            );
+            // Collect audit data (will be bulk inserted after commit)
+            $rfidDetectionsToStore[] = [
+                'reader_id' => $reader->id,
+                'serial' => $serial,
+                'raw_time' => $datetime->format('Y-m-d H:i:s'),
+                'entrant_id' => $entrant->id,
+                'wave_id' => $entrant->wave_id,
+                'processed' => true,
+                'created_result_id' => $result->id,
+                'action_taken' => 'result_created',
+                'error_message' => null,
+                'created_at' => now()->format('Y-m-d H:i:s'),
+                'updated_at' => now()->format('Y-m-d H:i:s'),
+            ];
 
             // Track races that need position recalculation (done once after batch)
             if ($race) {
                 $racesToRecalculate[$race->id] = $race;
             }
-
-
-            Log::debug("Detection processed", [
-                'bib' => $bibNumber,
-                'lap' => $passageNumber,
-                'time' => $datetime->format('H:i:s'),
-            ]);
 
             // Log for compatibility with old system
             $logEntry = "[{$serial}]:a" . date('YmdHis', intval($timestamp)) . $milliseconds;
@@ -364,7 +310,7 @@ class RaspberryController extends Controller
             'results' => $results
         ];
 
-        // Defer non-critical work AFTER the HTTP response is sent
+        // Defer ALL non-critical work AFTER the HTTP response is sent
         $logReaderSerial = $readerSerial;
         $logReaderLocation = $reader->location;
         $logDetectionCount = count($detections);
@@ -379,19 +325,20 @@ class RaspberryController extends Controller
 
         app()->terminating(function () use (
             $logReaderSerial, $logReaderLocation, $processed, $skipped,
-            $logDetectionCount, $bufferedOutput, $requestData, $responseData
+            $logDetectionCount, $bufferedOutput, $requestData, $responseData,
+            $rfidDetectionsToStore
         ) {
+            // Bulk insert audit detections (deferred, outside transaction)
+            if (!empty($rfidDetectionsToStore)) {
+                try {
+                    RfidDetection::insert($rfidDetectionsToStore);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to insert RFID audit detections', ['error' => $e->getMessage()]);
+                }
+            }
+
             // Log to file
             $this->logToFile($logReaderSerial, $logReaderLocation, $bufferedOutput);
-
-            // Log summary
-            Log::info('RFID detections processed', [
-                'reader' => $logReaderSerial,
-                'location' => $logReaderLocation,
-                'processed' => $processed,
-                'skipped' => $skipped,
-                'total_detections' => $logDetectionCount,
-            ]);
 
             // Log to RFID raw logs for /rfidlive-ultra display
             if ($logDetectionCount > 0) {
@@ -500,7 +447,14 @@ class RaspberryController extends Controller
      */
     private function calculateResult(Result $result): void
     {
-        $result->load(['wave', 'race', 'entrant']);
+        // Only load relations that aren't already set (avoids 3 queries per detection)
+        $toLoad = [];
+        if (!$result->relationLoaded('wave')) $toLoad[] = 'wave';
+        if (!$result->relationLoaded('race')) $toLoad[] = 'race';
+        if (!$result->relationLoaded('entrant')) $toLoad[] = 'entrant';
+        if (!empty($toLoad)) {
+            $result->load($toLoad);
+        }
 
         // Check race type for different calculation logic
         $raceType = $result->race->type ?? '1_passage';
@@ -627,14 +581,6 @@ class RaspberryController extends Controller
     {
         $readerMode = $reader->mode ?? 'multi_reader'; // Default if not set
 
-        Log::debug("Determining location", [
-            'reader_id' => $reader->id,
-            'reader_mode' => $readerMode,
-            'reader_location' => $reader->location,
-            'has_entrant' => $entrant !== null,
-            'has_wave' => $entrant && $entrant->wave_id ? true : false,
-        ]);
-
         switch ($readerMode) {
             case 'single_reader_simple':
                 // MODE 1: Plages horaires uniquement, pas de vagues
@@ -647,10 +593,6 @@ class RaspberryController extends Controller
                     if ($wave && $wave->real_start_time) {
                         return $this->determineByWaveWindow($wave, $datetime);
                     } else {
-                        // Vague pas encore lancée (pas de real_start_time) = IGNORE toutes détections
-                        Log::debug("Detection IGNORED - wave not started yet", [
-                            'wave_id' => $wave ? $wave->id : 'null',
-                        ]);
                         return null;
                     }
                 }
@@ -670,9 +612,6 @@ class RaspberryController extends Controller
                 if ($reader->location !== 'DEPART' && $entrant && $entrant->wave_id) {
                     $wave = $entrant->wave;
                     if ($wave && !$wave->real_start_time) {
-                        Log::debug("Detection IGNORED - wave not started yet (mode 4)", [
-                            'wave_id' => $wave->id,
-                        ]);
                         return null;
                     }
                 }
@@ -751,11 +690,6 @@ class RaspberryController extends Controller
         $departWindowStart = $realStartTime->copy()->subMinutes($windowMinutes);
         $departWindowEnd = $realStartTime->copy()->addMinutes($windowMinutes);
 
-        Log::debug("Wave-based TOP départ evaluation (Mode 2)", [
-            'wave_id' => $wave->id,
-            'detection_time' => $datetime->format('H:i:s'),
-        ]);
-
         // Detection within DEPART window?
         if ($datetime >= $departWindowStart && $datetime <= $departWindowEnd) {
             return 'DEPART';
@@ -766,12 +700,7 @@ class RaspberryController extends Controller
             return 'ARRIVEE';
         }
 
-        // Before window = IGNORE (détection trop tôt, probablement erreur)
-        Log::warning("Detection BEFORE wave DEPART window - ignoring", [
-            'wave_id' => $wave->id,
-            'detection_time' => $datetime->format('Y-m-d H:i:s'),
-            'window_start' => $departWindowStart->format('Y-m-d H:i:s'),
-        ]);
+        // Before window = IGNORE
         return null;
     }
 
@@ -806,11 +735,6 @@ class RaspberryController extends Controller
                     ->where('reader_location', 'ARRIVEE')
                     ->sortBy('calculated_time')
                     ->values();
-
-                Log::debug("Ranking with intermediate checkpoints", [
-                    'race_id' => $raceId,
-                    'arrivee_results' => $results->count(),
-                ]);
             } elseif ($race->type === 'infinite_loop') {
                 // INFINITE LOOP: Sort by distance (laps), then by time
                 $entrantResults = $allResults->groupBy('entrant_id')
@@ -867,26 +791,36 @@ class RaspberryController extends Controller
                     ->values();
             }
 
-            // Update all positions in a single transaction (1 commit instead of N)
-            \DB::transaction(function () use ($results) {
-                // Calculate overall positions
+            // Bulk update positions using CASE WHEN (2 queries instead of N individual UPDATEs)
+            if ($results->isNotEmpty()) {
+                // Build position assignments
+                $positionCases = [];
+                $catPositionCases = [];
+                $ids = [];
+
                 $position = 1;
                 foreach ($results as $result) {
-                    $result->update(['position' => $position++]);
+                    $ids[] = $result->id;
+                    $positionCases[] = "WHEN {$result->id} THEN {$position}";
+                    $position++;
                 }
 
                 // Calculate category positions
-                $resultsByCategory = $results->groupBy(function ($result) {
-                    return $result->entrant->category_id;
-                });
-
+                $resultsByCategory = $results->groupBy(fn($r) => $r->entrant->category_id);
                 foreach ($resultsByCategory as $categoryId => $categoryResults) {
-                    $categoryPosition = 1;
+                    $catPos = 1;
                     foreach ($categoryResults as $result) {
-                        $result->update(['category_position' => $categoryPosition++]);
+                        $catPositionCases[] = "WHEN {$result->id} THEN {$catPos}";
+                        $catPos++;
                     }
                 }
-            });
+
+                $idList = implode(',', $ids);
+                $posCases = implode(' ', $positionCases);
+                $catCases = implode(' ', $catPositionCases);
+
+                \DB::statement("UPDATE results SET position = CASE id {$posCases} END, category_position = CASE id {$catCases} END WHERE id IN ({$idList})");
+            }
         } catch (\Exception $e) {
             Log::error("Failed to recalculate positions", [
                 'race_id' => $raceId,
