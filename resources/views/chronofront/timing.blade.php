@@ -1976,6 +1976,7 @@ function chronoApp() {
         detectionFlash: false,
         pollMaxId: 0,
         pollCount: 0,
+        pollUpdatedMax: null,
         pollBusy: false,
 
         init() {
@@ -2245,6 +2246,7 @@ function chronoApp() {
                 this.displayedResults = [];
                 this.pollMaxId = 0;
                 this.pollCount = 0;
+                this.pollUpdatedMax = null;
                 return;
             }
 
@@ -2262,6 +2264,10 @@ function chronoApp() {
                 // Update poll tracking state
                 this.pollCount = this.results.length;
                 this.pollMaxId = this.results.reduce((max, r) => Math.max(max, r.id), 0);
+                // Track latest updated_at to detect position recalculations
+                this.pollUpdatedMax = this.results.reduce((max, r) => {
+                    return r.updated_at && r.updated_at > (max || '') ? r.updated_at : max;
+                }, null);
 
                 this.filterResults();
             } catch (error) {
@@ -2279,15 +2285,16 @@ function chronoApp() {
 
             this.pollBusy = true;
             try {
-                // Step 1: Lightweight check - just get count + max_id
+                // Step 1: Lightweight check - just get count + max_id + updated_max
                 const check = await axios.get('/results/poll-check', {
                     params: { timing_mode: true, _t: Date.now() }
                 });
                 const serverCount = check.data.count;
                 const serverMaxId = check.data.max_id;
+                const serverUpdatedMax = check.data.updated_max;
 
-                // Nothing changed at all - skip
-                if (serverCount === this.pollCount && serverMaxId === this.pollMaxId) {
+                // Nothing changed at all (same count, same max_id, same update timestamp) - skip
+                if (serverCount === this.pollCount && serverMaxId === this.pollMaxId && serverUpdatedMax === this.pollUpdatedMax) {
                     return;
                 }
 
@@ -2295,6 +2302,7 @@ function chronoApp() {
                 if (serverCount < this.pollCount) {
                     this.pollCount = serverCount;
                     this.pollMaxId = serverMaxId;
+                    this.pollUpdatedMax = serverUpdatedMax;
                     await this.loadAllResults();
                     return;
                 }
@@ -2311,23 +2319,36 @@ function chronoApp() {
                     const addedResults = response.data;
 
                     if (addedResults.length > 0) {
-                        // Merge new results
-                        this.results = [...addedResults, ...this.results];
+                        // Merge new results (replace existing by id to handle position updates)
+                        const existingIds = new Set(this.results.map(r => r.id));
+                        const newResults = addedResults.filter(r => !existingIds.has(r.id));
+                        this.results = [...newResults, ...this.results];
                         this.results.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
                         this.filterResults();
-                        this.triggerDetectionFlash();
+                        if (newResults.length > 0) {
+                            this.triggerDetectionFlash();
+                        }
                     }
 
                     this.pollMaxId = serverMaxId;
                     this.pollCount = serverCount;
+                    this.pollUpdatedMax = serverUpdatedMax;
                     return;
                 }
 
-                // Count increased but max_id unchanged (shouldn't happen, but handle gracefully)
-                // Or positions may have been recalculated - do a full reload
+                // Positions were recalculated (updated_max changed but no new results)
+                // Only reload the changed results instead of everything
+                if (serverUpdatedMax !== this.pollUpdatedMax) {
+                    await this.loadAllResults();
+                    this.pollUpdatedMax = serverUpdatedMax;
+                    return;
+                }
+
+                // Count mismatch without new IDs (shouldn't normally happen)
                 if (serverCount !== this.pollCount) {
                     this.pollCount = serverCount;
                     this.pollMaxId = serverMaxId;
+                    this.pollUpdatedMax = serverUpdatedMax;
                     await this.loadAllResults();
                 }
 

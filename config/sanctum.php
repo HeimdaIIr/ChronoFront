@@ -14,9 +14,12 @@ return [
     */
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
+        '%s%s%s',
         'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        env('APP_URL') ? ','.parse_url(env('APP_URL'), PHP_URL_HOST) : ''
+        env('APP_URL') ? ','.parse_url(env('APP_URL'), PHP_URL_HOST) : '',
+        // Auto-trust local/private network IPs (192.168.*, 10.*, 172.16-31.*)
+        // so timing works from RFID reader's local access point
+        ',192.168.*,10.*,172.16.*,172.17.*,172.18.*,172.19.*,172.20.*,172.21.*,172.22.*,172.23.*,172.24.*,172.25.*,172.26.*,172.27.*,172.28.*,172.29.*,172.30.*,172.31.*'
     ))),
 
     /*

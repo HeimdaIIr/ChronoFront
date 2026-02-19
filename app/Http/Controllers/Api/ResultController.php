@@ -42,10 +42,13 @@ class ResultController extends Controller
         // Clone BEFORE any aggregate to avoid query state mutation
         $maxId = (clone $query)->max('id') ?? 0;
         $count = (clone $query)->count();
+        // Track latest update timestamp to detect position recalculations
+        $updatedMax = (clone $query)->max('updated_at');
 
         return response()->json([
             'count' => $count,
             'max_id' => $maxId,
+            'updated_max' => $updatedMax,
         ]);
     }
 
@@ -126,8 +129,9 @@ class ResultController extends Controller
 
         $query->orderBy('raw_time', 'desc');
 
-        // Only apply limit if no filters (for performance)
-        if (!$hasFilters) {
+        // Apply reasonable limit to prevent memory issues
+        // In timing mode we need ALL results for accurate display and positions
+        if (!$hasFilters && !$timingMode) {
             $query->limit(500);
         }
 

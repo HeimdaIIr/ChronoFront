@@ -85,7 +85,9 @@ class RaspberryController extends Controller
             // Scope to this reader's event to avoid loading entrants from other events
             $entrantsQuery->where('event_id', $reader->event_id);
         }
-        $entrantsMap = $entrantsQuery->get()->keyBy('bib_number');
+        // Group by bib_number to handle same bib in multiple races
+        // keyBy would only keep the LAST record, losing entrants from other races
+        $entrantsGrouped = $entrantsQuery->get()->groupBy('bib_number');
 
         // Single DB transaction for the entire batch (1 commit instead of N)
         \DB::beginTransaction();
@@ -114,19 +116,22 @@ class RaspberryController extends Controller
             // Get milliseconds
             $milliseconds = $this->extractMilliseconds($timestamp);
 
-            // Find entrant from pre-loaded map (0 queries)
-            $entrant = $entrantsMap[(string) $bibNumber] ?? null;
+            // Find ALL entrants for this bib (one per race) from pre-loaded map (0 queries)
+            $entrantsForBib = $entrantsGrouped[(string) $bibNumber] ?? null;
 
-            if (!$entrant) {
+            if (!$entrantsForBib || $entrantsForBib->isEmpty()) {
                 $skipped++;
                 continue;
             }
+
+            // Process detection for EACH race this bib is registered in
+            $detectionProcessed = false;
+            foreach ($entrantsForBib as $entrant) {
 
             // Determine effective location
             $effectiveLocation = $this->determineEffectiveLocation($reader, $datetime, $entrant);
 
             if ($effectiveLocation === null) {
-                $skipped++;
                 continue;
             }
 
@@ -135,21 +140,18 @@ class RaspberryController extends Controller
             if ($race && $race->start_time) {
                 $raceStart = Carbon::parse($race->start_time);
                 if ($datetime->lt($raceStart)) {
-                    $skipped++;
                     continue;
                 }
             }
 
             // Block non-DEPART detections if race hasn't started yet (no TOP départ)
             if ($race && !$race->start_time && $effectiveLocation !== 'DEPART') {
-                $skipped++;
                 continue;
             }
 
             // Check anti-rebounce (now with effective location)
             $antiRebounceCheck = $this->checkAntiRebounce($entrant, $reader, $datetime, $effectiveLocation);
             if (!$antiRebounceCheck) {
-                $skipped++;
                 continue;
             }
 
@@ -160,18 +162,16 @@ class RaspberryController extends Controller
                 $elapsedSeconds = $datetime->diffInSeconds($raceStartTime);
 
                 if ($elapsedSeconds > $raceDurationSeconds) {
-                    $skipped++;
                     continue;
                 }
             }
 
-            // Get passage number
+            // Get passage number (scoped to entrant + race via entrant_id)
             $passageNumber = $this->getPassageNumber($entrant, $reader);
 
             // Check if max laps exceeded for n_laps races
             if ($race && $race->type === 'n_laps' && $race->laps > 0) {
                 if ($passageNumber > $race->laps) {
-                    $skipped++;
                     continue;
                 }
             }
@@ -186,9 +186,10 @@ class RaspberryController extends Controller
                     'action' => 'start_time_updated',
                     'time' => $datetime->format('Y-m-d H:i:s'),
                     'location' => $effectiveLocation,
+                    'race_id' => $race->id ?? null,
                 ];
 
-                $processed++;
+                $detectionProcessed = true;
 
                 // Collect audit data (will be bulk inserted after commit)
                 $rfidDetectionsToStore[] = [
@@ -216,7 +217,6 @@ class RaspberryController extends Controller
                     ->first();
 
                 if ($existingResult) {
-                    $skipped++;
                     continue;
                 }
 
@@ -281,10 +281,19 @@ class RaspberryController extends Controller
                 'passage' => $passageNumber,
                 'time' => $datetime->format('Y-m-d H:i:s'),
                 'location' => $reader->location,
+                'race_id' => $race->id ?? null,
                 'log' => $logEntry
             ];
 
-            $processed++;
+            $detectionProcessed = true;
+
+            } // end foreach entrant
+
+            if ($detectionProcessed) {
+                $processed++;
+            } else {
+                $skipped++;
+            }
 
             // Echo for reader (compatibility)
             echo $logEntry . "\n";
@@ -435,11 +444,12 @@ class RaspberryController extends Controller
     }
 
     /**
-     * Get the next passage number for this entrant at this reader
+     * Get the next passage number for this entrant at this reader within their race
      */
     private function getPassageNumber(Entrant $entrant, Reader $reader): int
     {
         $lastPassage = Result::where('entrant_id', $entrant->id)
+            ->where('race_id', $entrant->race_id)
             ->where('reader_id', $reader->id)
             ->max('lap_number');
 
