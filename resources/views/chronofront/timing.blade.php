@@ -1923,6 +1923,7 @@ function chronoApp() {
         results: [],
         displayedResults: [],
         selectedResult: null,
+        selectedRunnerResults: null,
         runnerCheckpoints: [],
         runnerAverageSpeed: null,
         editingField: null,
@@ -2527,8 +2528,19 @@ function chronoApp() {
             return this.races.some(r => r.start_time && !r.end_time);
         },
 
-        selectResult(result) {
+        async selectResult(result) {
             this.selectedResult = result;
+            // Load all passages for this runner from API (ensures complete data)
+            if (result && result.entrant_id) {
+                try {
+                    const response = await axios.get(`/results/entrant/${result.entrant_id}`, {
+                        params: { race_id: result.race_id }
+                    });
+                    this.selectedRunnerResults = response.data;
+                } catch (e) {
+                    this.selectedRunnerResults = null;
+                }
+            }
             this.calculateRunnerCheckpoints();
         },
 
@@ -2543,10 +2555,15 @@ function chronoApp() {
             const runnerRace = this.selectedResult.race;
             const isMultiLap = runnerRace && (runnerRace.type === 'n_laps' || runnerRace.type === 'infinite_loop');
 
+            // Use API-loaded results if available, otherwise fall back to local filter
+            const allRunnerResults = this.selectedRunnerResults
+                ? this.selectedRunnerResults
+                : this.results.filter(r => r.entrant_id === this.selectedResult.entrant_id && r.race_id === this.selectedResult.race_id);
+
             if (isMultiLap) {
                 // FOR MULTI-LAP RACES: Show all laps/passages for this runner
-                const runnerResults = this.results
-                    .filter(r => r.entrant_id === this.selectedResult.entrant_id)
+                const runnerResults = allRunnerResults
+                    .slice()
                     .sort((a, b) => (a.lap_number || 0) - (b.lap_number || 0));
 
                 this.runnerCheckpoints = [];
@@ -2627,8 +2644,8 @@ function chronoApp() {
 
             } else {
                 // FOR SINGLE-PASSAGE RACES: Show only real detections from database
-                const runnerResults = this.results
-                    .filter(r => r.entrant_id === this.selectedResult.entrant_id && r.race_id === this.selectedResult.race_id)
+                const runnerResults = allRunnerResults
+                    .slice()
                     .sort((a, b) => new Date(a.raw_time) - new Date(b.raw_time));
 
                 this.runnerCheckpoints = [];
@@ -2848,6 +2865,7 @@ function chronoApp() {
                 race.start_time = now;
                 this.showToast(`TOP DÉPART donné pour ${race.name}`, 'success');
                 await this.loadRaces();
+                await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur TOP DÉPART:', error);
                 this.showToast('Erreur lors du TOP DÉPART', 'error');
@@ -2946,8 +2964,9 @@ function chronoApp() {
                 await axios.post(`/waves/${wave.id}/top-depart`);
                 wave.real_start_time = new Date().toISOString();
                 this.showToast(`TOP DÉPART donné pour ${wave.name}`, 'success');
-                await this.loadWaves(); // Reload waves for the selected race
-                await this.loadAllWavesForModal(); // Reload modal waves
+                await this.loadWaves();
+                await this.loadAllWavesForModal();
+                await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur TOP DÉPART vague:', error);
                 this.showToast('Erreur lors du TOP DÉPART', 'error');
@@ -2994,6 +3013,7 @@ function chronoApp() {
                 race.start_time = newStartTime;
                 this.showToast(`Heure de départ mise à jour pour ${race.name}`, 'success');
                 await this.loadRaces();
+                await this.loadAllResults();
             } catch (error) {
                 console.error('Erreur mise à jour départ:', error);
                 this.showToast('Erreur lors de la mise à jour', 'error');
@@ -3892,8 +3912,11 @@ function chronoApp() {
                 await axios.delete(`/results/${result.id}`);
                 this.showToast('Détection supprimée', 'success');
 
-                // Reload to get updated positions
-                await this.loadAllResults();
+                // Positions are recalculated server-side by destroy()
+                // Next poll cycle will detect count change and sync
+                // Force a poll sync to pick up new positions quickly
+                this.pollBusy = false;
+                this.checkForNewResults();
             } catch (error) {
                 console.error('Erreur suppression:', error);
                 this.showToast('Erreur lors de la suppression', 'error');

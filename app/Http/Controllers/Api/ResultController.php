@@ -1635,22 +1635,36 @@ class ResultController extends Controller
                 }
             }
 
-            // Calculate overall positions
-            $position = 1;
-            foreach ($results as $result) {
-                $result->update(['position' => $position++]);
-            }
+            // Bulk update positions using CASE WHEN (2 queries instead of N individual UPDATEs)
+            if ($results->isNotEmpty()) {
+                $positionCases = [];
+                $catPositionCases = [];
+                $ids = [];
 
-            // Calculate category positions
-            $resultsByCategory = $results->groupBy(function ($result) {
-                return $result->entrant->category_id;
-            });
-
-            foreach ($resultsByCategory as $categoryId => $categoryResults) {
-                $categoryPosition = 1;
-                foreach ($categoryResults as $result) {
-                    $result->update(['category_position' => $categoryPosition++]);
+                $position = 1;
+                foreach ($results as $result) {
+                    $ids[] = $result->id;
+                    $positionCases[] = "WHEN {$result->id} THEN {$position}";
+                    $position++;
                 }
+
+                // Calculate category positions
+                $resultsByCategory = $results->groupBy(function ($result) {
+                    return $result->entrant ? $result->entrant->category_id : null;
+                });
+                foreach ($resultsByCategory as $categoryId => $categoryResults) {
+                    $catPos = 1;
+                    foreach ($categoryResults as $result) {
+                        $catPositionCases[] = "WHEN {$result->id} THEN {$catPos}";
+                        $catPos++;
+                    }
+                }
+
+                $idList = implode(',', $ids);
+                $posCases = implode(' ', $positionCases);
+                $catCases = implode(' ', $catPositionCases);
+
+                \DB::connection('tenant')->statement("UPDATE results SET position = CASE id {$posCases} END, category_position = CASE id {$catCases} END WHERE id IN ({$idList})");
             }
         } catch (\Exception $e) {
             // Log error but don't fail the main operation
@@ -1916,6 +1930,25 @@ class ResultController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get all results for a specific entrant in a race
+     * Used by timing panel to show all passages (DEPART, intermediates, ARRIVEE)
+     */
+    public function entrantResults(Request $request, int $entrantId): JsonResponse
+    {
+        $raceId = $request->query('race_id');
+
+        $query = Result::with(['entrant.category', 'wave', 'race'])
+            ->where('entrant_id', $entrantId)
+            ->orderBy('raw_time', 'asc');
+
+        if ($raceId) {
+            $query->where('race_id', $raceId);
+        }
+
+        return response()->json($query->get());
     }
 
     /**

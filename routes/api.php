@@ -71,6 +71,7 @@ Route::apiResource('entrants', EntrantController::class);
 // Results/Timing Routes
 Route::get('results/poll-check', [ResultController::class, 'pollCheck']);
 Route::get('results/count', [ResultController::class, 'count']);
+Route::get('results/entrant/{entrantId}', [ResultController::class, 'entrantResults']);
 Route::get('results', [ResultController::class, 'index']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
 Route::get('results/live-feed', [ResultController::class, 'liveFeed']);
