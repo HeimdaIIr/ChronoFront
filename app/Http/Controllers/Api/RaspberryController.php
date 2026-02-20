@@ -379,14 +379,15 @@ class RaspberryController extends Controller
     }
 
     /**
-     * Convert timestamp to Carbon datetime
+     * Convert timestamp to Carbon datetime with millisecond precision
      * Unix timestamp is UTC - convert to app timezone for SQLite storage
      */
     private function timestampToDatetime(float $timestamp): Carbon
     {
-        // Create from UTC timestamp and convert to app timezone
-        // This ensures SQLite stores the correct local time
-        return Carbon::createFromTimestamp(intval($timestamp))->setTimezone(config('app.timezone'));
+        // Use float precision to preserve milliseconds
+        // Carbon::createFromTimestampMs expects milliseconds as integer
+        $timestampMs = (int) round($timestamp * 1000);
+        return Carbon::createFromTimestampMs($timestampMs)->setTimezone(config('app.timezone'));
     }
 
     /**

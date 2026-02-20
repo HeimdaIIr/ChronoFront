@@ -1267,7 +1267,7 @@ body {
                     <!-- Row 1: Search and core filters -->
                     <div class="search-box" style="flex: 1; min-width: 250px;">
                         <i class="bi bi-search"></i>
-                        <input type="text" placeholder="Rechercher dossard / nom" x-model="searchQuery" @input="filterResults">
+                        <input type="text" placeholder="Rechercher dossard / nom" x-model="searchQuery" @input="debouncedFilter()">
                     </div>
                     <select class="filter-select" x-model="raceFilter" @change="filterResults" style="min-width: 150px;">
                         <option value="">Tous parcours</option>
@@ -1932,6 +1932,8 @@ function chronoApp() {
         displayedResults: [],
         allFilteredResults: [],
         displayLimit: 100,
+        filterRequestId: 0,
+        filterDebounceTimer: null,
         selectedResult: null,
         selectedRunnerResults: null,
         runnerCheckpoints: [],
@@ -2271,7 +2273,7 @@ function chronoApp() {
                         _t: Date.now()
                     }
                 });
-                this.results = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+                this.results = this.sortByTimeDesc(response.data);
 
                 // Update poll tracking state
                 this.pollCount = this.results.length;
@@ -2335,7 +2337,7 @@ function chronoApp() {
                         const existingIds = new Set(this.results.map(r => r.id));
                         const newResults = addedResults.filter(r => !existingIds.has(r.id));
                         this.results = [...newResults, ...this.results];
-                        this.results.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+                        this.sortByTimeDesc(this.results);
                         this.filterResults();
                         if (newResults.length > 0) {
                             this.triggerDetectionFlash();
@@ -2371,6 +2373,14 @@ function chronoApp() {
             }
         },
 
+        // Stable sort by raw_time descending with ID tiebreaker
+        sortByTimeDesc(arr) {
+            return arr.sort((a, b) => {
+                const diff = new Date(b.raw_time).getTime() - new Date(a.raw_time).getTime();
+                return diff !== 0 ? diff : b.id - a.id;
+            });
+        },
+
         triggerDetectionFlash() {
             // Trigger green flash animation around the clock
             this.detectionFlash = true;
@@ -2387,6 +2397,11 @@ function chronoApp() {
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         },
 
+        debouncedFilter() {
+            clearTimeout(this.filterDebounceTimer);
+            this.filterDebounceTimer = setTimeout(() => this.filterResults(), 250);
+        },
+
         async filterResults() {
             // Check if any filters are active
             const hasActiveFilters = this.searchQuery || this.categoryFilter || this.sasFilter || this.raceFilter || this.checkpointFilter || this.lapFilter;
@@ -2398,9 +2413,6 @@ function chronoApp() {
                 // No filters: use all cached results
                 this.allFilteredResults = this.results;
             }
-
-            // Calculate positions on FULL filtered set (before truncation)
-            this.calculatePositions();
 
             // Apply sorting on FULL filtered set
             this.sortResults();
@@ -2420,37 +2432,30 @@ function chronoApp() {
         },
 
         async fetchFilteredResults() {
-            try {
-                // Build query parameters
-                const params = new URLSearchParams();
+            // Increment request ID to discard stale responses
+            const currentRequestId = ++this.filterRequestId;
 
-                if (this.searchQuery) {
-                    params.append('search', this.searchQuery);
-                }
-                if (this.categoryFilter) {
-                    params.append('category', this.categoryFilter);
-                }
-                if (this.sasFilter) {
-                    params.append('wave', this.sasFilter);
-                }
+            try {
+                const params = new URLSearchParams();
+                if (this.searchQuery) params.append('search', this.searchQuery);
+                if (this.categoryFilter) params.append('category', this.categoryFilter);
+                if (this.sasFilter) params.append('wave', this.sasFilter);
                 if (this.raceFilter) {
-                    // Find race ID from race name
                     const race = this.races.find(r => r.name === this.raceFilter);
-                    if (race) {
-                        params.append('race_id', race.id);
-                    }
+                    if (race) params.append('race_id', race.id);
                 }
-                if (this.checkpointFilter) {
-                    params.append('checkpoint', this.checkpointFilter);
-                }
-                if (this.lapFilter) {
-                    params.append('lap_number', this.lapFilter);
-                }
+                if (this.checkpointFilter) params.append('checkpoint', this.checkpointFilter);
+                if (this.lapFilter) params.append('lap_number', this.lapFilter);
                 params.append('timing_mode', 'true');
 
                 const response = await axios.get(`/results?${params.toString()}`);
-                this.allFilteredResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+
+                // Discard if a newer request was launched while we waited
+                if (currentRequestId !== this.filterRequestId) return;
+
+                this.allFilteredResults = this.sortByTimeDesc(response.data);
             } catch (error) {
+                if (currentRequestId !== this.filterRequestId) return;
                 console.error('Erreur lors de la recherche filtrée:', error);
                 // Fallback to local filtering
                 this.allFilteredResults = this.results.filter(result => {
@@ -2459,11 +2464,7 @@ function chronoApp() {
                         const bibNumber = result.entrant?.bib_number?.toString() || '';
                         const fullName = (result.entrant?.firstname || '') + ' ' + (result.entrant?.lastname || '');
                         const fullNameNormalized = this.normalizeString(fullName);
-
-                        const matchesSearch = bibNumber.includes(this.searchQuery) ||
-                            fullNameNormalized.includes(searchNormalized);
-
-                        if (!matchesSearch) return false;
+                        if (!bibNumber.includes(this.searchQuery) && !fullNameNormalized.includes(searchNormalized)) return false;
                     }
                     if (this.categoryFilter && result.entrant?.category?.name !== this.categoryFilter) return false;
                     if (this.sasFilter && result.wave?.name !== this.sasFilter) return false;
@@ -2478,29 +2479,28 @@ function chronoApp() {
         sortResults() {
             switch (this.sortBy) {
                 case 'position':
-                    // Sort by position (lowest first)
                     this.allFilteredResults.sort((a, b) => {
                         const posA = a.position || 9999;
                         const posB = b.position || 9999;
-                        return posA - posB;
-                    });
-                    break;
-
-                case 'time':
-                    // Sort by calculated time (fastest first)
-                    this.allFilteredResults.sort((a, b) => {
+                        if (posA !== posB) return posA - posB;
                         const timeA = a.calculated_time || 999999;
                         const timeB = b.calculated_time || 999999;
                         return timeA - timeB;
                     });
                     break;
 
+                case 'time':
+                    this.allFilteredResults.sort((a, b) => {
+                        const timeA = a.calculated_time || 999999;
+                        const timeB = b.calculated_time || 999999;
+                        if (timeA !== timeB) return timeA - timeB;
+                        return b.id - a.id;
+                    });
+                    break;
+
                 case 'recent':
                 default:
-                    // Sort by raw_time (most recent first)
-                    this.allFilteredResults.sort((a, b) => {
-                        return new Date(b.raw_time) - new Date(a.raw_time);
-                    });
+                    this.sortByTimeDesc(this.allFilteredResults);
                     break;
             }
         },

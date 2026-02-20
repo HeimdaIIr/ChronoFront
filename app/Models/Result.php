@@ -65,13 +65,14 @@ class Result extends Model
     }
 
     /**
-     * Set raw_time attribute - store as local time string
+     * Set raw_time attribute - store as local time string with milliseconds
      */
     public function setRawTimeAttribute($value)
     {
         if ($value instanceof \Carbon\Carbon) {
-            // Store as local time string (Y-m-d H:i:s)
-            $this->attributes['raw_time'] = $value->format('Y-m-d H:i:s');
+            // Store with millisecond precision (Y-m-d H:i:s.v)
+            // SQLite stores as TEXT so this sorts correctly lexicographically
+            $this->attributes['raw_time'] = $value->format('Y-m-d H:i:s.v');
         } else {
             $this->attributes['raw_time'] = $value;
         }
