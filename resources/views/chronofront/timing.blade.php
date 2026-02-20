@@ -1299,7 +1299,7 @@ body {
                             <option :value="lap" x-text="'Tour ' + lap"></option>
                         </template>
                     </select>
-                    <select class="filter-select" x-model="sortBy" @change="sortResults" style="border-left: 2px solid #3b82f6; min-width: 140px;">
+                    <select class="filter-select" x-model="sortBy" @change="sortResults(); applyDisplayLimit()" style="border-left: 2px solid #3b82f6; min-width: 140px;">
                         <option value="recent">Tri: Plus récent</option>
                         <option value="position">Tri: Position</option>
                         <option value="time">Tri: Temps</option>
@@ -1348,6 +1348,14 @@ body {
                             </template>
                         </tbody>
                     </table>
+
+                    <!-- Load more + counter -->
+                    <div x-show="allFilteredResults.length > displayLimit" style="text-align: center; padding: 0.75rem; background: #1a1c2e; border-top: 1px solid #2a2d3e;">
+                        <button @click="loadMoreResults()" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 0.5rem 1.5rem; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                            Afficher plus
+                        </button>
+                        <span style="color: #71717a; font-size: 0.8rem; margin-left: 0.75rem;" x-text="`${displayedResults.length} / ${allFilteredResults.length} passages`"></span>
+                    </div>
 
                     <div x-show="displayedResults.length === 0" class="empty-state">
                         <i class="bi bi-inbox"></i>
@@ -1922,6 +1930,8 @@ function chronoApp() {
         readers: [],
         results: [],
         displayedResults: [],
+        allFilteredResults: [],
+        displayLimit: 100,
         selectedResult: null,
         selectedRunnerResults: null,
         runnerCheckpoints: [],
@@ -2122,6 +2132,7 @@ function chronoApp() {
                     this.categories = [];
                     this.detections = [];
                     this.results = [];
+                    this.allFilteredResults = [];
                     this.displayedResults = [];
                     this.selectedRaceId = null;
                     this.selectedCheckpointId = null;
@@ -2243,6 +2254,7 @@ function chronoApp() {
             // Don't load results if no active event
             if (!this.currentEventId) {
                 this.results = [];
+                this.allFilteredResults = [];
                 this.displayedResults = [];
                 this.pollMaxId = 0;
                 this.pollCount = 0;
@@ -2383,15 +2395,28 @@ function chronoApp() {
                 // When filters are active, fetch from API to search ALL results
                 await this.fetchFilteredResults();
             } else {
-                // No filters: filter locally from cached results (last 500)
-                this.displayedResults = this.results;
+                // No filters: use all cached results
+                this.allFilteredResults = this.results;
             }
 
-            // Calculate positions after filtering
+            // Calculate positions on FULL filtered set (before truncation)
             this.calculatePositions();
 
-            // Apply sorting
+            // Apply sorting on FULL filtered set
             this.sortResults();
+
+            // Truncate to displayLimit for rendering performance
+            this.displayLimit = 100;
+            this.applyDisplayLimit();
+        },
+
+        applyDisplayLimit() {
+            this.displayedResults = this.allFilteredResults.slice(0, this.displayLimit);
+        },
+
+        loadMoreResults() {
+            this.displayLimit += 100;
+            this.applyDisplayLimit();
         },
 
         async fetchFilteredResults() {
@@ -2424,11 +2449,11 @@ function chronoApp() {
                 params.append('timing_mode', 'true');
 
                 const response = await axios.get(`/results?${params.toString()}`);
-                this.displayedResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
+                this.allFilteredResults = response.data.sort((a, b) => new Date(b.raw_time) - new Date(a.raw_time));
             } catch (error) {
                 console.error('Erreur lors de la recherche filtrée:', error);
                 // Fallback to local filtering
-                this.displayedResults = this.results.filter(result => {
+                this.allFilteredResults = this.results.filter(result => {
                     if (this.searchQuery) {
                         const searchNormalized = this.normalizeString(this.searchQuery);
                         const bibNumber = result.entrant?.bib_number?.toString() || '';
@@ -2454,7 +2479,7 @@ function chronoApp() {
             switch (this.sortBy) {
                 case 'position':
                     // Sort by position (lowest first)
-                    this.displayedResults.sort((a, b) => {
+                    this.allFilteredResults.sort((a, b) => {
                         const posA = a.position || 9999;
                         const posB = b.position || 9999;
                         return posA - posB;
@@ -2463,7 +2488,7 @@ function chronoApp() {
 
                 case 'time':
                     // Sort by calculated time (fastest first)
-                    this.displayedResults.sort((a, b) => {
+                    this.allFilteredResults.sort((a, b) => {
                         const timeA = a.calculated_time || 999999;
                         const timeB = b.calculated_time || 999999;
                         return timeA - timeB;
@@ -2473,7 +2498,7 @@ function chronoApp() {
                 case 'recent':
                 default:
                     // Sort by raw_time (most recent first)
-                    this.displayedResults.sort((a, b) => {
+                    this.allFilteredResults.sort((a, b) => {
                         return new Date(b.raw_time) - new Date(a.raw_time);
                     });
                     break;
@@ -2484,7 +2509,7 @@ function chronoApp() {
             // Group results by race and entrant to get best result for each runner
             const resultsByRace = {};
 
-            this.displayedResults.forEach(result => {
+            this.allFilteredResults.forEach(result => {
                 if (!result.calculated_time || !result.race_id || !result.entrant_id) {
                     result.position = null;
                     result.category_position = null;
@@ -2537,7 +2562,7 @@ function chronoApp() {
             });
 
             // Reset positions for results not in best results
-            this.displayedResults.forEach(result => {
+            this.allFilteredResults.forEach(result => {
                 if (!result.position && result.calculated_time) {
                     result.position = '-';
                     result.category_position = '-';
@@ -3161,6 +3186,7 @@ function chronoApp() {
                     this.categories = [];
                     this.detections = [];
                     this.results = [];
+                    this.allFilteredResults = [];
                     this.displayedResults = [];
                     this.pollMaxId = 0;
                     this.pollCount = 0;
@@ -3926,6 +3952,7 @@ function chronoApp() {
             try {
                 // Immediately remove from local state for instant UI feedback
                 this.results = this.results.filter(r => r.id !== result.id);
+                this.allFilteredResults = this.allFilteredResults.filter(r => r.id !== result.id);
                 this.displayedResults = this.displayedResults.filter(r => r.id !== result.id);
                 this.selectedResult = null;
                 this.pollCount = Math.max(0, this.pollCount - 1);
@@ -3955,6 +3982,7 @@ function chronoApp() {
             try {
                 // Immediately clear local state for instant UI feedback
                 this.results = [];
+                this.allFilteredResults = [];
                 this.displayedResults = [];
                 this.selectedResult = null;
                 this.pollMaxId = 0;
